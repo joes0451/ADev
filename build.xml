@@ -1,0 +1,71 @@
+
+<project name="ADev" basedir="." default="main">
+
+    <property name="src.dir"     value="src"/>
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="proguard.dir"	value="C:\proguard5.0\lib\proguard.jar"/>
+    <property name="java_rt.dir"	value="C:\Program Files (x86)\Java\jdk1.8.0_20\jre\lib\rt.jar"/>
+    <property name="base.dir"     value="."/>
+    <property name="main-class"  value="com.dominionmobile.adev.ADev"/>
+    <property name="version"	value="ADev-2.9.2"/>
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}"/>
+    </target>
+
+    <target name="jar" depends="compile">
+        <jar destfile="${base.dir}/${version}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar">
+        <java jar="${base.dir}/${version}.jar" fork="true"/>
+    </target>
+
+    <target name="clean-build" depends="clean,jar"/>
+
+    <target name="main" depends="clean,run"/>
+    
+    <target name="optimize" depends="clean,jar">
+		<taskdef resource="proguard/ant/task.properties"
+			classpath="${proguard.dir}" />
+			
+		<move file="${version}.jar" tofile="${version}_In.jar"/>
+			
+		<proguard verbose="true"
+			obfuscate="false"
+			optimizationpasses="3">
+			
+			<injar file="${version}_In.jar"/>
+			<outjar file="${version}.jar"/>
+
+			<libraryjar file="${java_rt.dir}" />
+			
+			<keepclasseswithmembers access="public">
+				<method access="public static"
+				type="void"
+				name="main"
+				parameters="java.lang.String[]" />
+			</keepclasseswithmembers>
+			
+			<optimizations filter="!class/merging/*"/>
+			
+		</proguard>		
+		
+		<delete file="${version}_In.jar"/>
+		
+		<java jar="${base.dir}/${version}.jar" fork="true"/>
+		
+    </target>
+
+</project>
+

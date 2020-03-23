@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Runs ADev
+#
+
+# Get working directory..
+SCRIPT=$(readlink -f "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+if [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]]; then
+	JDK_PATH="$JAVA_HOME/bin/"
+	echo Found JAVA_HOME, JDK_PATH: $JDK_PATH 
+else
+	
+	# Did not find JAVA_HOME
+	JAVAC_LOCATION=`type javac | cut -f3 -d' '`
+	
+	while [ -h "$JAVAC_LOCATION" ]; do
+		LS_OUTPUT=`ls -ld "$JAVAC_LOCATION"`
+		EXPR_OUTPUT=`expr "$LS_OUTPUT" : '.*-> \(.*\)$'`
+		if expr "$EXPR_OUTPUT" : '/.*' > /dev/null; then
+				JAVAC_LOCATION="$EXPR_OUTPUT"
+		else
+				JAVAC_LOCATION=`dirname "$JAVAC_LOCATION"`/"$EXPR_OUTPUT"
+		fi
+	done
+	
+	JDK_PATH=`dirname $JAVAC_LOCATION`
+	echo JDK_PATH: $JDK_PATH
+	
+fi
+
+# Launch application.
+
+cd $SCRIPTPATH
+
+exec "$JDK_PATH/java" -jar ADev-2.9.2.jar
+
+
