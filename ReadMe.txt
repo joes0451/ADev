@@ -91,7 +91,7 @@ How to use ADev:
 Add <uses-sdk>:
 		If selected it will add a statement, like:
 		
-		<uses-sdk android:minSdkVersion="4" android:targetSdkVersion="8" />
+		<uses-sdk android:minSdkVersion="14" android:targetSdkVersion="28" />
 		
 		to the AndroidManifest.xml for a Gradle or Android Ant project, but not for Flutter.
 		
@@ -180,10 +180,6 @@ Release builds:
 		
 		For Linux, make sure that the build.gradle file has read and write permissions.
 		It tries to modify strings.xml so that might need it as well.
-		
-		Also, Gradle does a lot of network I/O,
-		with no screen activity, so give it lots of time.  You can also try
-		using the 'gradle_offline' option.
 		
 		For the Ant build you can add the Keystore path, Key Alias, Keystore password
 		and Key Alias passwords to config.properties, or define them in ant.properties using
@@ -373,8 +369,10 @@ Variable Window:
 Flutter debugger:
 
 		You can expand Class and nested Class variables.
-		At this time Lists are not fully supported.
-		There can be issues with the content of certain expanded Classes.
+		Lists are now fully supported.
+		
+		There is a delay when the debugger first starts,
+		as it's setting things up in the background.
 		
 
 Build Errors:
@@ -490,7 +488,10 @@ ADev-2.9.2:
 	Some improvements to Flutter debugger, still in development.
 	Other improvements.
 	
+ADev-2.9.4:
+	Improvements to Flutter debugger, now fully supports List.
 	
+
 	
 joes0451@users.sf.net
 

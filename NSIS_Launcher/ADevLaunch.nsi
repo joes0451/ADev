@@ -10,7 +10,7 @@ SilentInstall silent
 AutoCloseWindow true
 ShowInstDetails nevershow
  
-!define CLASSPATH ".;ADev-2.9.2.jar"
+!define CLASSPATH ".;ADev-2.9.4.jar"
 !define CLASS "com.dominionmobile.adev.ADev"
 
 Section ""

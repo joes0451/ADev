@@ -16,6 +16,6 @@
 
 # Screenshots:
 
-<img src="images/mainscreen.png" width="425"/>
-<img src="images/debugscreen.png" width="425"/>
+<img src="images/mainscreen.png" width="550"/>
+<img src="images/debugscreen.png" width="550"/>
 

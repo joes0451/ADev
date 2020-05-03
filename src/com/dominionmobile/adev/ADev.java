@@ -164,6 +164,7 @@ import java.util.concurrent.Semaphore;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.tree.TreeSelectionModel;
@@ -415,6 +416,7 @@ public class ADev
 	static volatile boolean bProcessEventFinished;
 	static volatile boolean bUpdateVariableJTreeFinished;
 	static volatile boolean bDebugRan;
+	static volatile boolean bFlutterSetLibraryDebuggableStarted;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -462,6 +464,8 @@ public class ADev
 	static volatile int iWaitForId;
 	static volatile int iPathCount;
 	static volatile int iTokenPosLine;
+	static volatile int iLibraryStartIndex;
+	static volatile int iSelectedElement;
 	static int iPort;
 	
 	static volatile long lMainThreadId;
@@ -551,6 +555,10 @@ public class ADev
 	static volatile String g_sClassId;
 	static volatile String g_sClassName;
 	static volatile String g_sObjectId;
+	static volatile String sSolarBodyObjectId;
+	static volatile String sOrgSelected;
+	static volatile String sOrgClassId;
+	static volatile String sOrgObjectId;
 	//static volatile String sCurrentScriptId;
 	
 	static String sDebugPackageName;
@@ -650,10 +658,12 @@ public class ADev
 	static ArrayList LibraryAr;
 	
 	//static Hashtable EventInfoHt;
-	static LinkedHashMap VariableInfoLHm;
+	static volatile LinkedHashMap VariableInfoLHm;
 	//static volatile Hashtable LineTableHt;
 	static volatile LinkedHashMap ClassVariableLHm;
 	static volatile LinkedHashMap LocalVariableLHm;
+	static volatile LinkedHashMap SelectedNodesLHm;
+	
 	static volatile Vector localVariableVector;
 	static volatile Vector staticVariableVector;
 	static volatile Vector jListVariableVector;
@@ -840,10 +850,9 @@ public class ADev
 	private ConnectWirelessBgThread connectWirelessBgThread;
 	private ModifyAndroidManifestBgThread modifyAndroidManifestBgThread;
 	//private PauseBreakpointBgThread pauseBreakpointBgThread;
-	private LibraryBgThread libraryBgThread;
 	private ProcessEventBgThread processEventBgThread;
-	private ExpandNodeBgThread expandNodeBgThread;
 	private UpdateNodesBgThread updateNodesBgThread;
+	private ExpandBgThread expandBgThread;
 
 	
 	static byte[] idbytes = {(byte)0x22, (byte)'i', (byte)'d', (byte)0x22};
@@ -855,9 +864,13 @@ public class ADev
 	static byte[] kindBytes = {(byte)0x22, (byte)'k', (byte)'i', (byte)'n', (byte)'d', (byte)0x22};
 	static final String KIND_STRING = new String(kindBytes);
 	
-	static byte[] typeClassBytes = {(byte)0x22, (byte)'t', (byte)'y', (byte)'p', (byte)'e', (byte)'C',
+	static byte[] typeClassBytes = {(byte)0x22, (byte)'f', (byte)'u', (byte)'n', (byte)'c', (byte)'t',
+		(byte)'i', (byte)'o', (byte)'n', (byte)'s', (byte)0x22};
+	static final String FUNCTIONS_STRING = new String(typeClassBytes);
+
+	static byte[] functionsBytes = {(byte)0x22, (byte)'t', (byte)'y', (byte)'p', (byte)'e', (byte)'C',
 		(byte)'l', (byte)'a', (byte)'s', (byte)'s', (byte)0x22};
-	static final String TYPECLASS_STRING = new String(typeClassBytes);
+	static final String TYPECLASS_STRING = new String(functionsBytes);
 	
 	static byte[] nameBytes = {(byte)0x22, (byte)'n', (byte)'a', (byte)'m', (byte)'e', (byte)0x22};
 	static final String NAME_STRING = new String(nameBytes);
@@ -876,10 +889,17 @@ public class ADev
 
 	static byte[] lengthBytes = {(byte)0x22, (byte)'l', (byte)'e', (byte)'n', (byte)'g', (byte)'t', (byte)'h', (byte)0x22};
 	static final String LENGTH_STRING = new String(lengthBytes);
+
+	static byte[] staticBytes = {(byte)0x22, (byte)'s', (byte)'t', (byte)'a', (byte)'t', (byte)'i', (byte)'c', (byte)0x22};
+	static final String STATIC_STRING = new String(staticBytes);
 	
 	static byte[] superTypeBytes = {(byte)0x22, (byte)'s', (byte)'u', (byte)'p', (byte)'e', (byte)'r',
 		(byte)'T', (byte)'y', (byte)'p', (byte)'e', (byte)0x22};
 	static final String SUPERTYPE_STRING = new String(superTypeBytes);
+
+	static byte[] elementBytes = {(byte)0x22, (byte)'e', (byte)'l', (byte)'e', (byte)'m', (byte)'e',
+		(byte)'n', (byte)'t', (byte)'s', (byte)0x22};
+	static final String ELEMENTS_STRING = new String(elementBytes);
 
 	static byte[] valueAsStringBytes = {(byte)0x22, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e',
 		(byte)'A', (byte)'s', (byte)'S', (byte)'t', (byte)'r', (byte)'i', (byte)'n', (byte)'g', (byte)0x22};
@@ -4568,6 +4588,7 @@ public class ADev
 				{				
 					doc = textPane.getStyledDocument();	
 					iLen = doc.getLength();
+					
 					doc.insertString(iLen, outSb.toString(), normalStyle);
 					if ( iLen > 0 )
 					{
@@ -4598,8 +4619,6 @@ public class ADev
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			byte[] tempBuf = new byte[1024];
-			//byte[] errorBuf = {(byte)0x22, (byte)'e', (byte)'r', (byte)'r', (byte)'o', (byte)'r', (byte)0x22};
-			//String sErrorString = new String(errorBuf);
 			
 			int iBytesRead = 0;
 			int iTmpLength = tempBuf.length;
@@ -4620,6 +4639,7 @@ public class ADev
 			boolean bLookForEnd = false;
 			boolean bError = false;
 			boolean bProgressFinished = false;
+			boolean bHitStart = false;
 			bHaveWsUri = false;
 
 			// Set initial Id..			
@@ -4744,8 +4764,6 @@ public class ADev
 
 				cmdSb.append("&&flutter run ");
 				
-				// !! TESTING !!
-				//sDeviceName = "emulator-5554";
 /*
 				if ( sDeviceName == null )
 					System.out.println("sDeviceName null");
@@ -4869,7 +4887,7 @@ public class ADev
 				
 				swingWorker.execute();
 				
-
+				
 				while ( true )
 				{
 					iBytesRead = 0;
@@ -4928,8 +4946,9 @@ public class ADev
 					{
 						
 						sT = new String(baos.toByteArray());
-						
-/*
+
+/*						
+						// ------ Debugging from here ------
 						if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
 						{
 							System.out.println("sT:");
@@ -4965,6 +4984,36 @@ public class ADev
 							}
 						}
 /**/
+
+						if ( bHitStart == false )
+						{
+							//System.out.println("sT.length(): "+sT.length());
+							//System.out.println("sT: '"+sT+"'");
+							// Kill any leading path output..
+							
+							if ( iOS == LINUX_MAC )
+							{
+								iLoc = sT.indexOf("export");
+								if ( iLoc != -1 )
+								{
+									bHitStart = true;
+									sT = sT.substring(iLoc);
+								}
+								else
+									continue;
+							}
+							else
+							{
+								iLoc = sT.indexOf("SET");
+								if ( iLoc != -1 )
+								{
+									bHitStart = true;
+									sT = sT.substring(iLoc);
+								}
+								else
+									continue;
+							}
+						}
 
 						sT2 = "";
 						
@@ -5058,13 +5107,13 @@ public class ADev
 						else
 						{
 /*							
-								if ( sT == null )
-									System.out.println("sT null");
-								else
-								{
-									System.out.println("sT.length(): "+sT.length());
-									System.out.println("sT: '"+sT+"'");
-								}
+							if ( sT == null )
+								System.out.println("sT null");
+							else
+							{
+								System.out.println("sT.length(): "+sT.length());
+								System.out.println("sT: '"+sT+"'");
+							}
 /**/
 
 							// No lead '['..
@@ -5178,7 +5227,7 @@ public class ADev
 						if ( (sT2 != null) && (sT2.length() > 0) )
 						{
 							// Output to console..
-							//System.out.println("sT2: '"+sT2+"'");
+							//System.out.println("(Out)sT2: '"+sT2+"'");
 							outSb = new StringBuffer(sT2);
 							outSb.append((char)0x0a);
 							
@@ -5437,69 +5486,6 @@ public class ADev
 						if ( bInternalFinished )
 							break;
 					}
-				}
-			}
-		}
-	}	//}}}
-
-	//{{{	LibraryBgThread
-	class LibraryBgThread extends Thread
-	{
-		public void run()
-		{
-			LibraryInfo libraryInfo;
-			String sReq;
-			
-			if ( (LibraryAr != null) && (LibraryAr.size() > 0) )
-			{
-				try
-				{
-					for ( int iZ = 0; iZ < LibraryAr.size(); iZ++ )
-					{
-						libraryInfo = (LibraryInfo)LibraryAr.get(iZ);
-					
-						//
-						// setLibraryDebuggable
-						//
-						
-						//requestLatch = new CountDownLatch(1);
-								
-						ParamAr = new ArrayList();
-						ParamAr.add((String)Utils.filterObject(sIsolateId));
-						ParamAr.add((String)Utils.filterObject(libraryInfo.sLibraryId));
-						if ( libraryInfo.bIsPackage )
-							ParamAr.add((String)"true");
-						else
-							ParamAr.add((String)"false");
-						
-						String[] setLibraryDebuggableMsg = {
-							"method", "setLibraryDebuggable",
-							"params",
-							"isolateId", "[]",
-							"libraryId", "[]",
-							"isDebuggable", "[d",
-							"}"};
-				
-						sReq = ConstructMessage(setLibraryDebuggableMsg);
-						//System.out.println("sReq: '"+sReq+"'");
-						
-						websocket = webSocketObject.getWebSocket();
-						websocket.send(sReq);
-						
-/*						
-						try
-						{
-							requestLatch.await();
-						}
-						catch (InterruptedException ie)
-						{
-						}
-/**/						
-					}	// End for..
-				}
-				catch (WebSocketException wse)
-				{
-					wse.printStackTrace();
 				}
 			}
 		}
@@ -5898,9 +5884,6 @@ public class ADev
 										"}"};
 							
 									sReq = ConstructMessage(evaluateThreeMsg);
-									//System.out.println("sReq: '"+sReq+"'");
-						
-									// Get WebSocket..			
 									websocket = webSocketObject.getWebSocket();
 									websocket.send(sReq);
 							
@@ -6010,183 +5993,124 @@ public class ADev
 			//System.out.println("Exiting UpdateNodesBgThread");
 		}
 	}	//}}}
-	
-	//{{{	ExpandNodeBgThread
-	class ExpandNodeBgThread extends Thread
+
+	//{{{	ExpandBgThread
+	class ExpandBgThread extends Thread
 	{
 		public void run()
 		{
-			//System.out.println("\nExpandNodeBgThread run()");
-			
-			DefaultMutableTreeNode childNode;
-			DefaultMutableTreeNode prevNode;
-			Object nodeObject;
-			NodeFVInfo nodeFVInfo;
-			NodeFVInfo tNodeFVInfo = null;
-			NodeFVInfo currNodeFVInfo;
-			//TreeNode treeNode;
-			VariableInfo variableInfo;
-			String sClassId = "";
-			String sName = "";
-			String sClassName = "";
-			String sClassObjectId = "";
-			String sKind;
-			String sType = "";
-			String sTypeName = "";
-			String sFieldName;
-			String sPropertyName;
-			String sFieldClassId;
-			String sEvalTargetId = "";
-			String sValueAsString = "";
-			String sExpression = "";
-			String sObjectId = "";
-			String sTestId = "";
-			String sTestClassId = "";
-			String sClassTargetId = "";
-			String sSelectedClassId = "";
-			String sSelectedClassName = "";
-			String sSelectedObjectId = "";
-			String sStackObjectId = "";
-			String sStackClassId = "";
-			String sStackClassName = "";
-			String sGetClassId = "";
-			String sGetObjectId = "";
-			String sGetId = "";
-			String sSavedSelectedName = "";
-			String sLib = "";
-			String sLibNm = "";
-			String sPixObjectId = "";
-			String sTestName = "";
-			String sTestClass = "";
+			//System.out.println("\nExpandBgThread run()");
 			String sSelectedName = "";
-			//String sNameString = "";
-			String sSourceName = "";
-			String sPixClassId = "";
-			String sId = "";
+			String sSelectedObjectId = "";
+			String sSelectedClassId = "";
+			String sURI;
+			String sKind = "";
+			String sPropertyName;
 			String sReq;
-			String sT;
+			String sName = "";
+			String sClassId = "";
+			String sObjectId = "";
+			String sClassName = "";
+			String sGetId = "";
+			String sType = "";
+			String sValueAsString = "";
 			String sDisplayClassName = "";
+			String sLength;
+			String sExpression = "";
+			String sStackObjectId = "";
+			String sTypeName = "";
+			String sTarget = "";
+			String sVmType;
+			String sT;
+			String sKey;
+			StringBuffer sB;
 			
-			int iExpandRow;
-			int iArrayIndex = 0;
+			boolean bIsSystemClass = false;
+			boolean bPastFields = false;
+			boolean bElements = false;
+			boolean bIsList;
+			boolean bIsClass = false;
+			boolean bIsObjectList = false;
+			boolean bBoundFieldFinished = false;
+			boolean bFunctionFinished = false;
+			boolean bFromPropertyName;
+			
 			int iLoc2 = 0;
 			int iLoc3 = 0;
-			int iLoc4 = 0;
-			int iLoc5 = 0;
-			int iLoc6 = 0;
+			int iLoc4;
+			int iLoc5;
+			int iLoc6;
 			int iLoc7 = 0;
-			int iLoc8 = 0;
-			int iLoc9 = 0;
-			int iLoc10 = 0;
-			int iLoc11 = 0;
-			int iLoc12 = 0;
-			int iEndFrame = 0;
-			int iEnd = 0;
-			int iSave;
-			int iNextBoundField;
+			int iLoc8;
+			int iLoc9;
+			int iLoc10;
+			int iLoc11;
+			int iLoc12;
+			int iFieldEnd = -1;
+			int iNextBoundField = 0;
+			int iNextFunction = 0;
 			int iSize = 0;
-			boolean bProcess;
-			boolean bCreateChildren = false;
-			boolean bFirst;
-			boolean bIsClass = false;
-			boolean bDidEvaluate;
-			boolean bResolved;
+			int iArrayIndex = 0;
+			int iExpandRow;
+			int iFunctionsEnd = 0;
 			
-			ArrayList tAr;
-			ArrayList tObjectAr;
-/*			
-			if ( currentNode == null )
-				System.out.println("currentNode null");
-			else
-				System.out.println("currentNode not null");
-/**/
+			LinkedHashMap ExpandedNodeLHm = new LinkedHashMap();
+			Set set;
+			Iterator iterator;
+			
+			NodeFVInfo nodeFVInfo;
+			NodeFVInfo tNodeFVInfo = null;
+			NodeFVInfo newNodeFVInfo;
+			Object nodeObject;
+			DefaultMutableTreeNode childNode;
+			
 
-			
 			if ( currentNode != null )
 			{
-
 				nodeObject = (Object)currentNode.getUserObject();
 				nodeFVInfo = (NodeFVInfo)nodeObject;
-/*				
-				System.out.println("\n(currentNode)nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-				System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-				System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-				System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
-				System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-				System.out.println("nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
-				System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
-				System.out.println("nodeFVInfo.bUsesObject: "+nodeFVInfo.bUsesObject);
-				System.out.println("\n");
-/**/				
-				//sClassId = nodeFVInfo.sClassId;
-				sSelectedClassId = nodeFVInfo.sClassId;
 				
-				//sName = nodeFVInfo.sName;
 				sSelectedName = nodeFVInfo.sName;
-				
-				
-				//sClassName = nodeFVInfo.sClassName;
-				sSelectedClassName = nodeFVInfo.sClassName;
-				
-				//sSelectedObjectId = nodeFVInfo.sObjectId;
-/*
-				if ( sSelectedName == null )
-					System.out.println("sSelectedName null");
-				else
-					System.out.println("sSelectedName: '"+sSelectedName+"'");
-/**/
-/*
-				if ( sSelectedClassId == null )
-					System.out.println("sSelectedClassId null");
-				else
-					System.out.println("sSelectedClassId: '"+sSelectedClassId+"'");
-/**/
-/*
-				if ( sSelectedClassName == null )
-					System.out.println("sSelectedClassName null");
-				else
-					System.out.println("sSelectedClassName: '"+sSelectedClassName+"'");
-/**/
+				//System.out.println("sSelectedName: '"+sSelectedName+"'");
+				sSelectedObjectId = nodeFVInfo.sObjectId;
+				//System.out.println("sSelectedObjectId: '"+sSelectedObjectId+"'");
+				sSelectedClassId = nodeFVInfo.sClassId;
+				//System.out.println("sSelectedClassId: '"+sSelectedClassId+"'");
+			}
+			
+			sGetId = sSelectedClassId;
 
-
-/*
-				if ( sSelectedObjectId == null )
-					System.out.println("sSelectedObjectId null");
-				else
-					System.out.println("sSelectedObjectId: '"+sSelectedObjectId+"'");
-/**/
-
-
-
-
-
+			for ( int iIndex = 0; iIndex <= 1; iIndex++ )
+			{
+				//System.out.println("~~TOP~~  iIndex: "+iIndex);
 				try
-				{
+				{	
 					//
-					// getStack
+					// getObject
 					//
 					
 					requestLatch = new CountDownLatch(1);
-							
+		
 					ParamAr = new ArrayList();
 					ParamAr.add((String)Utils.filterObject(sIsolateId));
-					
-					String[] getStackMsg = {
-						"method", "getStack",
+					ParamAr.add((String)Utils.filterObject(sGetId));
+			
+					String[] getObjectDMsg = {
+						"method", "getObject",
 						"params",
 						"isolateId", "[]",
+						"objectId", "[]",
 						"}"};
 			
-					sReq = ConstructMessage(getStackMsg);
-					websocket = webSocketObject.getWebSocket();		// Get WebSocket..
+					sReq = ConstructMessage(getObjectDMsg);
+					websocket = webSocketObject.getWebSocket();
 					websocket.send(sReq);
-					
 				}
 				catch (WebSocketException wse)
 				{
 					wse.printStackTrace();
 				}
-		
+				
 				try
 				{
 					requestLatch.await();
@@ -6195,413 +6119,96 @@ public class ADev
 				{
 				}
 
-				iLoc2 = 0;
-				bFirst = true;
 
-				//System.out.println("iPathCount: "+iPathCount);					
-				if ( iPathCount > 2 )
+				if ( iIndex == 0 )
 				{
-					// Nested Class, so we want to search for
-					// parent Class..
-					
-					// 'sParentClassName' gotten in selection..
-/*					
-					if ( sParentClassName == null )
-						System.out.println("sParentClassName null");
-					else
-						System.out.println("sParentClassName: '"+sParentClassName+"'");
-/**/
-					sSavedSelectedName = sSelectedName;		// Save..						
-					sSelectedName = sParentClassName;
-
-/*					
-					if ( sSelectedName == null )
-						System.out.println("sSelectedName null");
-					else
-						System.out.println("sSelectedName: '"+sSelectedName+"'");
-/**/						
-					
-				}
-				
-
-
-				iLoc2 = g_sMessage.indexOf(FRAME_STRING);
-				if ( iLoc2 != -1 )
-				{
-					// Find start of next Frame, end..
-					iEndFrame = g_sMessage.indexOf(FRAME_STRING, iLoc2 + 2);
-				}
-										
-				iLoc7 = iLoc2;
-				
-				// {"type":"BoundVariable","name":"time","value":{"type":"@Instance","class":{"type":"@Class",
-				// "fixedId":true,"id":"classes\/221","name":"DateTime"},"kind":"PlainInstance",
-				// "id":"objects\/64"},"declarationTokenPos":3333,"scopeStartTokenPos":3333,"scopeEndTokenPos":3441}
-
-				sStackClassName = "";
-				
-				// Get variables in this Frame..											
-				while ( true )
-				{
-					//System.out.println("--TOP-- BoundVariable");
-					// This should collect all Classes
-					// and get their targetId used for evaluate..
-					iLoc7 = g_sMessage.indexOf("BoundVariable", iLoc7);
-					if ( iLoc7 != -1 )
-					{
-						if ( iLoc7 > iEndFrame )
-						{
-							//System.out.println("Past end, breaking");
-							break;
-						}
-
-						// "name":"time"
-						iLoc8 = g_sMessage.indexOf(NAME_STRING, iLoc7);
-						if ( iLoc8 != -1 )
-						{
-							iLoc9 = g_sMessage.indexOf((int)0x22, iLoc8 + 8);
-							if ( iLoc9 != -1 )
-							{
-								//sClassName = g_sMessage.substring(iLoc8 + 8, iLoc9);
-								sStackClassName = g_sMessage.substring(iLoc8 + 8, iLoc9);
-								//System.out.println("sStackClassName: '"+sStackClassName+"'");
-							}
-
-							// Like: 'classes\/221'								
-							iLoc4 = g_sMessage.indexOf("classes", iLoc8);
-							if ( iLoc4 != -1 )
-							{
-								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
-								if ( iLoc5 != -1 )
-								{
-									sStackClassId = g_sMessage.substring(iLoc4, iLoc5);
-									//System.out.println("sStackClassId: '"+sStackClassId+"'");
-									//System.out.println("sGetClassId: '"+sGetClassId+"'");
-								}
-							}
-							
-							// Like: 'objects\/63'
-							iLoc10 = g_sMessage.indexOf("objects", iLoc8);
-							if ( iLoc10 != -1 )
-							{
-								iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10);
-								if ( iLoc11 != -1 )
-								{
-									// We use this as the 'targetId' for
-									// the evaluate for the Class..
-									// Like: 'objects\/41'
-									sStackObjectId = g_sMessage.substring(iLoc10, iLoc11);
-									//System.out.println("sStackObjectId: '"+sStackObjectId+"'");
-								}
-							}
-						}
-
-						//System.out.println("sSelectedName: '"+sSelectedName+"'");	
-						//System.out.println("sStackClassName: '"+sStackClassName+"'");
-						if ( sStackClassName.equals(sSelectedName) )
-						{
-							//System.out.println("Matched sSelectedName: '"+sSelectedName+"' breaking");
-							//System.out.println("(Using)sStackObjectId: '"+sStackObjectId+"'");
-							break;
-						}
-					}
-					else
-						break;
-					
-					iLoc7 += 2;	// Next..
-					
-				}	// End while..
-				
-				//System.out.println("Dropped out");
-										
-				//System.out.println("\n$$$$$$$ Above nested test $$$$$$$");
-				//System.out.println("nodeFVInfo.bUsesObject: "+nodeFVInfo.bUsesObject);
-				//System.out.println("iPathCount: "+iPathCount);
-				bDidEvaluate = false;
-				
-				if ( iPathCount > 2 )
-				//if ( (iPathCount > 2) && (nodeFVInfo.bUsesObject == false) )
-				{
-					//System.out.println("Doing evaluate");
-					// Nested Class..
-					
-					// Note:
-					// For nested Classes we need
-					// to use the parent Classes
-					// Object and Class Ids..
-					
-					//System.out.println("evaluate using sClassTargetId: '"+sClassTargetId+"'");
-					//System.out.println("evaluate using sObjectId: '"+sObjectId+"'");
-					//System.out.println("evaluate using sStackObjectId: '"+sStackObjectId+"'");
-					
-					// Restore..
-					sSelectedName = sSavedSelectedName;
-					bDidEvaluate = true;
-					//System.out.println("(Restored)sSelectedName: '"+sSelectedName+"'");
-
-					try
-					{						
-						//
-						// evaluate
-						//
-						
-						requestLatch = new CountDownLatch(1);
-
-						ParamAr = new ArrayList();
-						ParamAr.add((String)Utils.filterObject(sIsolateId));
-						ParamAr.add((String)Utils.filterObject(sStackObjectId));
-						ParamAr.add((String)sSelectedName);	// expression, like: 'aspectRatio'
-						ParamAr.add((String)"true");		// disableBreakpoints 
-						
-						String[] evaluateMsg = {
-							"method", "evaluate",
-							"params",
-							"isolateId", "[]",
-							"targetId", "[]",
-							"expression", "[]",
-							"disableBreakpoints ", "[d",
-							"}"};
-				
-						sReq = ConstructMessage(evaluateMsg);
-						websocket = webSocketObject.getWebSocket();
-						websocket.send(sReq);
-
-					}
-					catch (WebSocketException wse)
-					{
-						wse.printStackTrace();
-					}
-
-					try
-					{
-						requestLatch.await();
-					}
-					catch (InterruptedException ie)
-					{
-					}
-	
-					// Check for error..
-					iLoc6 = g_sMessage.indexOf(ERROR_STRING);
-					if ( iLoc6 != -1 )
-					{
-						// Error..
-						//System.out.println("*** Evaluate response error ***");
-						iArrayIndex++;
-					}
-					else
-					{
-						iLoc2 = g_sMessage.indexOf("classes");
-						if ( iLoc2 != -1 )
-						{
-							iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2);
-							if ( iLoc3 != -1 )
-							{
-								sStackClassId = g_sMessage.substring(iLoc2, iLoc3);
-								//System.out.println("sStackClassId: '"+sStackClassId+"'");
-							}
-						}
-
-						iLoc2 = g_sMessage.indexOf("objects");
-						if ( iLoc2 != -1 )
-						{
-							iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2);
-							if ( iLoc3 != -1 )
-							{
-								sStackObjectId = g_sMessage.substring(iLoc2, iLoc3);
-								//System.out.println("sStackObjectId: '"+sStackObjectId+"'");
-							}
-						}
-
-						// Note:
-						// With it testing the sStackClassName
-						// for 'this' it can often have an old
-						// value in it, so get 'name' here, and try to use that..
-						
-						iLoc2 = g_sMessage.indexOf(NAME_STRING);
-						if ( iLoc2 != -1 )
-						{
-							iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 8);
-							if ( iLoc3 != -1 )
-							{
-								sStackClassName = g_sMessage.substring(iLoc2 + 8, iLoc3);
-							}
-						}
-					}
-				}
-				
-
-				//tAr = new ArrayList();
-				//System.out.println("\n$$$$$$$$$$$$$$$$$$$$$$$$$");
-				//System.out.println("sStackObjectId: '"+sStackObjectId+"'");
-				//System.out.println("sStackClassId: '"+sStackClassId+"'");
-				//System.out.println("nodeFVInfo.sGetObjectId: '"+nodeFVInfo.sGetObjectId+"'");
-				//System.out.println("sGlobalTestClassId: '"+sGlobalTestClassId+"'");
-				//System.out.println("sGlobalTestObjectId: '"+sGlobalTestObjectId+"'");
-				//System.out.println("sStackClassName: '"+sStackClassName+"'");
-				//System.out.println("bDidEvaluate: "+bDidEvaluate);
-
-/*				
-				if ( sStackClassName == null )
-					System.out.println("sStackClassName null");
-				else
-					System.out.println("sStackClassName: '"+sStackClassName+"'");
-/**/
-
-				bResolved = false;
-				
-				if ( sStackClassName.equals("this") )
-				{
-					bResolved = true;
-					sGetId = sStackObjectId;
-				}
-				else
-					sGetId = sStackClassId;
-
-				do
-				{
-					//System.out.println("--TOP--");
-					//System.out.println("getObject sGetId: '"+sGetId+"'");
-					
-					try
-					{	
-						//
-						// getObject
-						//
-						
-						requestLatch = new CountDownLatch(1);
-			
-						ParamAr = new ArrayList();
-						ParamAr.add((String)Utils.filterObject(sIsolateId));
-						ParamAr.add((String)Utils.filterObject(sGetId));
-				
-						String[] getObjectAMsg = {
-							"method", "getObject",
-							"params",
-							"isolateId", "[]",
-							"objectId", "[]",
-							"}"};
-				
-						sReq = ConstructMessage(getObjectAMsg);
-						websocket = webSocketObject.getWebSocket();
-						websocket.send(sReq);
-
-					}
-					catch (WebSocketException wse)
-					{
-						wse.printStackTrace();
-					}
-					
-					try
-					{
-						requestLatch.await();
-					}
-					catch (InterruptedException ie)
-					{
-					}
-
-					if ( sGetId.startsWith("classes") )	
-					{
-						
-						// {"type":"@Library","fixedId":true,"id":"libraries\
-						// /@24042623","name":"","uri":"package:flutter\/src\/widgets\/framework.dart"}
-						
-						// Determine if it's a Dart Class..
-						iLoc2 = g_sMessage.indexOf("@Library");
-						if ( iLoc2 != -1 )
-						{
-							iLoc3 = g_sMessage.indexOf(URI_STRING, iLoc2);
-							if ( iLoc3 != -1 )
-							{
-								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 7);
-								if ( iLoc4 != -1 )
-								{
-									// Like: "dart:core"
-									sT = g_sMessage.substring(iLoc3 + 7, iLoc4);
-									//System.out.println("(uri)sT: '"+sT+"'");
-									if ( (sT.startsWith("dart:")) || (sT.startsWith("package:flutter")) )
-									{
-										// Done..
-										bResolved = true;
-									}
-									else
-									{
-										// Try again using object Id..
-										sGetId = sStackObjectId;
-									}
-								}
-							}
-						}
-					}
-					else
-					{
-						// Done..
-						bResolved = true;
-					}
-					
-				} while ( bResolved == false );
-
-				//System.out.println("Dropped out");
-				
-				// Note:
-				// In this getObject it looks like,
-				// for Classes, that the @Function/ImplicitGetter
-				// and @Field can contain basically the same data
-
-				iLoc2 = 0;
-				if ( sGetId.startsWith("classes") )
-				{
-					// Note:
-					// This might need improving..
-					// Get Stack Object Id..
-					iLoc2 = g_sMessage.indexOf(TYPECLASS_STRING);
+					iLoc2 = g_sMessage.indexOf(URI_STRING);
 					if ( iLoc2 != -1 )
 					{
-						// "id":"classes\/38"
-						iLoc3 = g_sMessage.indexOf(ID_STRING, iLoc2);	// "id"
+						iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 7);
 						if ( iLoc3 != -1 )
 						{
-							iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 6);
-							if ( iLoc4 != -1 )
+							sURI = g_sMessage.substring(iLoc2 + 7, iLoc3);
+							//System.out.println("\nsURI: '"+sURI+"'");
+							if ( sURI.startsWith("dart:") )
 							{
-								sClassObjectId = g_sMessage.substring(iLoc3 + 6, iLoc4);
-								//System.out.println("(typeClass)sClassObjectId: '"+sClassObjectId+"'");
+								bIsSystemClass = true;
 							}
 						}
 					}
-/*						
-					if ( sClassObjectId == null )
-						System.out.println("sClassObjectId null");
-					else
-						System.out.println("sClassObjectId: '"+sClassObjectId+"'");
-/**/
 				}
-				
-				iLoc2 = g_sMessage.indexOf(FIELDS_STRING, iLoc2);
+
+				iLoc2 = g_sMessage.indexOf(FUNCTIONS_STRING);
 				if ( iLoc2 != -1 )
 				{
-					//System.out.println("Found fields");
-					
+					iFunctionsEnd = g_sMessage.indexOf("]", iLoc2);					
 				}
-					
-				// Note:
-				// In the case of Path, we can get the 'fillType' Property here..
-				// Also, in the case of Path, 'fillType' is only shown here
-				// and NOT in the next getObject result!
+
+				// Skip @Field..				
+				iLoc2 = g_sMessage.indexOf(FIELDS_STRING);
+				if ( iLoc2 != -1 )
+				{
+					iFieldEnd = g_sMessage.indexOf("]", iLoc2);	
+					if ( sGetId.startsWith("classes") )
+					{
+						if ( iFieldEnd != -1 )
+						{
+							iLoc2 = iFieldEnd;
+						}
+					}
+				}
 				
-				// Note:
-				// The main thing we get from this is the
-				// list of property names from @Function
-				
-				//iLoc2 = 0;
-				tObjectAr = new ArrayList();
-				tAr = new ArrayList();
-				
-				//System.out.println("iLoc2: "+iLoc2);
-				
+				bPastFields = false;
+				bBoundFieldFinished = false;
+
 				while ( true )
 				{
 					//System.out.println("--TOP--");
+					
+					if ( sGetId.startsWith("object") )
+					{
+						// Adjust to end..
+						//System.out.println("bBoundFieldFinished: "+bBoundFieldFinished);
+						if ( bBoundFieldFinished )
+						{
+							iLoc2 = iFieldEnd;
+						}
+					}
+					else if ( sGetId.startsWith("classes") )
+					{
+						// Adjust to end..
+						//System.out.println("bBoundFieldFinished: "+bBoundFieldFinished);
+						if ( bFunctionFinished )
+						{
+							iLoc2 = iFunctionsEnd;
+						}
+					}
+					
+					
+					if ( sGetId.startsWith("object") )
+					{
+						iLoc3 = g_sMessage.indexOf("BoundField", iLoc2);
+						if ( iLoc3 != -1 )
+						{
+							;
+						}
+						iLoc3 = g_sMessage.indexOf("Instance", iLoc2);
+						if ( iLoc3 != -1 )
+						{
+							;
+						}
+						else
+						{
+							break;
+						}
+					}
+					
 					iLoc2 = g_sMessage.indexOf(TYPE_STRING, iLoc2);
+					if ( iLoc2 > iFunctionsEnd )
+					{
+						break;
+					}
+					
 					if ( iLoc2 != -1 )
 					{
 						iLoc8 = g_sMessage.indexOf((int)0x22, iLoc2 + 8);
@@ -6612,173 +6219,105 @@ public class ADev
 						}
 					}
 					else
+					{
 						break;
-						
-					if ( sType.equals("@Field") )
-					{
-						// Note:
-						// In most cases we don't want to
-						// add any of these, but in certain cases we do..
-						
-						// "name":"center"
-						iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
-						if ( iLoc6 != -1 )
-						{
-							iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
-							if ( iLoc7 != -1 )
-							{
-								// Note:
-								// In some cases this @Field name
-								// is one of the Properties, so try to add it..
-								sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
-								//System.out.println("(@Field)sName: '"+sName+"'");
-								
-/*								
-								nodeFVInfo = new NodeFVInfo(sName);
-								
-								if ( (sTreeSelectionName != null) && (sTreeSelectionName.length() > 0) )
-								{
-									if ( sTreeSelectionName.equals("this") )
-										nodeFVInfo.bUsesObject = true;
-								}
-								
-								nodeFVInfo.sPropertyName = sName;
-								System.out.println("(@Field)(Add)sPropertyName: '"+sName+"'");
-								tObjectAr.add((NodeFVInfo)nodeFVInfo);
-/**/
-							}
-						}
-						
-						// classes\/3886
-						iLoc8 = g_sMessage.indexOf("classes", iLoc2);
-						if ( iLoc8 != -1 )
-						{
-							iLoc9 = g_sMessage.indexOf((int)0x22, iLoc8);
-							if ( iLoc9 != -1 )
-							{
-								sClassId = g_sMessage.substring(iLoc8, iLoc9);
-								//System.out.println("(@Field)sClassId: '"+sClassId+"'");
-							}
-						}
-						
-						// objects\/411
-						iLoc8 = g_sMessage.indexOf("objects", iLoc2);
-						if ( iLoc8 != -1 )
-						{
-							iLoc9 = g_sMessage.indexOf((int)0x22, iLoc8);
-							if ( iLoc9 != -1 )
-							{
-								sObjectId = g_sMessage.substring(iLoc8, iLoc9);
-								//System.out.println("(@Field)sObjectId: '"+sObjectId+"'");
-							}
-						}
-						
-						iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc8);
-						if ( iLoc6 != -1 )
-						{
-							iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
-							if ( iLoc7 != -1 )
-							{
-								sClassName = g_sMessage.substring(iLoc6 + 8, iLoc7);
-								//System.out.println("(@Field)sClassName: '"+sClassName+"'");
-							}
-						}
 					}
-					else if ( sType.equals("@Function") )
+					
+					if ( iLoc2 > iFieldEnd )
+					{
+						//System.out.println("bPastFields <- true");
+						bPastFields = true;
+					}
+
+					if ( (sType.equals("@Function")) && (bPastFields) )
 					{
 						
-						// {"type":"@Function","fixedId":true,"id":"classes\/221\/functions\/get%3AtimeZoneOff
-						// set","name":"timeZoneOffset","_vmName":"get:timeZoneOffset","owner":{"type":"@Cl
-						// ass","fixedId":true,"id":"classes\/221","name":"DateTime"},"_kind":"GetterFuncti
-						// on","static":false,"const":false,"_intrinsic":false,"_native":false},
-						
-						bProcess = false;
-						
-						iLoc9 = g_sMessage.indexOf(ID_STRING, iLoc2);
-						if ( iLoc9 != -1 )	
+						// {"type":"@Function","fixedId":true,"id":"classes
+						// \/1039\/functions\/get%3Aalpha","name":"alpha","_vmName":"get:alpha","owner":{"t
+						// ype":"@Class","fixedId":true,"id":"classes\/1039","name":"Color"},"_kind":"Gette
+						// rFunction","static":false,"const":false,"_intrinsic":false,"_native":false},
+
+						// Find next one..
+						iNextFunction = g_sMessage.indexOf("@Function", iLoc2 + 12);
+						if ( iNextFunction == -1 )
 						{
-							iLoc10 = g_sMessage.indexOf((int)0x22, iLoc9 + 6);
-							if ( iLoc10 != -1 )
-							{
-								// Like:  'classes\/221\/functions\/get%3AtimeZoneOffset'
-								sId = g_sMessage.substring(iLoc9 + 6, iLoc10);
-								//System.out.println("(@Function)sId: '"+sId+"'");
-							}
-							
+							// Not found..
+							bFunctionFinished = true;
 						}
-						
+
+						// Check if we should ignore..						
+						iLoc7 = g_sMessage.indexOf("get:", iLoc2);
+						if ( iLoc7 != -1 )
+						{
+							iLoc8 = g_sMessage.indexOf((int)0x22, iLoc7);
+							if ( iLoc8 != -1 )
+							{
+								sT = g_sMessage.substring(iLoc7, iLoc8);
+								iLoc11 = sT.indexOf("@");
+								if ( iLoc11 != -1 )
+								{
+									// Find next..
+									if ( iNextFunction != -1 )
+									{
+										// There is a next Function..
+										iLoc2 = iNextFunction - 10;
+									}
+									
+									continue;
+								}
+							}
+						}
+								
 						iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
 						if ( iLoc6 != -1 )
 						{
 							iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
 							if ( iLoc7 != -1 )
 							{
-								// Like:  'timeZoneName'
 								sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
+								//System.out.println("(@Function)sName: '"+sName+"'");
 							}
 						}
 
-						iLoc8 = g_sMessage.indexOf("classes", iLoc6);
-						if ( iLoc8 != -1 )
+						iLoc9 = g_sMessage.indexOf("_kind", iLoc6);
+						if ( iLoc9 != -1 )
 						{
-							iLoc9 = g_sMessage.indexOf((int)0x22, iLoc8);
-							if ( iLoc9 != -1 )
+							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc9 + 8);
+							if ( iLoc5 != -1 )
 							{
-								// Like:  'classes\/221'
-								sClassId = g_sMessage.substring(iLoc8, iLoc9);
-								//System.out.println("(@Function)sClassId: '"+sClassId+"'");
-								
-							}
-						}
-						
-						iLoc3 = g_sMessage.indexOf("_kind", iLoc2);
-						if ( iLoc3 != -1 )
-						{
-							iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 8);
-							if ( iLoc4 != -1 )
-							{
-								sKind = g_sMessage.substring(iLoc3 + 8, iLoc4);
-								//System.out.println("(@Function)sKind: '"+sKind+"'");
+								sKind = g_sMessage.substring(iLoc9 + 8, iLoc5);
 								if ( sKind.equals("GetterFunction") )
-									bProcess = true;
-							}
-						}
-						
-						if ( bProcess )
-						{
-							iLoc3 = g_sMessage.indexOf(NAME_STRING, iLoc2);
-							if ( iLoc3 != -1 )
-							{
-								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 8);
-								if ( iLoc4 != -1 )
 								{
-									sPropertyName = g_sMessage.substring(iLoc3 + 8, iLoc4);
-									//System.out.println("(@Function)(Add)sPropertyName: '"+sPropertyName+"'");
-									
-									tAr.add((String)sPropertyName);
+									//System.out.println("(@Function)sName: '"+sName+"'");
+									//System.out.println("sKind: '"+sKind+"'");
+
+									tNodeFVInfo = new NodeFVInfo(sName);
+									tNodeFVInfo.sPropertyName = sName;
+									//System.out.println("(@Function put())sName: '"+sName+"'");
+									ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
+
 								}
 							}
 						}
+						
+						// Find next..
+						if ( iNextFunction != -1 )
+						{
+							// There is a next Function..
+							iLoc2 = iNextFunction - 10;
+						}
+
 					}
-					else if ( sType.equals("BoundField") )
+					//else if ( (sType.equals("BoundField")) && (bPastFields == false) )
+					else if ( (sType.equals("BoundField")) )
 					{
-						
-						// {"type":"BoundField","decl":{"type":"@Field","fixedId":true,"id":"class
-						// es\/3889\/fields\/name","name":"name","owner":{"type":"@Class","fixedId":true,"i
-						// d":"classes\/3889","name":"SolarBody"},"declaredType":{"type":"@Instance","_vmTy
-						// pe":"Type","class":{"type":"@Class","fixedId":true,"id":"classes\/42","name":"_T
-						// ype","_vmName":"_Type@0150898"},"kind":"Type","fixedId":true,"id":"classes\/160\
-						// /types\/0","typeClass":{"type":"@Class","fixedId":true,"id":"classes\/160","name
-						// ":"String"},"name":"String"},"static":false,"final":true,"const":false},"value":
-						// {"type":"@Instance","_vmType":"String","class":{"type":"@Class","fixedId":true,"
-						// id":"classes\/75","name":"_OneByteString","_vmName":"_OneByteString@0150898"},"k
-						// ind":"String","id":"objects\/121","length":7,"valueAsString":"Mercury"}}
-						
 						// Find next one..
 						iNextBoundField = g_sMessage.indexOf("BoundField", iLoc2 + 19);
-						if ( iNextBoundField != -1 )
+						if ( iNextBoundField == -1 )
 						{
-							
+							// Not found..
+							//System.out.println("No more BoundField");
+							bBoundFieldFinished = true;
 						}
 						
 						// "name":"center"
@@ -6789,39 +6328,84 @@ public class ADev
 							if ( iLoc7 != -1 )
 							{
 								sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
-								//System.out.println("\n(BoundField)sName: '"+sName+"'");
+								//System.out.println("(BoundField)sName: '"+sName+"'");
 								tNodeFVInfo = new NodeFVInfo(sName);
-/*
-								// ???
-								if ( (sTreeSelectionName != null) && (sTreeSelectionName.length() > 0) )
-								{
-									if ( sTreeSelectionName.equals("this") )
-										nodeFVInfo.bUsesObject = true;
-								}
-/**/
 							}
 						}
-						
+
+						// Note:
+						// In object pass, it often doesn't have 'typeClass'
 						// Like: 'classes\/221'
 						iLoc9 = g_sMessage.indexOf(TYPECLASS_STRING, iLoc6);	// Help locate the correct one..
 						if ( iLoc9 != -1 )
 						{
-							iLoc4 = g_sMessage.indexOf("classes", iLoc9);
-							if ( iLoc4 != -1 )
+							iLoc10 = g_sMessage.indexOf("@Class", iLoc9);
+							if ( iLoc10 != -1 )
 							{
-								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
-								if ( iLoc5 != -1 )
+								iLoc4 = g_sMessage.indexOf("classes", iLoc10);
+								if ( iLoc4 != -1 )
 								{
-									sClassId = g_sMessage.substring(iLoc4, iLoc5);
-									//System.out.println("BoundField)sClassId: '"+sClassId+"'");
-									tNodeFVInfo.sClassId = sClassId;
+									iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
+									if ( iLoc5 != -1 )
+									{
+										sClassId = g_sMessage.substring(iLoc4, iLoc5);
+										//System.out.println("sClassId: '"+sClassId+"'");
+										tNodeFVInfo.sClassId = sClassId;
+									}
+								}
+							}
+						}
 
+						// "kind":"List"
+						iLoc4 = g_sMessage.indexOf(KIND_STRING, iLoc9);
+						if ( iLoc4 != -1 )
+						{
+							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
+							if ( iLoc5 != -1 )
+							{
+								sKind = g_sMessage.substring(iLoc4 + 8, iLoc5);
+								//System.out.println("sKind: '"+sKind+"'");
+							}
+
+							if ( sKind.equals("List") )	
+							{
+								bIsList = true;
+								
+								// Get "length"..
+								iLoc12 = g_sMessage.indexOf(LENGTH_STRING, iLoc4);
+								if ( iLoc12 != -1 )
+								{
+									iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
+									if ( iLoc5 != -1 )
+									{
+										sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
+										sLength = sLength.trim();
+										//System.out.println("sLength: '"+sLength+"'");
+										
+										// Construct List display info..
+										sB = new StringBuffer();
+										sB.append("List (");
+										sB.append(sLength);
+										sB.append(" item");
+										if ( sLength.equals("1") )
+											;
+										else
+											sB.append("s");
+										
+										sB.append(")");
+										sDisplayClassName = sB.toString();
+										//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+										tNodeFVInfo.sDisplayClassName = sDisplayClassName;
+									}
 								}
 							}
 						}
 
 						// Like: 'objects\/63'
-						iLoc9 = g_sMessage.indexOf("PlainInstance", iLoc6);	// Help locate correct one..
+						// Note:
+						// Not all have 'PlainInstance'
+						// so use "id"..
+						iLoc9 = g_sMessage.indexOf(ID_STRING, iLoc4);
 						if ( iLoc9 != -1 )
 						{
 							iLoc10 = g_sMessage.indexOf("objects", iLoc9);
@@ -6831,9 +6415,8 @@ public class ADev
 								if ( iLoc11 != -1 )
 								{
 									sObjectId = g_sMessage.substring(iLoc10, iLoc11);
-									//System.out.println("BoundField)sObjectId: '"+sObjectId+"'");
+									//System.out.println("sObjectId: '"+sObjectId+"'");
 									tNodeFVInfo.sObjectId = sObjectId;
-									
 								}
 							}
 						}
@@ -6841,19 +6424,42 @@ public class ADev
 						// Note:
 						// This works for most, but not all..							
 						// Get Class name..
-						//iLoc11 = g_sMessage.indexOf(KIND_STRING, iLoc6);
 						iLoc11 = g_sMessage.indexOf(TYPECLASS_STRING, iLoc6);
 						if ( iLoc11 != -1 )
 						{
 							iLoc12 = g_sMessage.indexOf(NAME_STRING, iLoc11);
 							if ( iLoc12 != -1 )
 							{
-								iLoc9 = g_sMessage.indexOf((int)0x22, iLoc12 + 8);
-								if ( iLoc9 != -1 )
+								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc12 + 8);
+								if ( iLoc7 != -1 )
 								{
-									sClassName = g_sMessage.substring(iLoc12 + 8, iLoc9);
-									//System.out.println("(BoundField)sClassName: '"+sClassName+"'");
+									sClassName = g_sMessage.substring(iLoc12 + 8, iLoc7);
+									//System.out.println("sClassName: '"+sClassName+"'");
 									tNodeFVInfo.sClassName = sClassName;
+								}
+							}
+						}
+
+						// Class:		"@Instance","class"
+						// Non Class: 	"@Instance","_vmType"
+						iLoc8 = g_sMessage.indexOf(VALUE_STRING, iLoc6);	// Help locate..
+						if ( iLoc8 != -1 )
+						{
+							iLoc10 = g_sMessage.indexOf("@Instance", iLoc8);
+							if ( iLoc10 != -1 )
+							{
+								iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10 + 12);
+								if ( iLoc11 != -1 )
+								{
+									sT = g_sMessage.substring(iLoc10 + 12, iLoc11);
+									//System.out.println("(_vmType): '"+sT+"'");
+									if ( sT.equals("_vmType") )
+										;
+									else
+									{
+										//System.out.println("tNodeFVInfo.bIsClass <- true");
+										tNodeFVInfo.bIsClass = true;
+									}
 								}
 							}
 						}
@@ -6875,201 +6481,168 @@ public class ADev
 								// Note:
 								// If it has "valueAsString"
 								// it's not a Class..
-								tNodeFVInfo.bIsClass = false;
-								
-								iLoc9 = g_sMessage.indexOf((int)0x22, iLoc8 + 17);
-								if ( iLoc9 != -1 )
-								{
-									sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc9);
-									//System.out.println("BoundField)sValueAsString: '"+sValueAsString+"'");
-									tNodeFVInfo.sValueAsString = sValueAsString;
-									
-								}
-							}
-							else
-							{
-								tNodeFVInfo.sValueAsString = "";
 								
 								// Note:
-								// If it doesn't have "valueAsString"
-								// it's a Class..
-								tNodeFVInfo.bIsClass = true;
+								// In some cases it IS a Class
+								// but it can also have a "valueAsString"
+								// usually "null"..
+								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc8 + 17);
+								if ( iLoc7 != -1 )
+								{
+									sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc7);
+									//System.out.println("sValueAsString: '"+sValueAsString+"'");
+									tNodeFVInfo.sValueAsString = sValueAsString;
+								}
+							}
+						}
+						
+						//System.out.println("(BoundField put())sName: '"+sName+"'");
+						ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
+						
+						// Find end..
+						if ( iNextBoundField != -1 )
+						{
+							// There is a next BoundField..
+							iLoc2 = iNextBoundField - 10;
+						}
+					}
+					else if ( (sType.equals("@Instance")) )
+					{
+						// List
+						
+						// {"type":"@Instance","class":{"type":"@Class","fixedId":true,"id":"classes\/3887",
+						// "name":"PlanetWidget"},"kind":"PlainInstance","id":"objects\/300"},
+
+						// Construct array index..
+						sB = new StringBuffer();
+						sB.append("[");
+						sB.append(iArrayIndex);
+						sB.append("]");
+						iArrayIndex++;
+						
+						tNodeFVInfo = new NodeFVInfo(sB.toString());
+							
+						// Process List..
+						iLoc7 = g_sMessage.indexOf("classes", iLoc2);		// <- Next pointer..
+						if ( iLoc7 != -1 )
+						{
+							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7);
+							if ( iLoc5 != -1 )
+							{
+								sClassId = g_sMessage.substring(iLoc7, iLoc5);
+								//System.out.println("(@Instance)sClassId: '"+sClassId+"'");
+								tNodeFVInfo.sClassId = sClassId;
+							}
+						}
+
+						// Note:
+						// We want to search for "valueAsString"
+						// If we searched for "objects", next, we might get
+						// "objects\/int-14"					
+						iLoc4 = g_sMessage.indexOf(VALUE_AS_STRING_STRING, iLoc2);
+						if ( iLoc4 != -1 )
+						{
+							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 17);
+							if ( iLoc5 != -1 )
+							{
+								sValueAsString = g_sMessage.substring(iLoc4 + 17, iLoc5);
+								//System.out.println("sValueAsString: '"+sValueAsString+"'");
+								tNodeFVInfo.sValueAsString = sValueAsString;
 							}
 						}
 						else
 						{
-							tNodeFVInfo.sValueAsString = "";
+							bIsObjectList = true;
 							
-							// Note:
-							// If it doesn't have "valueAsString"
-							// it's a Class..
-							tNodeFVInfo.bIsClass = true;
+							// "name":"PlanetWidget"
+							iLoc4 = g_sMessage.indexOf(NAME_STRING, iLoc2);
+							if ( iLoc4 != -1 )
+							{
+								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
+								if ( iLoc5 != -1 )
+								{
+									sClassName = g_sMessage.substring(iLoc4 + 8, iLoc5);
+									//System.out.println("sClassName: '"+sClassName+"'");
+									tNodeFVInfo.sClassName = sClassName;
+								}
+							}
+							
+							iLoc4 = g_sMessage.indexOf("objects", iLoc4);
+							if ( iLoc4 != -1 )
+							{
+								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
+								if ( iLoc5 != -1 )
+								{
+									sObjectId = g_sMessage.substring(iLoc4, iLoc5);
+									//System.out.println("sObjectId: '"+sObjectId+"'");
+									tNodeFVInfo.sObjectId = sObjectId;
+								}
+							}
 						}
 						
-						tObjectAr.add((NodeFVInfo)tNodeFVInfo);
+						//System.out.println("(@Instance put())sB: '"+sB.toString()+"'");
+						ExpandedNodeLHm.put((String)sB.toString(), (NodeFVInfo)tNodeFVInfo);
+						
+						iLoc2 = iLoc4;
+						
 					}
-					
-					// Next..
-					if ( sGetId.startsWith("object") )
-					{
-						iLoc2 = g_sMessage.indexOf("BoundField", iLoc2 + 15);
-						if ( iLoc2 != -1 )
-						{
-							//System.out.println("Found BoundField");
-							iLoc2 -= 10;
-						}
-						else
-							break;
-					}
-					else
-						iLoc2 += 2;
-					
-					
 				}	// End while..
 				
+				if ( sGetId.startsWith("classes") )
+					sGetId = sSelectedObjectId;
 				
-				//System.out.println("Dropped out");
-					
-/*
-				if ( currentNode == null )
-					System.out.println("currentNode null");
-				else
-					System.out.println("currentNode not null");
-/**/
+			}	// End for..
 
-				if ( currentNode != null )
+			//System.out.println("\nDropped out");
+			
+			set = ExpandedNodeLHm.keySet();
+			iterator = set.iterator();
+			
+			while ( true )
+			{
+				//System.out.println("\n**TOP**");
+				if ( iterator.hasNext() )
 				{
-					nodeObject = currentNode.getUserObject();
-					tNodeFVInfo = (NodeFVInfo)nodeObject;
-					//System.out.println("\n(currentNode)tNodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-					//System.out.println("tNodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-					//System.out.println("tNodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-					//System.out.println("tNodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-					//System.out.println("\n");
-				}
-
-				iArrayIndex = 0;
-
-/*				
-				if ( tObjectAr == null )
-					System.out.println("tObjectAr null");
-				else
-					System.out.println("tObjectAr.size(): "+tObjectAr.size());
-/**/
-
-/*
-				if ( tAr == null )
-					System.out.println("tAr null");
-				else
-					System.out.println("tAr.size(): "+tAr.size());
-/**/
-
-
-				if ( (tAr != null) && (tAr.size() > 0) )
-					iSize = tAr.size();
-				
-				if ( (tObjectAr != null) && (tObjectAr.size() > 0) )
-					iSize = tObjectAr.size();
-				
-				
-				for ( ; iArrayIndex < iSize; )
-				{
-					//System.out.println("\n--TOP--  iArrayIndex: "+iArrayIndex);
+					sKey = (String)iterator.next();
+					//System.out.println("sKey: '"+sKey+"'");
 					
-/*
-					if ( nodeFVInfo == null )
-						System.out.println("nodeFVInfo null");
-					else
-						System.out.println("nodeFVInfo not null");
-/**/						
+					nodeFVInfo = (NodeFVInfo)ExpandedNodeLHm.get((String)sKey);
 
+					//System.out.println("\nnodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
+					//System.out.println("nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
+					//System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
+					//System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
+					//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
+					//System.out.println("nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
+					//System.out.println("nodeFVInfo.sDisplayClassName: '"+nodeFVInfo.sDisplayClassName+"'");
+					//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
 
-/*
-					sEvalTargetId = "";
+					sValueAsString = "";
+					bFromPropertyName = false;
 					
-					if ( currentNode != null )
+					// Process 'sPropertyName'..					
+					if ( (nodeFVInfo.sPropertyName != null) && (nodeFVInfo.sPropertyName.length() > 0) )
 					{
-						nodeObject = currentNode.getUserObject();
-						nodeFVInfo = (NodeFVInfo)nodeObject;
-						System.out.println("(currentNode)nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-						System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-						System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-						System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-						System.out.println("\n");
-						
-						variableInfo = (VariableInfo)VariableInfoLHm.get((String)nodeFVInfo.sName);
-						
-						
-						//if ( variableInfo == null )
-							//System.out.println("variableInfo null");
-						//else
-							//System.out.println("variableInfo not null");
-							
-						if ( variableInfo != null )
-						{
-							//System.out.println("variableInfo.bIsClass: "+variableInfo.bIsClass);
-							
-							//if ( variableInfo.bIsClass )
-							{
-								//System.out.println("bIsClass, doing continue");
-								//iArrayIndex++;
-								//continue;
-							//}
+				
+						sExpression = nodeFVInfo.sName;
 
-							// Load/update for enum..
-							//nodeFVInfo.sTargetId = variableInfo.sStackObjectId;
-							nodeFVInfo.sTargetId = variableInfo.sObjectId;
-							currentNode.setUserObject((NodeFVInfo)nodeFVInfo);
-							
-							//sEvalTargetId = variableInfo.sStackObjectId;
-							sEvalTargetId = variableInfo.sObjectId;
-						}
-						else
-						{
-							//System.out.println("variableInfo null, breaking");
-							//break;
-							
-							sEvalTargetId = nodeFVInfo.sTargetId;
-							
-						}
-					}
-/**/
-
-					//System.out.println("sSelectedClassName: '"+sSelectedClassName+"'");
-					
-					
-					//System.out.println("sGetId: '"+sGetId+"'");				
-					if ( sGetId.startsWith("classes") )
-					{
-						sExpression = (String)tAr.get(iArrayIndex);
-
-					
-/*	
+/*
 						if ( sExpression == null )
 							System.out.println("sExpression null");
 						else
 							System.out.println("sExpression: '"+sExpression+"'");
 /**/
 
-/*
-						if ( sEvalTargetId == null )
-							System.out.println("sEvalTargetId null");
+						sObjectId = sSelectedObjectId;
+
+/*						
+						if ( sObjectId == null )
+							System.out.println("sObjectId null");
 						else
-							System.out.println("sEvalTargetId: '"+sEvalTargetId+"'");
-/**/					
-/*		
-						if ( sStackObjectId == null )
-							System.out.println("sStackObjectId null");
-						else
-							System.out.println("sStackObjectId: '"+sStackObjectId+"'");
+							System.out.println("sObjectId: '"+sObjectId+"'");
 /**/					
 		
-						//System.out.println("At H");
 		
-						// Note:
-						// It looks like the 'targetId' parameter
-						// is the Classes "id", like: "id":"objects\/124",
-						// from the getStack result
 		
 						try
 						{				
@@ -7081,7 +6654,7 @@ public class ADev
 									
 							ParamAr = new ArrayList();
 							ParamAr.add((String)Utils.filterObject(sIsolateId));
-							ParamAr.add((String)Utils.filterObject(sStackObjectId));	// targetId, like: 'objects\/41'
+							ParamAr.add((String)Utils.filterObject(sObjectId));	// targetId, like: 'objects\/41'
 							ParamAr.add((String)sExpression);	// expression, like: 'aspectRatio'
 							ParamAr.add((String)"true");		// disableBreakpoints 
 							
@@ -7122,17 +6695,7 @@ public class ADev
 						}
 						else
 						{
-						
-							// Note:
-							// It looks like the way to tell that 'flipped'
-							// is a Class, it to look at the result here.
-							
-							// Variables will have:
-							// {"type":"@Instance","_vmType"
-							
-							// And 'flipped' has:
-							// {"type":"@Instance","class"
-							
+							bFromPropertyName = true;
 							
 							// {"jsonrpc":"2.0", "result":{"type":"@Instance","class":{"type":"@Class","fixedId":true,
 							// "id":"classes\/222","name":"Duration"},"kind":"PlainInstance","id":"objects\/127"},"id":"497"}
@@ -7142,7 +6705,8 @@ public class ADev
 							// "_vmName":"_Smi@0150898"},"kind":"Int","fixedId":true,"id":"objects\/int-2179",
 							// "valueAsString":"2179"},"id":"498"}
 							
-							sValueAsString = "";
+							//sValueAsString = "";
+							bIsClass = false;
 		
 							// Check for 'class' / '_vmType'
 							iLoc3 = g_sMessage.indexOf("@Instance");
@@ -7166,7 +6730,7 @@ public class ADev
 											{
 												// Like:  'Duration'
 												sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
-												//System.out.println("sTypeName: '"+sTypeName+"'");
+												//System.out.println("(PropertyName)sTypeName: '"+sTypeName+"'");
 											}
 										}
 									}
@@ -7175,10 +6739,11 @@ public class ADev
 										bIsClass = false;
 									}
 								}
+								
+								//System.out.println("(PropertyName)bIsClass: "+bIsClass);
 							}
 							
 							// Get value..	
-							
 							iLoc5 = g_sMessage.indexOf(KIND_STRING, iLoc3);		// Help locate '}'..
 							if ( iLoc5 != -1 )
 							{
@@ -7194,112 +6759,180 @@ public class ADev
 											if ( iLoc4 != -1 )
 											{
 												sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
-												//System.out.println("sValueAsString: '"+sValueAsString+"'");
+												//System.out.println("(PropertyName)sValueAsString: '"+sValueAsString+"'");
 											}
 										}
 									}
 								}
 							}
+							
+							iLoc7 = g_sMessage.indexOf("classes", iLoc3);
+							if ( iLoc7 != -1 )
+							{
+								iLoc6 = g_sMessage.indexOf((int)0x22, iLoc7);
+								if ( iLoc6 != -1 )
+								{
+									sClassId = g_sMessage.substring(iLoc7, iLoc6);
+									//System.out.println("(PropertyName)sClassId: '"+sClassId+"'");
+								}
+							}
+							
+							iLoc5 = g_sMessage.indexOf("objects", iLoc5);
+							if ( iLoc5 != -1 )
+							{
+								iLoc6 = g_sMessage.indexOf((int)0x22, iLoc5);
+								if ( iLoc6 != -1 )
+								{
+									sObjectId = g_sMessage.substring(iLoc5, iLoc6);
+									//System.out.println("(PropertyName)sObjectId: '"+sObjectId+"'");
+								}
+							}
 						}
 					}
-
-/*
-					if ( currentNode == null )
-						System.out.println("currentNode null");
-					else
-						System.out.println("currentNode not null");
-/**/
-
+					
 					if ( currentNode != null )
 					{
 						//System.out.println("--Create--");
-						
-						// Get targetId..								
-						Object tObject = currentNode.getUserObject();
-						//nodeFVInfoTwo = (NodeFVInfo)tObject;
-						currNodeFVInfo = (NodeFVInfo)tObject;
-						//System.out.println("(currentNode)nodeFVInfoTwo.sName: '"+nodeFVInfoTwo.sName+"'");
-						//System.out.println("currentNode)nodeFVInfoTwo.sClassName: '"+nodeFVInfoTwo.sClassName+"'");
-						//System.out.println("currentNode)nodeFVInfoTwo.sClassId: '"+nodeFVInfoTwo.sClassId+"'");
-						//System.out.println("currentNode)nodeFVInfoTwo.sTargetId: '"+nodeFVInfoTwo.sTargetId+"'");
-						
-						//String sTarget = nodeFVInfoTwo.sTargetId;
-						String sTarget = currNodeFVInfo.sTargetId;
-						
-						//System.out.println("sTarget: '"+sTarget+"'");
-						
+						//System.out.println("sGetId: '"+sGetId+"'");
 						if ( sGetId.startsWith("objects") )
 						{
-							tNodeFVInfo = (NodeFVInfo)tObjectAr.get(iArrayIndex);
-							sExpression = tNodeFVInfo.sName;
-							sValueAsString = tNodeFVInfo.sValueAsString;
-							sTypeName = tNodeFVInfo.sClassName;
-							bIsClass = tNodeFVInfo.bIsClass;
-							sDisplayClassName = tNodeFVInfo.sDisplayClassName;
-
+							// These are from BoundField and @Instance..
+							sExpression = nodeFVInfo.sName;
+							
+							if ( bFromPropertyName )
+							{
+								;
+							}
+							else
+							{
+								bIsClass = nodeFVInfo.bIsClass;
+								sValueAsString = nodeFVInfo.sValueAsString;
+								sTypeName = nodeFVInfo.sClassName;
+								sObjectId = nodeFVInfo.sObjectId;
+								sClassId = nodeFVInfo.sClassId;
+							}
+							
+							//System.out.println("(Final)sValueAsString: '"+sValueAsString+"'");
+							
+							sDisplayClassName = nodeFVInfo.sDisplayClassName;
+	
 						}
 						
-						//System.out.println("sExpression: '"+sExpression+"'");
+						//System.out.println("\nsExpression: '"+sExpression+"'");
+						//System.out.println("sObjectId: '"+sObjectId+"'");
+						//System.out.println("sClassId: '"+sClassId+"'");
 						//System.out.println("sValueAsString: '"+sValueAsString+"'");
-						//System.out.println("sTypeName: '"+sTypeName+"'");
+						//System.out.println("sClassName: '"+sClassName+"'");
+						//System.out.println("(sClassName)sTypeName: '"+sTypeName+"'");
 						//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
 						//System.out.println("sType: '"+sType+"'");
 						//System.out.println("bIsClass: "+bIsClass);
 						//System.out.println("sObjectId: '"+sObjectId+"'");
-						//System.out.println("sGetObjectId: '"+sGetObjectId+"'");
+						//System.out.println("sObjectId: '"+sObjectId+"'");
+						//System.out.println("sTypeName: '"+sTypeName+"'");
 						//System.out.println("\n");
 						
-						nodeFVInfo = new NodeFVInfo(sExpression);
-						//nodeFVInfo.sTargetId = sObjectId;
-						nodeFVInfo.sTargetId = sTarget;
-
-						//System.out.println("bIsClass: "+bIsClass);						
-						if ( bIsClass )
+						newNodeFVInfo = new NodeFVInfo(sExpression);
+						newNodeFVInfo.sTargetId = sTarget;
+						newNodeFVInfo.sObjectId = sObjectId;
+						newNodeFVInfo.sClassId = sClassId;
+	
+						//System.out.println("bIsClass: "+bIsClass);	
+						//System.out.println("bIsObjectList: "+bIsObjectList);
+						//if ( bIsClass )
+						if ( bIsClass || bIsObjectList )
 						{
-							nodeFVInfo.bIsClass = true;
-							nodeFVInfo.sValueAsString = sTypeName;
-							nodeFVInfo.sClassName = sTypeName;
+							newNodeFVInfo.bIsClass = true;
+
+							// Note:
+							// Even if it's a Class
+							// it can sometimes have a valid "valueAsString"
+							// of "null"..
+/*							
+							if ( sValueAsString == null )
+								System.out.println("sValueAsString null");
+							else
+							{
+								System.out.println("sValueAsString.length(): "+sValueAsString.length());
+								System.out.println("sValueAsString: '"+sValueAsString+"'");
+							}
+/**/							
+							if ( (sValueAsString != null) && (sValueAsString.length() > 0) )
+								newNodeFVInfo.sValueAsString = sValueAsString;
+							else
+								newNodeFVInfo.sValueAsString = sTypeName;
+							
+							//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
+							
+							newNodeFVInfo.sClassName = sTypeName;
 						}
 						else
 						{
-							nodeFVInfo.bIsClass = false;
-							nodeFVInfo.sValueAsString = sValueAsString;
+							newNodeFVInfo.bIsClass = false;
+/*							
+							if ( sDisplayClassName == null )
+								System.out.println("sDisplayClassName null");
+							else
+								System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+/**/	
+	
+/*
+							if ( sValueAsString == null )
+								System.out.println("sValueAsString null");
+							else
+								System.out.println("sValueAsString: '"+sValueAsString+"'");
+/**/								
+	
+							if ( (sDisplayClassName != null) && (sDisplayClassName.length() > 0) &&
+									(! sDisplayClassName.equals("null")) )
+							{
+								newNodeFVInfo.sValueAsString = sDisplayClassName;
+							}
+							else if ( (sValueAsString != null) && (sValueAsString.length() > 0) )
+							{
+								newNodeFVInfo.sValueAsString = sValueAsString;
+							}
+							else
+							{
+								// Note:
+								// This is the case where it wouldn't
+								// have a value..
+								newNodeFVInfo.sValueAsString = sTypeName;
+							}
+	
 						}
-
-/*						
-						System.out.println("Final ----------------------------");
-						System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-						System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-						System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-						System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-						System.out.println("nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
-						System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
+	
+						//System.out.println("Final ----------------------------");
+						//System.out.println("newNodeFVInfo.sName: '"+newNodeFVInfo.sName+"'");
+						//System.out.println("newNodeFVInfo.sClassName: '"+newNodeFVInfo.sClassName+"'");
+						//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
+						//System.out.println("newNodeFVInfo.sObjectId: '"+newNodeFVInfo.sObjectId+"'");
+						//System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
+						//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
+						//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
 /**/
-
-						childNode = new DefaultMutableTreeNode(nodeFVInfo);
+	
+						childNode = new DefaultMutableTreeNode(newNodeFVInfo);
 						currentNode.add(childNode);
-						iArrayIndex++;
 					}
-
-				}	// End for..
-
-					
-				//
-				// Expand the row..
-				//
+				}
+				else
+					break;
 				
-				TreePath treePath = variableJTree.getSelectionPath();
-				iExpandRow = variableJTree.getRowForPath(treePath);
-				
-				// We've finished creating the children
-				// so expand that node..
-				//System.out.println("iExpandRow: "+iExpandRow);
-				variableJTree.expandRow(iExpandRow);	// Zero based..
+			}	// End while..
 
-			}
+				
+			//
+			// Expand the row..
+			//
 			
-			//System.out.println("Exiting ExpandNodeBgThread");
+			TreePath treePath = variableJTree.getSelectionPath();
+			iExpandRow = variableJTree.getRowForPath(treePath);
 			
+			//System.out.println("iExpandRow: "+iExpandRow);
+			variableJTree.expandRow(iExpandRow);	// Zero based..
+			
+			//System.out.println("Exiting ExpandBgThread");
 		}
 	}	//}}}
 
@@ -7349,6 +6982,8 @@ public class ADev
 			boolean bDoGetStack = false;
 			boolean bFound;
 			boolean bFirst = true;
+			boolean bMatched;
+			
 			int iLoc2 = 0;
 			int iLoc3 = 0;
 			int iLoc4;
@@ -7367,24 +7002,27 @@ public class ADev
 			int iExpandRow = 0;
 			int iEndFrame = 0;
 			int iSave;
+			int iCount;
+			
 			ArrayList tAr = null;
-			//ArrayList classInfoAr = null;
 			VariableInfo variableInfo = null;
 			Set set;
 			Iterator iterator;
 			
 			
-			//JTreeClassInfo jTreeClassInfo;
 			NodeFVInfo nodeFVInfo = null;
 			NodeFVInfo nodeFVInfoTwo;
+			NodeFVInfo tNodeFVInfo;
 			DefaultMutableTreeNode node = null;
 			DefaultMutableTreeNode childNode;
 			DefaultMutableTreeNode root = null;
 			DefaultMutableTreeNode child = null;
-			//DefaultMutableTreeNode topNode = null;
 			DefaultTreeModel model = null;
 			Enumeration enumeration = null;
 			Object nodeObject;
+			Object rootObject;
+			Object dataObject;
+			TreeModel treeModel;
 			
 			// Like: 'libraries\/@477433113\/scripts\/package%3Aflutter%2Fsrc
 			// %2Fwidgets%2Fvalue_listenable_builder.dart\/16f0547fbd8'
@@ -7411,25 +7049,47 @@ public class ADev
 				System.out.println("variableJTree not null");
 /**/			
 
+/*
+			if ( VariableInfoLHm == null )
+				System.out.println("VariableInfoLHm null");
+			else
+				System.out.println("VariableInfoLHm.size(): "+VariableInfoLHm.size());
+/**/
+
 			if ( variableJTree != null )	
 			{
 				boolean bAddChild;
 				model = (DefaultTreeModel)variableJTree.getModel();
 				root = (DefaultMutableTreeNode)model.getRoot();
+				
+				//System.out.println("(root.getChildCount()): "+root.getChildCount());
 /*				
 				if ( root == null )
 					System.out.println("root null");
 				else
 					System.out.println("root not null");
-/**/				
-				enumeration = root.children();
+/**/
 
+				tAr = new ArrayList();
+				treeModel = variableJTree.getModel();
+				rootObject = treeModel.getRoot();
+		
+				iCount = treeModel.getChildCount(rootObject);
+				
+				for ( int iJ = 0; iJ < iCount; iJ++ )
+				{
+					//System.out.println("--TOP-- iJ: "+iJ);
+					nodeObject = treeModel.getChild(rootObject, iJ);
+					dataObject = ((DefaultMutableTreeNode)nodeObject).getUserObject();
+					tNodeFVInfo = (NodeFVInfo)dataObject;
+					//System.out.println("tNodeFVInfo.sName: '"+tNodeFVInfo.sName+"'");
+					tAr.add((NodeFVInfo)tNodeFVInfo);
+				}
+				
+				
+				enumeration = root.children();
 				set = VariableInfoLHm.keySet();
 				iterator = set.iterator();
-				//bFirst = true;
-				
-				// Try to keep the nodes and the
-				// variables in sync..
 				
 				while ( true )
 				{
@@ -7439,6 +7099,7 @@ public class ADev
 						sKey = (String)iterator.next();
 						//System.out.println("(next())sKey: '"+sKey+"'");
 						bAddChild = false;
+						bMatched = false;
 						
 						try
 						{
@@ -7455,40 +7116,40 @@ public class ADev
 /**/								
 								bFirst = false;
 							}
-/**/							
-							nodeObject = (Object)node.getUserObject();
-							nodeFVInfo = (NodeFVInfo)nodeObject;
-							sName = nodeFVInfo.sName;
-							//System.out.println("(nextElement())sName: '"+sName+"'");
-
-							// Already have?							
-							if ( sName.equals(sKey) )
+							
+							if ( (tAr != null) && (tAr.size() > 0) )
 							{
-								//System.out.println("(Already have)sName equals sKey");
-								//System.out.println("node.isLeaf(): "+node.isLeaf());
-								
-								//System.out.println("Doing continue");
-								continue;
+								for ( int iZ = 0; iZ < tAr.size(); iZ++ )
+								{
+									tNodeFVInfo = (NodeFVInfo)tAr.get(iZ);
+									//System.out.println("tNodeFVInfo.sName: '"+tNodeFVInfo.sName+"'");
+									if ( sKey.equals(tNodeFVInfo.sName) )
+									{
+										//System.out.println("--MATCHED--");
+										bMatched = true;
+										break;
+									}
+								}
 							}
-							else
+							
+							if ( bMatched )
 							{
-								// Node and element didn't
-								// match, so remove node..
-								//System.out.println("Node and element don't match");
-								;
+								continue;
 							}
 						}
 						catch (NoSuchElementException nsee)
 						{
 							// No matching node, so add it..
 							//System.out.println("NoSuchElementException");
-							bAddChild = true;
-							
 						}
+						
+						if ( bMatched == false )
+							bAddChild = true;
 
 						//System.out.println("bAddChild: "+bAddChild);						
 						if ( bAddChild )
 						{
+							//System.out.println("\n--- Add Child ---");
 							variableInfo = (VariableInfo)VariableInfoLHm.get((String)sKey);
 							//System.out.println("(get())sKey: '"+sKey+"'");
 							
@@ -7501,9 +7162,7 @@ public class ADev
 							nodeFVInfo.sClassName = variableInfo.sClassName;
 							nodeFVInfo.sClassId = variableInfo.sClassId;
 							nodeFVInfo.bIsClass = variableInfo.bIsClass;
-							//nodeFVInfo.sObjectId = variableInfo.sId;
 							nodeFVInfo.sObjectId = variableInfo.sObjectId;
-							//System.out.println("(nodeFVInfo.sObjectId)variableInfo.sId: '"+variableInfo.sId+"'");
 
 							// Note:
 							// In the case of 'List'
@@ -7535,20 +7194,6 @@ public class ADev
 							else
 							{
 								// Class variable..
-/*
-								sDisplayClassName = variableInfo.sDisplayClassName;
-								
-								if ( sDisplayClassName == null )
-									System.out.println("sDisplayClassName null");
-								else
-									System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
-								
-								if ( (sDisplayClassName != null) && (sDisplayClassName.length() > 0) &&
-										(! sDisplayClassName.equals("null")) )
-								{
-									nodeFVInfo.sValueAsString = sDisplayClassName;
-								}
-/**/								
 								// Signal that we have a new Class
 								// and we should do a getStack..
 								bDoGetStack = true;
@@ -7556,11 +7201,6 @@ public class ADev
 							
 							//System.out.println("(Final)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
 							
-/*							
-							if ( ((variableInfo.sValueAsString != null) && (variableInfo.sValueAsString.length() > 0))
-									&& (! variableInfo.sValueAsString.equals("null")) )
-								nodeFVInfo.sValueAsString = variableInfo.sValueAsString;
-/**/							
 							child = new DefaultMutableTreeNode(nodeFVInfo);
 								
 							((DefaultTreeModel)variableJTree.getModel()).
@@ -7570,7 +7210,6 @@ public class ADev
 									root.getChildCount());	// index
 							
 						}
-						
 					}
 					else
 					{
@@ -7579,6 +7218,8 @@ public class ADev
 					}
 					
 				}	// End while..
+				
+				//System.out.println("Dropped out");
 			}
 			
 
@@ -7588,7 +7229,6 @@ public class ADev
 			// we should do a getStack..
 			
 			// Children already created..
-			//enumeration = currentNode.children();
 
 			
 			try
@@ -7664,7 +7304,6 @@ public class ADev
 				while ( true )
 				{
 					//System.out.println("**TOP**");
-					
 /*					
 					if ( enumeration == null )
 						System.out.println("enumeration null");
@@ -7708,12 +7347,14 @@ public class ADev
 						//System.out.println("enumeration breaking");
 						break;
 					}
+					
 /*
 					if ( sExpression == null )
 						System.out.println("sExpression null");
 					else
 						System.out.println("sExpression: '"+sExpression+"'");
 /**/
+
 /*
 					if ( sEvalTargetId == null )
 						System.out.println("sEvalTargetId null");
@@ -7850,7 +7491,6 @@ public class ADev
 			{
 				
 				TreePath treePath = variableJTree.getSelectionPath();
-				//int iXRow = variableJTree.getRowForPath(treePath);
 				iExpandRow = variableJTree.getRowForPath(treePath);
 				
 				// We've finished creating the children
@@ -7910,6 +7550,51 @@ public class ADev
 			actListener.actionPerformed(ae);
 
 		}
+	}	//}}}
+
+	//{{{	WalkTree()	
+	public void WalkTree()
+	{
+		System.out.println("\nWalkTree()");
+		Object nodeObject;
+		Object rootObject;
+		Object dataObject;
+		int iCount;
+		TreeModel treeModel;
+		NodeFVInfo nodeFVInfo;
+		
+		treeModel = variableJTree.getModel();
+		rootObject = treeModel.getRoot();
+/*		
+		if ( rootObject == null )
+			System.out.println("rootObject null");
+		else
+			System.out.println("rootObject not null");
+/**/		
+		iCount = treeModel.getChildCount(rootObject);
+		System.out.println("iCount: "+iCount);
+		
+		for ( int iJ = 0; iJ < iCount; iJ++ )
+		{
+			System.out.println("--TOP-- iJ: "+iJ);
+			nodeObject = treeModel.getChild(rootObject, iJ);
+
+			if ( nodeObject == null )
+				System.out.println("nodeObject null");
+			else
+				System.out.println("nodeObject not null");
+			
+			dataObject = ((DefaultMutableTreeNode)nodeObject).getUserObject();
+			nodeFVInfo = (NodeFVInfo)dataObject;
+			
+			System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
+			System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
+			System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
+			System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
+			
+		}
+		
+		
 	}	//}}}
 	
 	//{{{	CheckKeystorePasswords
@@ -8734,7 +8419,7 @@ public class ADev
 			//System.out.println("Exiting ReleaseBgThread run()");
 		}
 	}	//}}}
-
+	
 	//{{{	ShowProgressTask
 	class ShowProgressTask extends SwingWorker
 	{
@@ -9222,13 +8907,16 @@ public class ADev
 		int iLoc6;
 		
 		VariableInfoLHm = new LinkedHashMap();
-		//eventStack = new Stack();
+		SelectedNodesLHm = new LinkedHashMap();
 		eventQueue = new LinkedList();
 		sVariablesScriptId = "";
 		iPauseBreakpointTokenPos = 0;
 		iTokenPosLine = 0;
 		iPreviousLine = 0;
 		sTreeSelectionName = "";
+		bFlutterSetLibraryDebuggableStarted = false;
+		iLibraryStartIndex = 0;
+		
 		
 		try
 		{
@@ -9276,17 +8964,12 @@ public class ADev
 				
 			// Establish WebSocket Connection
 			websocket.connect();
-			//System.out.println("Past connect()");
-
 			
 			webSocketObject = new WebSocketObject(websocket);
 			
 			//
 			// getVersion
 			// 
-			
-			//completeLatch = new CountDownLatch(1);
-			//requestLatch = new CountDownLatch(1);
 			
 			String[] getVersionMsg = {
 				"method", "getVersion",
@@ -9296,23 +8979,11 @@ public class ADev
 			websocket = webSocketObject.getWebSocket();
 			websocket.send(sReq);
 
-/*			
-			try
-			{
-				requestLatch.await();
-				//completeLatch.await();
-			}
-			catch (InterruptedException ie)
-			{
-			}
-/**/
 
 			//
 			// streamListen, Debug
 			//
 	
-			//completeLatch = new CountDownLatch(1);
-			//requestLatch = new CountDownLatch(1);
 			
 			ParamAr = new ArrayList();
 			ParamAr.add((String)"Debug");
@@ -9326,22 +8997,10 @@ public class ADev
 			sReq = ConstructMessage(getStreamListen1Msg);
 			websocket = webSocketObject.getWebSocket();
 			websocket.send(sReq);
-/*
-			try
-			{
-				//completeLatch.await();
-				requestLatch.await();
-			}
-			catch (InterruptedException ie)
-			{
-			}
-/**/	
+			
 			//
 			// streamListen, Isolate
 			//
-			
-			//completeLatch = new CountDownLatch(1);
-			//requestLatch = new CountDownLatch(1);
 			
 			ParamAr = new ArrayList();
 			ParamAr.add((String)"Isolate");
@@ -9356,21 +9015,10 @@ public class ADev
 			websocket = webSocketObject.getWebSocket();
 			websocket.send(sReq);
 			
-/*
-			try
-			{
-				//completeLatch.await();
-				requestLatch.await();
-			}
-			catch (InterruptedException ie)
-			{
-			}
-/**/
 			//
 			// getVM, get isolateId
 			//
 			
-			//completeLatch = new CountDownLatch(1);
 			requestLatch = new CountDownLatch(1);
 	
 			String[] getVMMsg = {
@@ -9383,7 +9031,6 @@ public class ADev
 	
 			try
 			{
-				//completeLatch.await();
 				requestLatch.await();
 			}
 			catch (InterruptedException ie)
@@ -9405,7 +9052,6 @@ public class ADev
 			// getIsolate
 			//
 			
-			//completeLatch = new CountDownLatch(1);
 			requestLatch = new CountDownLatch(1);
 					
 			ParamAr = new ArrayList();
@@ -9423,7 +9069,6 @@ public class ADev
 	
 			try
 			{
-				//completeLatch.await();
 				requestLatch.await();
 			}
 			catch (InterruptedException ie)
@@ -9442,6 +9087,7 @@ public class ADev
 					//System.out.println("sPackageString: '"+sPackageString+"'");
 				}
 			}
+			
 			
 			// Collect libraries..
 			LibraryAr = new ArrayList();
@@ -9495,17 +9141,49 @@ public class ADev
 					
 				}	// End while..
 			}
-			
 
 			
-/*
-			getPackageName();
+			if ( (LibraryAr != null) && (LibraryAr.size() > 0) )
+			{
+				try
+				{
+					for ( int iZ = 0; iZ < LibraryAr.size(); iZ++ )
+					{
+						libraryInfo = (LibraryInfo)LibraryAr.get(iZ);
+					
+						//
+						// setLibraryDebuggable
+						//
+						
+						ParamAr = new ArrayList();
+						ParamAr.add((String)Utils.filterObject(sIsolateId));
+						ParamAr.add((String)Utils.filterObject(libraryInfo.sLibraryId));
+						if ( libraryInfo.bIsPackage )
+							ParamAr.add((String)"true");
+						else
+							ParamAr.add((String)"false");
+						
+						String[] setLibraryDebuggableMsg = {
+							"method", "setLibraryDebuggable",
+							"params",
+							"isolateId", "[]",
+							"libraryId", "[]",
+							"isDebuggable", "[d",
+							"}"};
+				
+						sReq = ConstructMessage(setLibraryDebuggableMsg);
+						websocket = webSocketObject.getWebSocket();
+						websocket.send(sReq);
+						
+					}	// End for..
+				}
+				catch (WebSocketException wse)
+				{
+					wse.printStackTrace();
+				}
+			}
+
 			
-			if ( packageNameS == null )
-				System.out.println("packageNameS null");
-			else
-				System.out.println("packageNameS: '"+packageNameS+"'");
-/**/
 			//
 			// getScripts, get scriptId(s)
 			//
@@ -9606,37 +9284,21 @@ public class ADev
 		
 		variableJTree.setEditable(false);
 		variableJTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-		
 		variableJTree.setShowsRootHandles(false);
-		
 		variableJTree.addTreeSelectionListener(variableSelectionListener);
 		
-		//treeScrollPane = new JScrollPane(jTree);
-		//variableTreeScrollPane = new JScrollPane(jTree);
-		//variableTreeScrollPane = new JScrollPane(variableJTree);
 		variableTreeScrollPane = new JScrollPane(variableJTree,
 			JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 			JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		
 		// Need to set the size before it gets added..
-		//Rectangle rect = jTree.getRowBounds(0);
-		//rect = jTree.getRowBounds(0);
 		Rectangle rect = variableJTree.getRowBounds(0);
 		
-		//treeScrollPane.setPreferredSize(new Dimension((int)(iChrW * 42), (int)((rect.height + 1) * 8)));
 		variableTreeScrollPane.setPreferredSize(new Dimension((int)(iChrW * 42), (int)((rect.height + 1) * 8)));
 		variableJTree.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));		// top, left, bottom, right
 		
-		//horzSplitPane.setLeftComponent(treeScrollPane);
-		//horzSplitPane.setRightComponent(treeScrollPane);
 		horzSplitPane.setRightComponent(variableTreeScrollPane);
 
-		libraryBgThread = new LibraryBgThread();
-		libraryBgThread.start();
-/**/
-
-
-		
 		//System.out.println("Exiting DebugInit()");
 		
 	}	//}}}
@@ -9859,14 +9521,11 @@ public class ADev
 			System.out.println("completeLatch not null");
 /**/
 		//System.out.println("processMessage()");
-		//String sType = "";
 		String sKind = "";
 		String sProjectName = "";
 		String sId;
 		String sT2 = "";
-		//String sBreakpointId = "";
 		sBreakpointId = "";
-		//String sBreakpointScriptId = "";
 		int iLoc2;
 		int iLoc3;
 		int iLoc4;
@@ -9887,10 +9546,8 @@ public class ADev
 			//System.out.println("In streamNotify");
 			
 			// Save message..
-			//eventStack.push((String)sMessage);
 			eventQueue.add((String)sMessage);
 
-			//sStreamMessage = sMessage;	// Try to save it..
 			bProcessEventFinished = false;
 			processEventBgThread = new ProcessEventBgThread();
 			processEventBgThread.start();					
@@ -9907,7 +9564,6 @@ public class ADev
 		// so it drops through to here, and it
 		// can find 'error' in the text!
 
-		//iLoc3 = sMessage.indexOf("error");
 		iLoc3 = sMessage.indexOf(ERROR_STRING);
 		if ( iLoc3 != -1 )
 		{
@@ -9915,17 +9571,11 @@ public class ADev
 			{
 				//System.out.println("--- Error ---");
 				sResultMessage = sMessage;
-				
-				// Signal complete..
-				//completeLatch.countDown();
-				
 			}
 		}
 
 		if ( bIsStreamNotify == false )
 		{
-			//byte[] idbytes = {(byte)0x22, (byte)0x69, (byte)0x64, (byte)0x22};	// "id"
-			//String sIdString = new String(idbytes);
 			int iNum = 0;
 			boolean bIsGood = true;
 			
@@ -9955,7 +9605,6 @@ public class ADev
 					catch (NumberFormatException nfe)
 					{
 						System.out.println("Exception: "+nfe.toString());
-						//bIsGood = false;
 					}
 				}
 			}
@@ -9970,7 +9619,6 @@ public class ADev
 						iLoc3 = sMessage.indexOf((int)0x22, iLoc2 + 6);
 						if ( iLoc3 != -1 )
 						{
-							//sT = sMessage.substring(iLoc2 + 6, iLoc3);
 							try
 							{
 								iNum = Integer.parseInt(sMessage.substring(iLoc2 + 6, iLoc3));
@@ -10277,7 +9925,7 @@ public class ADev
 		// Get variables in this Frame..											
 		while ( true )
 		{
-			//System.out.println("--TOP-- BoundVariable");
+			//System.out.println("++TOP++ BoundVariable");
 			sDisplayClassName = "";
 			
 			// This should collect all Classes
@@ -10337,7 +9985,6 @@ public class ADev
 							}
 						}
 					}
-					
 					
 					iLoc10 = sMessage.indexOf("objects", iLoc8);
 					if ( iLoc10 != -1 )
@@ -10482,7 +10129,7 @@ public class ADev
 /**/
 						//System.out.println("(put())variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
 						VariableInfoLHm.put((String)variableInfo.sName, (VariableInfo)variableInfo);
-						//System.out.println("(put())variableInfo.sName: '"+variableInfo.sName+"'");
+						//System.out.println("(Full)(put())variableInfo.sName: '"+variableInfo.sName+"'");
 					//}
 				}
 				else
@@ -10492,7 +10139,7 @@ public class ADev
 					{
 						variableInfo.sObjectId = g_sObjectId;
 						variableInfo.sDisplayClassName = sDisplayClassName;
-						//System.out.println("(put())variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
+						//System.out.println("(Update)(put())variableInfo.sName: '"+variableInfo.sName+"'");
 						VariableInfoLHm.put((String)variableInfo.sName, (VariableInfo)variableInfo);
 					}
 				}
@@ -16231,7 +15878,7 @@ While_Break:
 		{
 			System.out.println("Exception: "+ble.toString());
 		}
-		
+
 		//System.out.println("Exiting updateSourceLines()");
 		
 	}	//}}}
@@ -19527,6 +19174,10 @@ While_Break:
 					model.reload();
 					
 					VariableInfoLHm.clear();
+					
+					//System.out.println("root.getChildCount(): "+root.getChildCount());
+					//System.out.println("VariableInfoLHm.size(): "+VariableInfoLHm.size());
+					
 					
 					//System.out.println("==At C==");
 					//updateSourceLines((long)0);
@@ -23135,7 +22786,6 @@ While_Break:
 								{
 									// Matched..
 									//System.out.println("(Matched)iOneLineNumber: "+iOneLineNumber);
-									//iSelectedLine = iActualLineNumber;
 									iSelectedLine = iOneLineNumber;
 									bLineMatched = true;
 									bLineSelected = true;	// Set selected..
@@ -23366,10 +23016,6 @@ Break_Out:
 					// Normal line selection highlight..
 					//
 					
-					//String sT3;
-					//int iLn;
-					//bDoLineSelect = true;
-					
 					if ( (BreakpointAr != null) && (BreakpointAr.size() > 0) )
 					{
 						for ( int iX = 0; iX < BreakpointAr.size(); iX++ )
@@ -23431,6 +23077,9 @@ Break_Out:
 			//System.out.println("(Variable JTree)TreeSelectionListener valueChanged()");
 			
 			TreePath treePath = e.getPath();
+			int iIndex;
+			StringBuffer sB;
+			String sNodeName = "";
 
 			// Note:
 			// This will basically tell you what "column"
@@ -23447,8 +23096,8 @@ Break_Out:
 			
 			
 			NodeFVInfo nodeFVInfo;
-			//String sName;
 			DefaultMutableTreeNode nodeSel = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
+
 /*			
 			if ( nodeSel == null )
 				System.out.println("nodeSel null");
@@ -23463,17 +23112,36 @@ Break_Out:
 		 	String sT = "";
 		 	int iLoc2;
 			TreeNode[] tNode = nodeSel.getPath();
+			
 			//for ( int iJ = 0; iJ < tNode.length; iJ++ )
 				//System.out.println("["+iJ+"]: "+tNode[iJ]);
 			
 			if ( iPathCount > 2 )
 			{
 				// Nested Class, so get parent..
-				sT = tNode[1].toString();
+				
+				iIndex = tNode.length - 1;
+				iIndex--;
+				
+				if ( iIndex < 0 )
+					iIndex = 0;
+				//System.out.println("iIndex: "+iIndex);
+
+				// Like: '[1]:  PlanetWidget'				
+				sT = tNode[iIndex].toString();
+				//System.out.println("sT: '"+sT+"'");
 				iLoc2 = sT.indexOf(":");
 				if ( iLoc2 != -1 )
 				{
-					sParentClassName = sT.substring(0, iLoc2);
+					// Get:
+					// [1]:  PlanetWidget
+					//       ^
+					
+					if ( sT.charAt(0) == '[' )
+						sParentClassName = sT.substring(iLoc2 + 1);
+					else
+						sParentClassName = sT.substring(0, iLoc2);
+						
 					sParentClassName = sParentClassName.trim();
 					//System.out.println("sParentClassName: '"+sParentClassName+"'");
 				}
@@ -23487,12 +23155,6 @@ Break_Out:
 			System.out.println("(getLeafCount()): "+nodeSel.getLeafCount());
 			System.out.println("(getLevel()): "+nodeSel.getLevel());
 			System.out.println("(getSiblingCount()): "+nodeSel.getSiblingCount());
-			
-			Object[] objectAr = nodeSel.getUserObjectPath();
-			System.out.println("objectAr.length : "+objectAr.length);
-
-			TreeNode[] treeNodeAr = nodeSel.getPath();
-			System.out.println("treeNodeAr.length : "+treeNodeAr.length);
 /**/
 
 			Object nodeObject = nodeSel.getUserObject();
@@ -23500,50 +23162,52 @@ Break_Out:
 			
 			//System.out.println("(Selected)nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
 			//System.out.println("(Selected)nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
+			//System.out.println("(Selected)nodeFVInfo.sDisplayClassName: '"+nodeFVInfo.sDisplayClassName+"'");
 			//System.out.println("(Selected)nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
 			//System.out.println("(Selected)nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
 			//System.out.println("(Selected)nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
 			
-			sTreeSelectionName = nodeFVInfo.sName;
-			//System.out.println("sTreeSelectionName: '"+sTreeSelectionName+"'");			
+			sOrgSelected = nodeFVInfo.sName;
+			sOrgClassId = nodeFVInfo.sClassId;
+			sOrgObjectId = nodeFVInfo.sObjectId;
 			
-			//nodeFVInfo = (NodeFVInfo)nodeSel.getUserObject();
-			//nodeFVInfo = (Object)nodeSel.getUserObject();
-/*			
-			if ( nodeFVInfo == null )
-				System.out.println("nodeFVInfo null");
-			else
-				System.out.println("nodeFVInfo not null");
-/**/
+			sTreeSelectionName = nodeFVInfo.sName;
+			//System.out.println("sTreeSelectionName: '"+sTreeSelectionName+"'");	
 
-			//int iLevel = nodeSel.getLevel();
-			//System.out.println("(getLevel()): "+iLevel);
+			// Try to add to SelectedNodesLHm..			
+			if ( nodeFVInfo.sName.charAt(0) == '[' )
+			{
+				// Construct new name, like: '[1].children' 
+				sB = new StringBuffer();
+				sB.append(nodeFVInfo.sName);
+				sB.append(".");
+				sB.append(sParentClassName);
+				sNodeName = sB.toString();
+			}
+			else
+			{
+				sNodeName = nodeFVInfo.sName;
+			}
+			
+			//System.out.println("sNodeName: '"+sNodeName+"'");
+			SelectedNodesLHm.put((String)sNodeName, (NodeFVInfo)nodeFVInfo);
 			
 			bVariableNodeSelected = true;
-			
-			currentNode = nodeSel;	// Set up for UpdateVariableJTreeBgThread..
-			//sName = nodeFVInfo.sName;
 
-/*
-			DefaultTreeModel model = (DefaultTreeModel)variableJTree.getModel();
-			DefaultMutableTreeNode root = (DefaultMutableTreeNode)model.getRoot();
-			int iIndex = root.getChildCount();
-			System.out.println("root.getChildCount(): "+iIndex);
-/**/
+			currentNode = nodeSel;	// Set up for UpdateVariableJTreeBgThread..
+
 
 			
 			//System.out.println("In variableSelectionListener");
 			//updateVariableJTreeBgThread = new UpdateVariableJTreeBgThread();
 			//updateVariableJTreeBgThread.start();
 
-			// Only expand Classes..			
-			if ( nodeFVInfo.bIsClass )
+			// Only expand Classes or List..			
+			if ( (nodeFVInfo.bIsClass) || (nodeFVInfo.sClassName.equals("List")) )
 			{
-				expandNodeBgThread = new ExpandNodeBgThread();
-				expandNodeBgThread.start();
+				expandBgThread = new ExpandBgThread();
+				expandBgThread.start();
 			}
-			
-
 
 		}
 	};	//}}}
@@ -23557,6 +23221,7 @@ Break_Out:
 			//System.out.println("(Source JTree)TreeSelectionListener valueChanged()");
 			
 			DefaultMutableTreeNode parentNode = null;
+			TabInfo tabInfo;
 			//int iExpandRow;
 			
 			// Note:
@@ -23585,11 +23250,6 @@ Break_Out:
 				System.out.println("parentPath not null");
 /**/
 
-/*
-			iExpandRow = jTree.getRowForPath(parentPath);
-			System.out.println("iExpandRow: "+iExpandRow);
-			jTree.expandRow(iExpandRow);	// Zero based..
-/**/
 
 			DefaultMutableTreeNode nodeX = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
 
@@ -23606,8 +23266,8 @@ Break_Out:
 			
 			//System.out.println("nodeObject: "+nodeObject);
 			NodeInfo nInfo = (NodeInfo)nodeX.getUserObject();
-
-/*			
+			
+/*
 			if ( nInfo == null )
 				System.out.println("nInfo null");
 			else
@@ -23615,7 +23275,7 @@ Break_Out:
 /**/
 			
 			//System.out.println("nInfo.lId: "+nInfo.getId());
-			//System.out.println("nInfo.sName: '"+nInfo.getName()+"'");
+			//System.out.println("nInfo.sName: '"+nInfo.getName()+"'");		// Like:  'main.dart'
 			//System.out.println("nInfo.bIsClass: "+nInfo.getIsClass());
 			
 			boolean bIsClass = nInfo.getIsClass();
@@ -23627,17 +23287,14 @@ Break_Out:
 			int iLoc2;
 			String sSourceFilePath = "";
 			boolean bDoTab = false;
+			boolean bMatched;
 			
-			// !! TESTING !!
-			//int iTestMethodId = (int)nInfo.getId();
 
 			//System.out.println("bIsClass: "+bIsClass);			
 			if ( bIsClass )
 			{
 				//System.out.println("Selected Class");
-				//iLevel = nodeX.getLevel();
 				iLevel = 3;
-				//System.out.println("iLevel: "+iLevel);
 				jTree.expandRow(iLevel);
 				
 				// Selected Class..
@@ -23711,7 +23368,7 @@ Break_Out:
 					//System.out.println("In bFlutterSelected");
 
 					// Differentiate between directory and file selection..					
-					iLoc2 = nInfo.sName.indexOf(".dart");
+					iLoc2 = nInfo.sName.indexOf(".dart");	// Like: 'main.dart'
 					if ( iLoc2 != -1 )
 					{
 						// Source file selected..
@@ -23725,19 +23382,9 @@ Break_Out:
 						// The array index is already
 						// set to the correct location..
 						
-/*
-						// Get object from parent..				
-						DefaultMutableTreeNode pNode = (DefaultMutableTreeNode)(nodeX.getParent());				
-		
-						NodeInfo nodeInfo;
-						Object object = pNode.getUserObject();
-						nodeInfo = (NodeInfo)object;
-						
-						iArIndex = (int)nodeInfo.getId();
-/**/
-	
 						//System.out.println("(getId())iArIndex: "+iArIndex);		
 						
+						// Like: 'C:\Android\Dev\planets-master\lib\main.dart'
 						sSourceFilePath = nInfo.getFullPath();
 /*						
 						if ( sSourceFilePath == null )
@@ -23749,17 +23396,35 @@ Break_Out:
 						if ( (sSourceFilePath != null) && (sSourceFilePath.length() > 0) )
 						{
 							//System.out.println("sSourceFilePath: '"+sSourceFilePath+"'");
-							bDoTab = true;
-						}
-/*						
-						if ( (LibFileAr != null) && (LibFileAr.size() > 0) )
-						{
-							sSourceFilePath = (String)LibFileAr.get(iArIndex);
-							System.out.println("sSourceFilePath: '"+sSourceFilePath+"'");
+/*							
+							if ( TabInfoAr == null )
+								System.out.println("TabInfoAr null");
+							else
+								System.out.println("TabInfoAr.size(): "+TabInfoAr.size());
+/**/							
 							
-							bDoTab = true;
+							// Check for dup..
+							if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+							{
+								bMatched = false;
+								for ( int iZ = 0; iZ < TabInfoAr.size(); iZ++ )
+								{
+									tabInfo = (TabInfo)TabInfoAr.get(iZ);
+									if ( (tabInfo.sSourcePath != null) && (tabInfo.sSourcePath.length() > 0) )
+									{
+										//if ( tabInfo.sSourcePath.equals(sSourceFilePath) )
+										if ( sSourceFilePath.equals(tabInfo.sSourcePath) )
+										{
+											bMatched = true;
+											break;
+										}
+									}
+								}
+								
+								if ( bMatched == false )
+									bDoTab = true;
+							}
 						}
-/**/
 					}
 				}
 				else
@@ -23806,17 +23471,15 @@ Break_Out:
 					// Get Method info..
 					String sMethodName = nInfo.getName();
 					//System.out.println("sMethodName: '"+sMethodName+"'");
-					//long lMethodId = nInfo.getId();
 					lMethodId = nInfo.getId();
 					//System.out.println("lMethodId: "+lMethodId);
-					//boolean bDoTab = true;	// Do Tab by default
-					bDoTab = true;
+					bDoTab = true;	// Do Tab by default
 					
 					// Check for duplicate..
 					if ( ClassMethodAr != null )
 					{
 						int iG;
-						boolean bMatched = false;
+						bMatched = false;
 						for ( iG = 0; iG < ClassMethodAr.size(); iG++ )
 						{
 							//System.out.println("--TOP-- iG: "+iG);
@@ -23856,10 +23519,6 @@ Break_Out:
 						lCurrentSelectedMethod = lMethodId;
 						
 						//System.out.println("(Before)lMethodId: "+lMethodId);
-						
-						// !! TESTING !!
-						//lMethodId = iTestMethodId;
-						
 	
 						updateSource(lClassId, lMethodId);
 					}
@@ -23872,6 +23531,16 @@ Break_Out:
 					//System.out.println("(setSelectedIndex())iMethodIndex: "+iMethodIndex);
 					tabbedPane.setSelectedIndex(iMethodIndex);
 					
+				}
+
+				// For Flutter, try to load
+				// lengthy SetLibraryDebuggable after source is selected and loaded..
+				if ( (bFlutterSelected) && (bFlutterSetLibraryDebuggableStarted == false) )
+				{
+/*
+					libraryTimingBgThread = new LibraryTimingBgThread();
+					libraryTimingBgThread.start();
+/**/
 				}
 			}
 		}
@@ -24225,9 +23894,12 @@ Break_Out:
 								{
 								}
 							}
+
+
 							
 							//if ( bDebugRan == false )
 								DebugInit();
+								
 						}
 						else
 							bShowDebug = false;
@@ -24677,6 +24349,7 @@ Break_Out:
 		public String sTargetId;	// For evaluate
 		public boolean bIsClass;
 		public boolean bUsesObject;
+		//public int iArrayIndex;
 	
 		
 		public NodeFVInfo(String sName)
@@ -24685,6 +24358,10 @@ Break_Out:
 			bUsesObject = false;
 			sDisplayClassName = "";
 			sValueAsString = "";
+			sClassName = "";
+			sPropertyName = "";
+			sObjectId = "";
+			bIsClass = false;
 		}
 	
 		//@Override
@@ -24700,8 +24377,9 @@ Break_Out:
 			sB.append(sName);
 			sB.append(":  ");
 	
-			if ( ((sValueAsString != null) && (sValueAsString.length() > 0))
-					&& (! sValueAsString.equals("null")) )
+			//if ( ((sValueAsString != null) && (sValueAsString.length() > 0))
+					//&& (! sValueAsString.equals("null")) )
+			if ( ((sValueAsString != null) && (sValueAsString.length() > 0)) )
 				sB.append(sValueAsString);
 			//else if ( ((sDisplayClassName != null) && (sDisplayClassName.length() > 0))
 					//&& (! sDisplayClassName.equals("null")) )
