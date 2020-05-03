@@ -16,11 +16,7 @@
 
 # Screenshots:
 
-<<<<<<< HEAD
-<img src="images/mainscreen.png" width="550"/>
-<img src="images/debugscreen.png" width="550"/>
-=======
 <img src="images/mainscreen.PNG" width="550"/>
 <img src="images/debugscreen.PNG" width="550"/>
->>>>>>> 250bac584a38c5f761b9d8535d84aa2a990cd948
+
 
