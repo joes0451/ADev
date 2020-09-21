@@ -7,8 +7,8 @@ https://developer.android.com/studio/#downloads
 
 Note:
 	If using the latest 'commandlinetools-win-6200805_latest.zip':
-	A work-around, to a current bug, is to always include the --sdk_root command option
-	with the sdkmanager.
+	A work-around, to a current bug, is to include the --sdk_root command option
+	on each line with the sdkmanager.
 	If you used a directory 'android-sdk' you would run 'sdkmanager' like:
 	
 	sdkmanager --list --sdk_root=c:\android-sdk 
@@ -24,8 +24,8 @@ version of the Android SDK tools package.
 - CD into your tools/bin directory and run:     sdkmanager --list [--include_obsolete]
 	to show all available packages.
 
-- Choose the latest version of build-tools, like "build-tools;28.0.3"
-	and run:    sdkmanager "platform-tools" "build-tools;28.0.3"
+- Choose the latest version of build-tools, like "build-tools;30.0.0-rc3"
+	and run:    sdkmanager "platform-tools" "build-tools;30.0.0-rc3"
 	
 - You should also install at least one target,
 	the minimum is one of the 'platforms;..' like:   sdkmanager "platforms;android-26"
@@ -258,7 +258,7 @@ Keystore passwords:
 		file to hold the Keystore passwords.
 		
 Clean:
-		Clean also deletes the key.properties file so that you can safely
+		Clean also deletes the key.properties file, used for signing, so that you can safely
 		archive your project.  And for older projects, that are not set up
 		for the key.properties file, it will modify the app/build.gradle file to support it.
 		
@@ -369,7 +369,7 @@ Variable Window:
 Flutter debugger:
 
 		You can expand Class and nested Class variables.
-		Lists are now fully supported.
+		List is now fully supported.
 		
 		There is a delay when the debugger first starts,
 		as it's setting things up in the background.
@@ -396,27 +396,6 @@ BlueStacks Emulator:
 		
 
 Release notes:
-	
-	
-ADev-2.6.3:
-	Improved 'Recent Projects' so that the 'Use Gradle' and 'Use Kotlin' menu items
-	are set when the project is selected.  You can now choose to do Gradle builds
-	using 'gradle' or 'gradlew'.
-
-ADev-2.6.4:
-	For Gradle it now restores the original build.gradle file and removes the
-	backup when build is complete.
-	
-ADev-2.6.5:
-	For Gradle builds, added 'gradle_command_option' Property so you can add
-	options like '--info' to your build.
-	
-ADev-2.6.6:
-	Fixed some commands so they didn't use as much CPU.
-
-ADev-2.6.7:
-	Wider console window, and added property 'use_linebreaking' to enable/disable
-	line breaking, allowing faster console output.
 	
 ADev-2.6.8:
 	Improved logcat console output.  Automatically re-connects after logcat
@@ -491,7 +470,9 @@ ADev-2.9.2:
 ADev-2.9.4:
 	Improvements to Flutter debugger, now fully supports List.
 	
-
+ADev-2.9.5:
+    Added option to Gradle for debugs like -Xlint:unchecked.
+    
 	
 joes0451@users.sf.net
 
