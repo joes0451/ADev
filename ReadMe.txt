@@ -472,6 +472,7 @@ ADev-2.9.4:
 	
 ADev-2.9.5:
     Added option to Gradle for debugs like -Xlint:unchecked.
+    Minor improvement to Gradle Install.
     
 	
 joes0451@users.sf.net

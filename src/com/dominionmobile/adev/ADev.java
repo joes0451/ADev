@@ -4817,7 +4817,7 @@ public class ADev
 				cmdSb.append("\n");
 			}
 
-			System.out.println("cmdSb: '"+cmdSb.toString()+"'");
+			//System.out.println("cmdSb: '"+cmdSb.toString()+"'");
 			
 			try
 			{
@@ -4909,7 +4909,7 @@ public class ADev
 					if ( error_is.available() > 0 )	// Check Error Stream..
 					{
 						iBytesRead = error_is.read(tempBuf, 0, iTmpLength);
-						System.out.println("(error_is)iBytesRead: "+iBytesRead);
+						//System.out.println("(error_is)iBytesRead: "+iBytesRead);
 						if ( iBytesRead == -1 )
 						{
 							// Never gets this..
@@ -4921,7 +4921,7 @@ public class ADev
 					else if ( out_is.available() > 0 )	// Check Input Stream..
 					{
 						iBytesRead = out_is.read(tempBuf, 0, iTmpLength);
-						System.out.println("(out_is)iBytesRead: "+iBytesRead);
+						//System.out.println("(out_is)iBytesRead: "+iBytesRead);
 						if ( iBytesRead == -1 )
 						{
 							// Never gets this..
@@ -4956,7 +4956,7 @@ public class ADev
 						
 						sT = new String(baos.toByteArray());
 
-						
+/*						
 						// ------ Debugging from here ------
 						if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
 						{
@@ -9763,6 +9763,7 @@ public class ADev
 	//{{{	processMessage()
 	public void processMessage(String sMessage)
 	{
+	    //System.out.println("processMessage()");
 /*		
 		try
 		{
@@ -9777,7 +9778,10 @@ public class ADev
 		if ( sMessage == null )
 			System.out.println("sMessage null");
 		else
+		{
 			System.out.println("sMessage.length(): "+sMessage.length());
+			System.out.println("sMessage: '"+sMessage+"'");
+		}
 /**/
 
 		if ( (sMessage != null) && (sMessage.length() > 0) )
@@ -9801,7 +9805,7 @@ public class ADev
 		else
 			System.out.println("completeLatch not null");
 /**/
-		//System.out.println("processMessage()");
+
 		String sKind = "";
 		String sProjectName = "";
 		String sId;
@@ -13683,8 +13687,27 @@ public class ADev
 		String altS = "";
 		apkNameS = "";
 
-		if ( folder.exists() )
+		// Note:
+		// Sometimes when you do the Install
+		// it has no akp, so we wait here..
+		
+		// Wait till it's ready..
+		while ( true )
 		{
+		    if ( folder.exists() )
+		        break;
+		    
+		    try
+		    {
+		        Thread.sleep(250);  
+		    }
+		    catch (InterruptedException ie)
+		    {
+		    }
+		}
+		
+		//if ( folder.exists() )
+		//{
 			//System.out.println("Folder exists");
 			File[] listOfFiles = folder.listFiles();
 			File file;
@@ -13720,7 +13743,7 @@ public class ADev
 			
 			if ( apkNameS.equals("") )
 				apkNameS = altS;
-		}
+		//}
 	}	//}}}
 
 	//{{{	createChildren()
@@ -18978,7 +19001,7 @@ While_Break:
 					else
 						commandSb.append("/bin/");
 
-/*
+/*					
 					if ( apkNameS == null )
 						System.out.println("apkNameS null");
 					else
