@@ -562,6 +562,7 @@ public class ADev
 	static volatile String sOrgClassId;
 	static volatile String sOrgObjectId;
 	static volatile String sDebugArg;
+	static volatile String sUsingOpenJdk;
 	//static volatile String sCurrentScriptId;
 	
 	static String sDebugPackageName;
@@ -953,7 +954,8 @@ public class ADev
 	"Android 8.0 OREO (API level 26)",
 	"Android 8.1 OREO (API level 27)",
 	"Android 9.0 PIE (API level 28)",
-	"Android 10.0 Q (API level 29)"};
+	"Android 10.0 Q (API level 29)",
+	"Android 11.0 (API level 30)"};
 
 	//}}}
 	
@@ -1205,7 +1207,6 @@ public class ADev
 			else
 				sTrail = new String(zeroDzeroA);
 
-			
 			String sAppName = appNmField.getText();
 			sAppName = sAppName.trim();
 			//System.out.println("sAppName: '"+sAppName+"'");
@@ -1438,7 +1439,7 @@ public class ADev
 				conSb.append(resSb.toString() + "/values");
 				consoleOutput(conSb.toString());
 			}
-
+			
 			if ( bLibrarySelected == false )
 			{
 /*				
@@ -1704,7 +1705,8 @@ public class ADev
 			}
 
 			//System.out.println("\nFinished GradleProject");
-			bCreateGradleProjectFinished = true;			
+			bCreateGradleProjectFinished = true;
+			
 		}
 	}	//}}}
 
@@ -1953,7 +1955,8 @@ public class ADev
 				}
 				else
 				{
-					outSb.append("apply plugin: 'android'");
+					//outSb.append("apply plugin: 'android'");
+					outSb.append("apply plugin: 'com.android.application'");
 					outSb.append(sTrail);
 					outSb.append(sTrail);
 				}
@@ -2064,6 +2067,19 @@ public class ADev
 				
 				outSb.append("}");
 				outSb.append(sTrail);
+				
+                if ( bKotlinSelected )
+                {
+                    outSb.append(sTrail);
+                    outSb.append("dependencies {");
+                    outSb.append(sTrail);
+                    outSb.append("    implementation \"org.jetbrains.kotlin:kotlin-stdlib:");  
+                    outSb.append(sKotlinVersion);
+                    outSb.append("\"");
+                    outSb.append(sTrail);
+                    outSb.append("}");
+                    outSb.append(sTrail);
+                }
 	
 				tSb = new StringBuffer(createProjectHomeS);
 				tSb.append("/app/build.gradle");
@@ -2080,7 +2096,8 @@ public class ADev
 			outSb.append(sTrail);
 			outSb.append("        google()");
 			outSb.append(sTrail);
-			outSb.append("        mavenCentral()");
+			//outSb.append("        mavenCentral()");
+			outSb.append("        jcenter()");
 			outSb.append(sTrail);
 			outSb.append("    }");
 			outSb.append(sTrail);
@@ -4567,7 +4584,7 @@ public class ADev
 	{
 		public void run()
 		{
-			System.out.println("DaemonOutputBgThread run()");
+			//System.out.println("DaemonOutputBgThread run()");
 			String sOut = "";
 			StringBuffer outSb = new StringBuffer();
 			int iLen;
@@ -4597,7 +4614,7 @@ public class ADev
 					doc.insertString(iLen, outSb.toString(), normalStyle);
 					if ( iLen > 0 )
 					{
-						System.out.println("outSb: '"+outSb.toString()+"'");
+						//System.out.println("outSb: '"+outSb.toString()+"'");
 						textPane.setCaretPosition(doc.getLength() - 1);
 						textPane.repaint();
 					}
@@ -7564,7 +7581,7 @@ public class ADev
 	//{{{	WalkTree()	
 	public void WalkTree()
 	{
-		System.out.println("\nWalkTree()");
+		//System.out.println("\nWalkTree()");
 		Object nodeObject;
 		Object rootObject;
 		Object dataObject;
@@ -7581,29 +7598,27 @@ public class ADev
 			System.out.println("rootObject not null");
 /**/		
 		iCount = treeModel.getChildCount(rootObject);
-		System.out.println("iCount: "+iCount);
+		//System.out.println("iCount: "+iCount);
 		
 		for ( int iJ = 0; iJ < iCount; iJ++ )
 		{
-			System.out.println("--TOP-- iJ: "+iJ);
+			//System.out.println("--TOP-- iJ: "+iJ);
 			nodeObject = treeModel.getChild(rootObject, iJ);
-
+/*
 			if ( nodeObject == null )
 				System.out.println("nodeObject null");
 			else
 				System.out.println("nodeObject not null");
-			
+/**/			
 			dataObject = ((DefaultMutableTreeNode)nodeObject).getUserObject();
 			nodeFVInfo = (NodeFVInfo)dataObject;
 			
-			System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-			System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-			System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-			System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
+			//System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
+			//System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
+			//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
+			//System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
 			
 		}
-		
-		
 	}	//}}}
 	
 	//{{{	CheckKeystorePasswords
@@ -7856,7 +7871,7 @@ public class ADev
 	{
 		public void run()
 		{
-			System.out.println("\nGradleConfigBgThread run()");
+			//System.out.println("\nGradleConfigBgThread run()");
 			byte[] zeroATab = {(byte)0x0a, (byte)0x20, (byte)0x20, (byte)0x20, (byte)0x20};
 			String zeroATabS = new String(zeroATab);
 			byte[] zeroDzeroATab = {(byte)0x0d, (byte)0x0a, (byte)0x20, (byte)0x20, (byte)0x20, (byte)0x20};
@@ -7931,7 +7946,7 @@ public class ADev
 			}
 
 
-			System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
+			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
 			buildFilenameS = fileNameSb.toString();	// Save original name..
 			
 			File buildFile = new File(fileNameSb.toString());
@@ -7967,7 +7982,7 @@ public class ADev
 					fileNameSb.toString());	// fileName
 			}
 
-			
+/*			
 			if ( buildBuf == null )
 				System.out.println("buildBuf null");
 			else
@@ -7981,7 +7996,7 @@ public class ADev
 
 				// Check if it's already defined..				
 				iLoc2 = outSb.indexOf("keystoreProperties");
-				System.out.println("(keystoreProperties) iLoc2: "+iLoc2);
+				//System.out.println("(keystoreProperties) iLoc2: "+iLoc2);
 				if ( iLoc2 == -1 )
 				{
 					// Not defined, add def..
@@ -8215,7 +8230,7 @@ public class ADev
 			}
 			
 			bGradleConfigFinished = true;
-			System.out.println("Exiting GradleConfigBgThread");
+			//System.out.println("Exiting GradleConfigBgThread");
 
 		}
 	}	//}}}
@@ -10780,6 +10795,7 @@ public class ADev
 		String sKotlinV = "";
 		String sMonth = "";
 		String sAPV = "";
+		String gradleVersionS = "";
 		boolean bDoJSON = false;
 		//boolean bUpdateProperties = false;
 		int iPropMonth = 0;
@@ -10959,6 +10975,8 @@ public class ADev
 		// so it doesn't need it..
 		boolean bGradleSelected = uGradleMenuItem.getState();
 		//System.out.println("bUseGradle: "+bUseGradle);
+		
+		
 		if ( (bGradleSelected) && (bFlutterSelected == false) )
 		{
 			// Get Gradle version..
@@ -10998,7 +11016,6 @@ public class ADev
 			// Wait for Thread to end..
 			while ( true )
 			{
-/*
 				try
 				{
 					Thread.sleep(100);
@@ -11006,7 +11023,6 @@ public class ADev
 				catch (InterruptedException ie)
 				{
 				}
-/**/
 				
 				Thread.yield();
 
@@ -11038,7 +11054,7 @@ public class ADev
 				}
 			}
 			
-			String gradleVersionS = "";
+			//String gradleVersionS = "";
 			if ( iLoc != -1 )
 			{
 				int iG3;
@@ -11114,7 +11130,7 @@ public class ADev
 					gradleVersionS.equals("5.0") ||
 					gradleVersionS.equals("5.1") )
 				{
-					sAndroidPluginVersion = "3.3.0";
+					sAndroidPluginVersion = "3.3.3";
 					bDoBuildGradleUpdate = true;
 				}
 				else if ( gradleVersionS.equals("5.1.1") ||
@@ -11124,52 +11140,57 @@ public class ADev
 					gradleVersionS.equals("5.3.1") ||
 					gradleVersionS.equals("5.4") )
 				{
-					sAndroidPluginVersion = "3.3.0";
-					//sAndroidPluginVersion = "3.4.0";	// Had issues..
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "3.4.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+				        
 					bDoBuildGradleUpdate = true;
 				}
 				else if ( gradleVersionS.equals("5.4.1") ||
 					gradleVersionS.equals("5.5") ||
 					gradleVersionS.equals("5.5.1") ||
-					gradleVersionS.equals("5.6") )
-				{
-					//sAndroidPluginVersion = "3.5.0";	// Had issues..
-					sAndroidPluginVersion = "3.3.0";
-					//sAndroidPluginVersion = "3.3.2";
-					//sAndroidPluginVersion = "3.4.0";
-					//sAndroidPluginVersion = "3.4.1";
-					//sAndroidPluginVersion = "3.4.0";	// Had issues..
-					bDoBuildGradleUpdate = true;
-				}
-				else if ( gradleVersionS.equals("5.6.1") ||
+					gradleVersionS.equals("5.6") ||
+					gradleVersionS.equals("5.6.1") ||
 					gradleVersionS.equals("5.6.2") ||
 					gradleVersionS.equals("5.6.3") )
 				{
-					sAndroidPluginVersion = "3.3.0";
-					//sAndroidPluginVersion = "3.3.2";
-					//sAndroidPluginVersion = "3.4.0";
-					//sAndroidPluginVersion = "3.4.1";
-					//sAndroidPluginVersion = "3.5.0";
-					//sAndroidPluginVersion = "3.5.3";
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "3.5.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+				    
 					bDoBuildGradleUpdate = true;
-					
 				}
 				else if ( gradleVersionS.equals("5.6.4") ||
 					gradleVersionS.equals("6.0") ||
 					gradleVersionS.equals("6.0.1") ||
-					gradleVersionS.equals("6.1") ||
-					gradleVersionS.equals("6.1.1") ||
+					gradleVersionS.equals("6.1") )
+				{
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "3.6.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+				        
+				    bDoBuildGradleUpdate = true;
+				}
+				else if ( gradleVersionS.equals("6.1.1") ||
 					gradleVersionS.equals("6.2") ||
 					gradleVersionS.equals("6.2.1") ||
-					gradleVersionS.equals("6.2.2") )
+					gradleVersionS.equals("6.2.2") ||
+					gradleVersionS.equals("6.3") ||
+					gradleVersionS.equals("6.4") ||
+					gradleVersionS.equals("6.4.1") ||
+					gradleVersionS.equals("6.5") ||
+					gradleVersionS.equals("6.5.1") ||
+					gradleVersionS.equals("6.6") ||
+					gradleVersionS.equals("6.6.1") )
 				{
-					sAndroidPluginVersion = "3.3.0";
-					//sAndroidPluginVersion = "3.3.2";
-					//sAndroidPluginVersion = "3.4.0";
-					//sAndroidPluginVersion = "3.4.1";
-					//sAndroidPluginVersion = "3.5.0";
-					//sAndroidPluginVersion = "3.5.3";
-					//sAndroidPluginVersion = "3.6.0";	// Says, requires Gradle 5.6.4
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "4.0.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+
 					bDoBuildGradleUpdate = true;
 				}
 				else if ( gradleVersionS.equals("2.4") ||
@@ -11200,7 +11221,8 @@ public class ADev
 				else
 				{
 					//sAndroidPluginVersion = "3.4.0";
-					sAndroidPluginVersion = "3.3.0";
+					//sAndroidPluginVersion = "3.3.0";
+					sAndroidPluginVersion = "3.3.3";
 				}
 			}
 		}
@@ -11208,9 +11230,13 @@ public class ADev
 		//System.out.println("\nbKotlinSelected: "+bKotlinSelected);
 		if ( bKotlinSelected )
 		{
-			//sKotlinVersion = "1.3.50";	// Issues..
-			sKotlinVersion = "1.3.30";
-			//sKotlinVersion = "1.3.70";
+            //sKotlinVersion = "1.3.50";	// Issues..
+            //sKotlinVersion = "1.3.30";
+            //sKotlinVersion = "1.3.70";
+            sKotlinVersion = "1.3.72";
+            //sKotlinVersion = "1.4.0";
+            //sKotlinVersion = "1.4.10";
+                
 		}
 		
 		
@@ -11665,7 +11691,7 @@ public class ADev
 			releaseButton.setVisible(true);	
 		
 		toolBar.add(new JSeparator());
-
+		
 		JButton devicesButton = new JButton();
 		devicesButton.setIcon(devices24Icon);
 		devicesButton.setActionCommand("Devices");
@@ -13368,6 +13394,7 @@ public class ADev
 			// Get Property Values..
 			antPathS = Utils.processPath(prop.getProperty("ant_path"));
 			javaPathS = Utils.processPath(prop.getProperty("java_path"));
+			sUsingOpenJdk = Utils.processPath(prop.getProperty("using_openjdk"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
 			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
 			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
@@ -13417,7 +13444,6 @@ public class ADev
 					javaPathS = javaPathS.substring(0, iLoc);
 				}
 			}
-			
 		}
 		catch (IOException ioe)
 		{
@@ -17361,7 +17387,21 @@ While_Break:
 
 				init();
 				RefreshProperties();
-
+				
+                //System.out.println("bGradleSelected: "+bGradleSelected);
+                //System.out.println("bKotlinSelected: "+bKotlinSelected);
+                //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                if ( (bGradleSelected == false) &&
+                    (bKotlinSelected == false) &&
+                    (bFlutterSelected == false) )
+                {
+                    androidSdkPathS = androidSdkPathAntS;
+                }
+                else
+                {
+                    androidSdkPathS = androidSdkPathGradleS;
+                }
+				
 				//System.out.println("bGradleSelected: "+bGradleSelected);
 				if ( bGradleSelected )	
 				{
@@ -19572,7 +19612,7 @@ While_Break:
 			else if ( HOME.equals(actionCommandS) )
 			{
 				// Project Home..
-				System.out.println("HOME");
+				//System.out.println("HOME");
 				boolean bHaveDir = false;
 				String inS;
 				String sType = "";
@@ -19600,7 +19640,7 @@ While_Break:
 					bHaveDir = true;
 					projectHomeS = fChooser.getSelectedFile().toString();
 					projectHomeS = Utils.processPath(projectHomeS);
-					System.out.println("projectHomeS: '"+projectHomeS+"'");
+					//System.out.println("projectHomeS: '"+projectHomeS+"'");
 					File file;
 					byte[] buffer = null;
 					StringBuffer fSb;
@@ -19622,12 +19662,12 @@ While_Break:
 						fSb.append("/build.gradle");
 					}
 					
-					System.out.println("fSb: '"+fSb.toString()+"'");
+					//System.out.println("fSb: '"+fSb.toString()+"'");
 					// Like:  'C:/Android/Dev/libgdx-demo-superjumper-master/build.gradle'
 					file = new File(fSb.toString());
 					if ( file.exists() )
 					{
-						System.out.println("--Exists--");
+						//System.out.println("--Exists--");
 						buffer = readFile(2048, fSb.toString());
 						String tS = new String(buffer);
 						iLoc2 = tS.indexOf("kotlin");
@@ -20317,7 +20357,7 @@ While_Break:
 					else
 					{
 						// Gradle and Kotlin..
-						//System.out.println("Gradle Kotlin");						
+						//System.out.println("Gradle Kotlin");
 						
 						bCreateGradleProjectFinished = false;
 						createGradleProjectBgThread = new CreateGradleProjectBgThread();

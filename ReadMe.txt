@@ -6,9 +6,8 @@ The latest SDK version:
 https://developer.android.com/studio/#downloads
 
 Note:
-	If using the latest 'commandlinetools-win-6200805_latest.zip':
-	A work-around, to a current bug, is to include the --sdk_root command option
-	on each line with the sdkmanager.
+    It looks like every new SDK version requires the --sdk_root command option
+    be on every command line using the sdkmanager.
 	If you used a directory 'android-sdk' you would run 'sdkmanager' like:
 	
 	sdkmanager --list --sdk_root=c:\android-sdk 
@@ -148,9 +147,13 @@ Gradle builds:
 		it checks the Gradle version and tries to select a compatible
 		Android Plugin Version.
 
-		Newer Android Plugin Versions (some had issues):		
-		3.5.0 (?), 3.4.0 (?), 3.3.0, 3.2.0, 3.1.0, 3.0.0 (?), 2.3.0, 2.1.3
+        ====================================================================		
+		The highest Android Gradle Plugin version that will build using
+		the Java JDK is 'com.android.tools.build:gradle:3.3.3'.
+		To use higher versions, or the latest, you have to use the OpenJdk.
+		====================================================================
 		
+        Android Gradle Plugin:		
 		See:	http://tools.android.com/tech-docs/new-build-system
 				https://developer.android.com/studio/releases/gradle-plugin.html#updating-plugin
 		
@@ -159,10 +162,6 @@ Gradle builds:
 		all have build problems using any combination of Android Plugin Versions
 		and Android SDK Build-tools versions.  Gradle versions past those build fine.
 		
-		I haven't tested any Gradle versions past 5.6.4 to see how well they work
-		with the various Android Plugin Versions, so until I can test them
-		it will try to use 3.3.0.
- 		
 		If you are getting errors like:
 		"Gradle version 1.10 is required. Current version is 2.0."
 		It needs a different Android Plugin Version.
@@ -236,10 +235,8 @@ Use Kotlin:
 		Support for creating and building Kotlin projects.
 		It relies on using Gradle for the builds, so the 'Use Gradle'
 		checkbox is automatically selected.
-		
-		The only build versions that seem to work are Kotlin 1.3.30
-		with Android Plugin Version 3.3.0, so that's what it defaults to.
-		I'll see if I can get newer versions to work.
+
+        The minimum required Gradle version is 4.10.1.		
 		
 		
 Use NDK:
@@ -474,7 +471,13 @@ ADev-2.9.5:
     Added option to Gradle for debugs like -Xlint:unchecked.
     Minor improvement to Gradle Install.
     
-	
+ADev-2.9.6:
+    Improvements to project level and app/build.gradle for Android Gradle builds.
+    Now supports latest versions of Android Gradle Plugin using the OpenJdk.
+    Some Kotlin build.gradle improvements.
+
+
+
 joes0451@users.sf.net
 
 
