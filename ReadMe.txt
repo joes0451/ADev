@@ -148,9 +148,9 @@ Gradle builds:
 		Android Plugin Version.
 
         ====================================================================		
-		The highest Android Gradle Plugin version that will build using
+		From what I've found, the highest Android Gradle Plugin version that will build using
 		the Java JDK is 'com.android.tools.build:gradle:3.3.3'.
-		To use higher versions, or the latest, you have to use the OpenJdk.
+		To use higher versions, or the latest, you have to use the OpenJDK.
 		====================================================================
 		
         Android Gradle Plugin:		
@@ -365,6 +365,8 @@ Variable Window:
 		
 Flutter debugger:
 
+        Select Run, then after application launches select Window->Debug.
+        
 		You can expand Class and nested Class variables.
 		List is now fully supported.
 		
@@ -476,8 +478,13 @@ ADev-2.9.6:
     Now supports latest versions of Android Gradle Plugin using the OpenJdk.
     Some Kotlin build.gradle improvements.
 
+ADev-2.9.8:  
+    Many improvements to the Flutter debugger.
+    
 
+I use it for all of my own development, and try to fix what issues I see,
+but please let me know of any issues that you find so that I can fix them.
 
-joes0451@users.sf.net
+joes0451@outlook.com
 
 

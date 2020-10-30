@@ -165,6 +165,7 @@ import java.util.concurrent.Semaphore;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
+import javax.swing.tree.TreePath;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.tree.TreeSelectionModel;
@@ -4973,7 +4974,7 @@ public class ADev
 						
 						sT = new String(baos.toByteArray());
 
-/*						
+/*
 						// ------ Debugging from here ------
 						if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
 						{
@@ -5842,8 +5843,7 @@ public class ADev
 							System.out.println("node not null");
 /**/						
 						nodeObject = (Object)node.getUserObject();
-
-/*						
+/*
 						if ( nodeObject == null )
 							System.out.println("nodeObject null");
 						else
@@ -5851,6 +5851,10 @@ public class ADev
 /**/
 						if ( nodeObject != null )
 						{
+						    // Note:
+						    // sTargetId can be quote quote
+						    // and gets an error
+						    
 							nodeFVInfo = (NodeFVInfo)nodeObject;
 							sName = nodeFVInfo.sName;
 							bIsClass = nodeFVInfo.bIsClass;
@@ -5858,21 +5862,21 @@ public class ADev
 							sValueAsString = nodeFVInfo.sValueAsString;
 							sDisplayClassName = nodeFVInfo.sDisplayClassName;
 							
-							
 /*							
 							if ( sName == null )
 								System.out.println("sName null");
 							else
 								System.out.println("sName: '"+sName+"'");
 /**/
-/*							
-							if ( sDisplayClassName == null )
+
+/*
+                            if ( sDisplayClassName == null )
 								System.out.println("sDisplayClassName null");
 							else
 								System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
 /**/
 
-							//System.out.println("bIsClass: "+bIsClass);
+                            //System.out.println("bIsClass: "+bIsClass);
 /*							
 							if ( sTargetId == null )
 								System.out.println("sTargetId null");
@@ -5959,32 +5963,36 @@ public class ADev
 							}
 							else
 							{
+							    //System.out.println("In else");
 								// Try to update from PauseBreakpoint..
 								variableInfo = (VariableInfo)VariableInfoLHm.get((String)sName);
-								//System.out.println("variableInfo.sName: '"+variableInfo.sName+"'");
-								//System.out.println("variableInfo.sValueAsString: '"+variableInfo.sValueAsString+"'");
-								//System.out.println("variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
-								
-								nodeObject = (Object)node.getUserObject();
-								if ( nodeObject != null )
+								if ( variableInfo != null )
 								{
-									nodeFVInfo = (NodeFVInfo)nodeObject;
-
-									if ( (variableInfo.sDisplayClassName != null) && (variableInfo.sDisplayClassName.length() > 0)
-										&& (! variableInfo.sDisplayClassName.equals("null")) )
-									{
-										nodeFVInfo.sValueAsString = variableInfo.sDisplayClassName;
-										//System.out.println("(if)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
-									}
-									else if ( (variableInfo.sValueAsString != null) && (variableInfo.sValueAsString.length() > 0)
-										&& (! variableInfo.sValueAsString.equals("null")) )
-									{
-										nodeFVInfo.sValueAsString = variableInfo.sValueAsString;
-										//System.out.println("(else)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
-									}
-									
-									node.setUserObject(nodeFVInfo);
-								}
+                                    //System.out.println("variableInfo.sName: '"+variableInfo.sName+"'");
+                                    //System.out.println("variableInfo.sValueAsString: '"+variableInfo.sValueAsString+"'");
+                                    //System.out.println("variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
+                                    
+                                    nodeObject = (Object)node.getUserObject();
+                                    if ( nodeObject != null )
+                                    {
+                                        nodeFVInfo = (NodeFVInfo)nodeObject;
+    
+                                        if ( (variableInfo.sDisplayClassName != null) && (variableInfo.sDisplayClassName.length() > 0)
+                                            && (! variableInfo.sDisplayClassName.equals("null")) )
+                                        {
+                                            nodeFVInfo.sValueAsString = variableInfo.sDisplayClassName;
+                                            //System.out.println("(if)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
+                                        }
+                                        else if ( (variableInfo.sValueAsString != null) && (variableInfo.sValueAsString.length() > 0)
+                                            && (! variableInfo.sValueAsString.equals("null")) )
+                                        {
+                                            nodeFVInfo.sValueAsString = variableInfo.sValueAsString;
+                                            //System.out.println("(else)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
+                                        }
+                                        
+                                        node.setUserObject(nodeFVInfo);
+                                    }
+                                }
 							}
 						}
 					}
@@ -6049,17 +6057,24 @@ public class ADev
 			String sVmType;
 			String sT;
 			String sKey;
+			String sEvalKind;
+			String sInstanceType = "";
+			
+			String sMessage = "";
 			StringBuffer sB;
 			
 			boolean bIsSystemClass = false;
 			boolean bPastFields = false;
 			boolean bElements = false;
-			boolean bIsList;
+			boolean bIsList = false;
 			boolean bIsClass = false;
 			boolean bIsObjectList = false;
 			boolean bBoundFieldFinished = false;
 			boolean bFunctionFinished = false;
 			boolean bFromPropertyName;
+			boolean bEvalIsClass;
+			boolean bGoodValueAsString = false;
+			boolean bExpanded = false;
 			
 			int iLoc2 = 0;
 			int iLoc3 = 0;
@@ -6067,11 +6082,12 @@ public class ADev
 			int iLoc5;
 			int iLoc6;
 			int iLoc7 = 0;
-			int iLoc8;
-			int iLoc9;
+			int iLoc8 = 0;
+			int iLoc9 = 0;
 			int iLoc10;
 			int iLoc11;
 			int iLoc12;
+			int iLoc14 = 0;
 			int iFieldEnd = -1;
 			int iNextBoundField = 0;
 			int iNextFunction = 0;
@@ -6079,7 +6095,12 @@ public class ADev
 			int iArrayIndex = 0;
 			int iExpandRow;
 			int iFunctionsEnd = 0;
-			
+			int iEndFrame = 0;
+			int iIndex2;
+			int iChildCount = 0;
+			int iInstanceNext = 0;
+			int iKindLoc = 0;
+
 			LinkedHashMap ExpandedNodeLHm = new LinkedHashMap();
 			Set set;
 			Iterator iterator;
@@ -6089,10 +6110,28 @@ public class ADev
 			NodeFVInfo newNodeFVInfo;
 			Object nodeObject;
 			DefaultMutableTreeNode childNode;
-			
+			DefaultMutableTreeNode emptyNode;
+			DefaultMutableTreeNode firstNode;
+			DefaultTreeModel model = (DefaultTreeModel)(variableJTree.getModel());
+/*			
+			if ( currentNode == null )
+			    System.out.println("currentNode null");
+			else
+			    System.out.println("currentNode not null");
+/**/
 
 			if ( currentNode != null )
 			{
+			    iChildCount = currentNode.getChildCount();
+			    //System.out.println("iChildCount: "+iChildCount);
+                if ( iChildCount == 1 )
+                {
+                    firstNode = currentNode.getFirstLeaf();
+                    nodeObject = (Object)firstNode.getUserObject();
+                    if ( nodeObject == null )
+                        model.removeNodeFromParent(firstNode);
+                }
+			    
 				nodeObject = (Object)currentNode.getUserObject();
 				nodeFVInfo = (NodeFVInfo)nodeObject;
 				
@@ -6102,13 +6141,148 @@ public class ADev
 				//System.out.println("sSelectedObjectId: '"+sSelectedObjectId+"'");
 				sSelectedClassId = nodeFVInfo.sClassId;
 				//System.out.println("sSelectedClassId: '"+sSelectedClassId+"'");
+				
+				sDisplayClassName = nodeFVInfo.sDisplayClassName;
+				//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+
+				bIsClass = nodeFVInfo.bIsClass;
+				//System.out.println("bIsClass: "+bIsClass);
+
+                // Set as default if it doesn't match
+                // ones in Frame..				
+				g_sObjectId = sSelectedObjectId;
+				g_sClassId = sSelectedClassId;
 			}
 			
-			sGetId = sSelectedClassId;
+			TreePath selectedPath = variableJTree.getSelectionPath();
+			bExpanded = variableJTree.isExpanded(selectedPath);
+			if ( bExpanded )
+			{
+			    variableJTree.collapsePath(selectedPath);
+			    return;
+			}
+			
+            requestLatch = new CountDownLatch(1);
+                    
+            ParamAr = new ArrayList();
+            ParamAr.add((String)Utils.filterObject(sIsolateId));
+            
+            String[] getStackMsg = {
+                "method", "getStack",
+                "params",
+                "isolateId", "[]",
+                "}"};
+    
+            sReq = ConstructMessage(getStackMsg);
+            websocket = webSocketObject.getWebSocket();
+            websocket.send(sReq);
+    
+            try
+            {
+                requestLatch.await();
+            }
+            catch (InterruptedException ie)
+            {
+            }
+
+            //System.out.println("Past await()");
+            iLoc2 = g_sMessage.indexOf(FRAME_STRING);
+            if ( iLoc2 != -1 )
+            {
+                // Find start of next Frame, end..
+                iEndFrame = g_sMessage.indexOf(FRAME_STRING, iLoc2 + 2);
+            }
+
+
+            // Get BoundVariable information
+            // for selected node to expand..
+            sMessage = g_sMessage;
+            iLoc7 = 0;
+            //System.out.println("iEndFrame: "+iEndFrame);
+            //System.out.println("sSelectedName: '"+sSelectedName+"'");
+            
+            // Get variables in this Frame..											
+            while ( true )
+            {
+                //System.out.println("++TOP++");
+                if ( iLoc7 != -1 )
+                {
+                    if ( iLoc7 > iEndFrame )
+                        break;
+    
+                    iLoc8 = sMessage.indexOf(NAME_STRING, iLoc7);
+                    if ( iLoc8 != -1 )
+                    {
+                        iLoc9 = sMessage.indexOf((int)0x22, iLoc8 + 8);
+                        if ( iLoc9 != -1 )
+                        {
+                            // Like: 'time'
+                            g_sName = sMessage.substring(iLoc8 + 8, iLoc9);
+                            //System.out.println("(Frame)g_sName: '"+g_sName+"'");
+                            
+                            if ( g_sName.equals(sSelectedName) )
+                                ;
+                            else
+                            {
+                                iLoc7 = iLoc8 + 2;  // Next..
+                                continue;
+                            }
+                        }
+                        
+                        iLoc6 = sMessage.indexOf("classes", iLoc8);
+                        if ( iLoc6 != -1 )
+                        {
+                            iLoc7 = sMessage.indexOf((int)0x22, iLoc6);
+                            if ( iLoc7 != -1 )
+                            {
+                                g_sClassId = sMessage.substring(iLoc6, iLoc7);
+                                //System.out.println("(Frame)g_sClassId: '"+g_sClassId+"'");
+                            }
+                        }
+                        
+                        iLoc3 = sMessage.indexOf(NAME_STRING, iLoc8 + 2);
+                        if ( iLoc3 != -1 )
+                        {
+                            iLoc4 = sMessage.indexOf((int)0x22, iLoc3 + 8);
+                            if ( iLoc4 != -1 )
+                            {
+                                // Like: 'DateTime'
+                                g_sClassName = sMessage.substring(iLoc3 + 8, iLoc4);
+                                //System.out.println("(Frame)g_sClassName: '"+g_sClassName+"'");
+                            }
+                        }
+                        
+                        iLoc10 = sMessage.indexOf("objects", iLoc8);
+                        if ( iLoc10 != -1 )
+                        {
+                            iLoc11 = sMessage.indexOf((int)0x22, iLoc10);
+                            if ( iLoc11 != -1 )
+                            {
+                                g_sObjectId = sMessage.substring(iLoc10, iLoc11);
+                                sSelectedObjectId = g_sObjectId;
+                                //System.out.println("(Frame)g_sObjectId: '"+g_sObjectId+"'");
+                            }
+                        }
+                        
+                        break;
+                    }
+                }
+                
+                iLoc7 = iLoc8 + 2;	// Next..
+            }    // End while..
+
 
 			for ( int iIndex = 0; iIndex <= 1; iIndex++ )
 			{
 				//System.out.println("~~TOP~~  iIndex: "+iIndex);
+				
+				if ( iIndex == 0 )
+				    sGetId = g_sObjectId;
+				else
+				    sGetId = g_sClassId;
+				    
+				//System.out.println("sGetId: '"+sGetId+"'");
+				
 				try
 				{	
 					//
@@ -6144,481 +6318,444 @@ public class ADev
 				catch (InterruptedException ie)
 				{
 				}
-
-
-				if ( iIndex == 0 )
-				{
-					iLoc2 = g_sMessage.indexOf(URI_STRING);
-					if ( iLoc2 != -1 )
-					{
-						iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 7);
-						if ( iLoc3 != -1 )
-						{
-							sURI = g_sMessage.substring(iLoc2 + 7, iLoc3);
-							//System.out.println("\nsURI: '"+sURI+"'");
-							if ( sURI.startsWith("dart:") )
-							{
-								bIsSystemClass = true;
-							}
-						}
-					}
-				}
-
-				iLoc2 = g_sMessage.indexOf(FUNCTIONS_STRING);
-				if ( iLoc2 != -1 )
-				{
-					iFunctionsEnd = g_sMessage.indexOf("]", iLoc2);					
-				}
-
-				// Skip @Field..				
-				iLoc2 = g_sMessage.indexOf(FIELDS_STRING);
-				if ( iLoc2 != -1 )
-				{
-					iFieldEnd = g_sMessage.indexOf("]", iLoc2);	
-					if ( sGetId.startsWith("classes") )
-					{
-						if ( iFieldEnd != -1 )
-						{
-							iLoc2 = iFieldEnd;
-						}
-					}
-				}
 				
-				bPastFields = false;
-				bBoundFieldFinished = false;
-
-				while ( true )
-				{
-					//System.out.println("--TOP--");
-					
-					if ( sGetId.startsWith("object") )
-					{
-						// Adjust to end..
-						//System.out.println("bBoundFieldFinished: "+bBoundFieldFinished);
-						if ( bBoundFieldFinished )
-						{
-							iLoc2 = iFieldEnd;
-						}
-					}
-					else if ( sGetId.startsWith("classes") )
-					{
-						// Adjust to end..
-						//System.out.println("bBoundFieldFinished: "+bBoundFieldFinished);
-						if ( bFunctionFinished )
-						{
-							iLoc2 = iFunctionsEnd;
-						}
-					}
-					
-					
-					if ( sGetId.startsWith("object") )
-					{
-						iLoc3 = g_sMessage.indexOf("BoundField", iLoc2);
-						if ( iLoc3 != -1 )
-						{
-							;
-						}
-						iLoc3 = g_sMessage.indexOf("Instance", iLoc2);
-						if ( iLoc3 != -1 )
-						{
-							;
-						}
-						else
-						{
-							break;
-						}
-					}
-					
-					iLoc2 = g_sMessage.indexOf(TYPE_STRING, iLoc2);
-					if ( iLoc2 > iFunctionsEnd )
-					{
-						break;
-					}
-					
-					if ( iLoc2 != -1 )
-					{
-						iLoc8 = g_sMessage.indexOf((int)0x22, iLoc2 + 8);
-						if ( iLoc8 != -1 )
-						{
-							sType = g_sMessage.substring(iLoc2 + 8, iLoc8);
-							//System.out.println("sType: '"+sType+"'");
-						}
-					}
-					else
-					{
-						break;
-					}
-					
-					if ( iLoc2 > iFieldEnd )
-					{
-						//System.out.println("bPastFields <- true");
-						bPastFields = true;
-					}
-
-					if ( (sType.equals("@Function")) && (bPastFields) )
-					{
-						
-						// {"type":"@Function","fixedId":true,"id":"classes
-						// \/1039\/functions\/get%3Aalpha","name":"alpha","_vmName":"get:alpha","owner":{"t
-						// ype":"@Class","fixedId":true,"id":"classes\/1039","name":"Color"},"_kind":"Gette
-						// rFunction","static":false,"const":false,"_intrinsic":false,"_native":false},
-
-						// Find next one..
-						iNextFunction = g_sMessage.indexOf("@Function", iLoc2 + 12);
-						if ( iNextFunction == -1 )
-						{
-							// Not found..
-							bFunctionFinished = true;
-						}
-
-						// Check if we should ignore..						
-						iLoc7 = g_sMessage.indexOf("get:", iLoc2);
-						if ( iLoc7 != -1 )
-						{
-							iLoc8 = g_sMessage.indexOf((int)0x22, iLoc7);
-							if ( iLoc8 != -1 )
-							{
-								sT = g_sMessage.substring(iLoc7, iLoc8);
-								iLoc11 = sT.indexOf("@");
-								if ( iLoc11 != -1 )
-								{
-									// Find next..
-									if ( iNextFunction != -1 )
-									{
-										// There is a next Function..
-										iLoc2 = iNextFunction - 10;
-									}
-									
-									continue;
-								}
-							}
-						}
-								
-						iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
-						if ( iLoc6 != -1 )
-						{
-							iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
-							if ( iLoc7 != -1 )
-							{
-								sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
-								//System.out.println("(@Function)sName: '"+sName+"'");
-							}
-						}
-
-						iLoc9 = g_sMessage.indexOf("_kind", iLoc6);
-						if ( iLoc9 != -1 )
-						{
-							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc9 + 8);
-							if ( iLoc5 != -1 )
-							{
-								sKind = g_sMessage.substring(iLoc9 + 8, iLoc5);
-								if ( sKind.equals("GetterFunction") )
-								{
-									//System.out.println("(@Function)sName: '"+sName+"'");
-									//System.out.println("sKind: '"+sKind+"'");
-
-									tNodeFVInfo = new NodeFVInfo(sName);
-									tNodeFVInfo.sPropertyName = sName;
-									//System.out.println("(@Function put())sName: '"+sName+"'");
-									ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
-
-								}
-							}
-						}
-						
-						// Find next..
-						if ( iNextFunction != -1 )
-						{
-							// There is a next Function..
-							iLoc2 = iNextFunction - 10;
-						}
-
-					}
-					//else if ( (sType.equals("BoundField")) && (bPastFields == false) )
-					else if ( (sType.equals("BoundField")) )
-					{
-						// Find next one..
-						iNextBoundField = g_sMessage.indexOf("BoundField", iLoc2 + 19);
-						if ( iNextBoundField == -1 )
-						{
-							// Not found..
-							//System.out.println("No more BoundField");
-							bBoundFieldFinished = true;
-						}
-						
-						// "name":"center"
-						iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
-						if ( iLoc6 != -1 )
-						{
-							iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
-							if ( iLoc7 != -1 )
-							{
-								sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
-								//System.out.println("(BoundField)sName: '"+sName+"'");
-								tNodeFVInfo = new NodeFVInfo(sName);
-							}
-						}
-
-						// Note:
-						// In object pass, it often doesn't have 'typeClass'
-						// Like: 'classes\/221'
-						iLoc9 = g_sMessage.indexOf(TYPECLASS_STRING, iLoc6);	// Help locate the correct one..
-						if ( iLoc9 != -1 )
-						{
-							iLoc10 = g_sMessage.indexOf("@Class", iLoc9);
-							if ( iLoc10 != -1 )
-							{
-								iLoc4 = g_sMessage.indexOf("classes", iLoc10);
-								if ( iLoc4 != -1 )
-								{
-									iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
-									if ( iLoc5 != -1 )
-									{
-										sClassId = g_sMessage.substring(iLoc4, iLoc5);
-										//System.out.println("sClassId: '"+sClassId+"'");
-										tNodeFVInfo.sClassId = sClassId;
-									}
-								}
-							}
-						}
-
-						// "kind":"List"
-						iLoc4 = g_sMessage.indexOf(KIND_STRING, iLoc9);
-						if ( iLoc4 != -1 )
-						{
-							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
-							if ( iLoc5 != -1 )
-							{
-								sKind = g_sMessage.substring(iLoc4 + 8, iLoc5);
-								//System.out.println("sKind: '"+sKind+"'");
-							}
-
-							if ( sKind.equals("List") )	
-							{
-								bIsList = true;
-								
-								// Get "length"..
-								iLoc12 = g_sMessage.indexOf(LENGTH_STRING, iLoc4);
-								if ( iLoc12 != -1 )
-								{
-									iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
-									if ( iLoc5 != -1 )
-									{
-										sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
-										sLength = sLength.trim();
-										//System.out.println("sLength: '"+sLength+"'");
-										
-										// Construct List display info..
-										sB = new StringBuffer();
-										sB.append("List (");
-										sB.append(sLength);
-										sB.append(" item");
-										if ( sLength.equals("1") )
-											;
-										else
-											sB.append("s");
-										
-										sB.append(")");
-										sDisplayClassName = sB.toString();
-										//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
-										tNodeFVInfo.sDisplayClassName = sDisplayClassName;
-									}
-								}
-							}
-						}
-
-						// Like: 'objects\/63'
-						// Note:
-						// Not all have 'PlainInstance'
-						// so use "id"..
-						iLoc9 = g_sMessage.indexOf(ID_STRING, iLoc4);
-						if ( iLoc9 != -1 )
-						{
-							iLoc10 = g_sMessage.indexOf("objects", iLoc9);
-							if ( iLoc10 != -1 )
-							{
-								iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10);
-								if ( iLoc11 != -1 )
-								{
-									sObjectId = g_sMessage.substring(iLoc10, iLoc11);
-									//System.out.println("sObjectId: '"+sObjectId+"'");
-									tNodeFVInfo.sObjectId = sObjectId;
-								}
-							}
-						}
-
-						// Note:
-						// This works for most, but not all..							
-						// Get Class name..
-						iLoc11 = g_sMessage.indexOf(TYPECLASS_STRING, iLoc6);
-						if ( iLoc11 != -1 )
-						{
-							iLoc12 = g_sMessage.indexOf(NAME_STRING, iLoc11);
-							if ( iLoc12 != -1 )
-							{
-								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc12 + 8);
-								if ( iLoc7 != -1 )
-								{
-									sClassName = g_sMessage.substring(iLoc12 + 8, iLoc7);
-									//System.out.println("sClassName: '"+sClassName+"'");
-									tNodeFVInfo.sClassName = sClassName;
-								}
-							}
-						}
-
-						// Class:		"@Instance","class"
-						// Non Class: 	"@Instance","_vmType"
-						iLoc8 = g_sMessage.indexOf(VALUE_STRING, iLoc6);	// Help locate..
-						if ( iLoc8 != -1 )
-						{
-							iLoc10 = g_sMessage.indexOf("@Instance", iLoc8);
-							if ( iLoc10 != -1 )
-							{
-								iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10 + 12);
-								if ( iLoc11 != -1 )
-								{
-									sT = g_sMessage.substring(iLoc10 + 12, iLoc11);
-									//System.out.println("(_vmType): '"+sT+"'");
-									if ( sT.equals("_vmType") )
-										;
-									else
-									{
-										//System.out.println("tNodeFVInfo.bIsClass <- true");
-										tNodeFVInfo.bIsClass = true;
-									}
-								}
-							}
-						}
-						
-						// Like: '"valueAsString":"6600233167816000"'
-						iLoc8 = g_sMessage.indexOf(VALUE_AS_STRING_STRING, iLoc6);
-						if ( iLoc8 != -1 )
-						{
-							//System.out.println("Found valueAsString");
-							// Note:
-							// if there is no "valueAsString"
-							// we need to prevent it from finding the
-							// wrong one..
-							
-							//System.out.println("iNextBoundField: "+iNextBoundField);
-							//System.out.println("iLoc8: "+iLoc8);
-							if ( (iNextBoundField == -1) || (iLoc8 < iNextBoundField) )
-							{
-								// Note:
-								// If it has "valueAsString"
-								// it's not a Class..
-								
-								// Note:
-								// In some cases it IS a Class
-								// but it can also have a "valueAsString"
-								// usually "null"..
-								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc8 + 17);
-								if ( iLoc7 != -1 )
-								{
-									sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc7);
-									//System.out.println("sValueAsString: '"+sValueAsString+"'");
-									tNodeFVInfo.sValueAsString = sValueAsString;
-								}
-							}
-						}
-						
-						//System.out.println("(BoundField put())sName: '"+sName+"'");
-						ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
-						
-						// Find end..
-						if ( iNextBoundField != -1 )
-						{
-							// There is a next BoundField..
-							iLoc2 = iNextBoundField - 10;
-						}
-					}
-					else if ( (sType.equals("@Instance")) )
-					{
-						// List
-						
-						// {"type":"@Instance","class":{"type":"@Class","fixedId":true,"id":"classes\/3887",
-						// "name":"PlanetWidget"},"kind":"PlainInstance","id":"objects\/300"},
-
-						// Construct array index..
-						sB = new StringBuffer();
-						sB.append("[");
-						sB.append(iArrayIndex);
-						sB.append("]");
-						iArrayIndex++;
-						
-						tNodeFVInfo = new NodeFVInfo(sB.toString());
-							
-						// Process List..
-						iLoc7 = g_sMessage.indexOf("classes", iLoc2);		// <- Next pointer..
-						if ( iLoc7 != -1 )
-						{
-							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7);
-							if ( iLoc5 != -1 )
-							{
-								sClassId = g_sMessage.substring(iLoc7, iLoc5);
-								//System.out.println("(@Instance)sClassId: '"+sClassId+"'");
-								tNodeFVInfo.sClassId = sClassId;
-							}
-						}
-
-						// Note:
-						// We want to search for "valueAsString"
-						// If we searched for "objects", next, we might get
-						// "objects\/int-14"					
-						iLoc4 = g_sMessage.indexOf(VALUE_AS_STRING_STRING, iLoc2);
-						if ( iLoc4 != -1 )
-						{
-							iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 17);
-							if ( iLoc5 != -1 )
-							{
-								sValueAsString = g_sMessage.substring(iLoc4 + 17, iLoc5);
-								//System.out.println("sValueAsString: '"+sValueAsString+"'");
-								tNodeFVInfo.sValueAsString = sValueAsString;
-							}
-						}
-						else
-						{
-							bIsObjectList = true;
-							
-							// "name":"PlanetWidget"
-							iLoc4 = g_sMessage.indexOf(NAME_STRING, iLoc2);
-							if ( iLoc4 != -1 )
-							{
-								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
-								if ( iLoc5 != -1 )
-								{
-									sClassName = g_sMessage.substring(iLoc4 + 8, iLoc5);
-									//System.out.println("sClassName: '"+sClassName+"'");
-									tNodeFVInfo.sClassName = sClassName;
-								}
-							}
-							
-							iLoc4 = g_sMessage.indexOf("objects", iLoc4);
-							if ( iLoc4 != -1 )
-							{
-								iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
-								if ( iLoc5 != -1 )
-								{
-									sObjectId = g_sMessage.substring(iLoc4, iLoc5);
-									//System.out.println("sObjectId: '"+sObjectId+"'");
-									tNodeFVInfo.sObjectId = sObjectId;
-								}
-							}
-						}
-						
-						//System.out.println("(@Instance put())sB: '"+sB.toString()+"'");
-						ExpandedNodeLHm.put((String)sB.toString(), (NodeFVInfo)tNodeFVInfo);
-						
-						iLoc2 = iLoc4;
-						
-					}
-				}	// End while..
-				
-				if ( sGetId.startsWith("classes") )
-					sGetId = sSelectedObjectId;
-				
+                if ( sGetId.startsWith("classes") )
+                {
+                    iLoc2 = 0;
+                    while ( true )
+                    {
+                        // classes
+                        //System.out.println("--TOP--");
+                        iLoc2 = g_sMessage.indexOf("@Function", iLoc2);
+                        if ( iLoc2 != -1 )
+                        {
+                            //System.out.println("@Function");
+                            
+                            // {"type":"@Function","fixedId":true,"id":"classes
+                            // \/1039\/functions\/get%3Aalpha","name":"alpha","_vmName":"get:alpha","owner":{"t
+                            // ype":"@Class","fixedId":true,"id":"classes\/1039","name":"Color"},"_kind":"Gette
+                            // rFunction","static":false,"const":false,"_intrinsic":false,"_native":false},
+    
+                            iLoc9 = g_sMessage.indexOf("_kind", iLoc2);
+                            if ( iLoc9 != -1 )
+                            {
+                                iLoc5 = g_sMessage.indexOf((int)0x22, iLoc9 + 8);
+                                if ( iLoc5 != -1 )
+                                {
+                                    sKind = g_sMessage.substring(iLoc9 + 8, iLoc5);
+                                    if ( sKind.equals("GetterFunction") )
+                                    {
+                                        iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
+                                        if ( iLoc6 != -1 )
+                                        {
+                                            iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
+                                            if ( iLoc7 != -1 )
+                                            {
+                                                sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
+                                                //System.out.println("(@Function)sName: '"+sName+"'");
+                                            }
+                                        }
+    
+                                        tNodeFVInfo = new NodeFVInfo(sName);
+                                        tNodeFVInfo.sPropertyName = sName;
+                                        //System.out.println("(@Function put())sName: '"+sName+"'");
+                                        ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                            break;
+                        
+                        iLoc2 += 2;
+                        
+                    }   // End while..
+                }
+                else
+                {
+                    // Get "fields" end..
+                    iLoc10 = g_sMessage.indexOf(FIELDS_STRING);
+                    if ( iLoc10 != -1 )
+                    {
+                        iFieldEnd = g_sMessage.indexOf("]", iLoc10);
+                    }
+                    
+                    iLoc2 = 0;
+                    while ( true )
+                    {
+                        // objects
+                        //System.out.println("--TOP--");
+                        iKindLoc = 0;
+                        
+                        iLoc2 = g_sMessage.indexOf(TYPE_STRING, iLoc2);
+                        if ( iLoc2 != -1 )
+                        {
+                            iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 8);
+                            if ( iLoc3 != -1 )
+                            {
+                                sType = g_sMessage.substring(iLoc2 + 8, iLoc3);
+                                if ( sType.equals("BoundField") )
+                                {
+                                    //System.out.println("\nBoundField");
+                                    // Find next one..
+                                    iNextBoundField = g_sMessage.indexOf("BoundField", iLoc2 + 19);
+                                   
+                                    // "name":"center"
+                                    iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
+                                    if ( iLoc6 != -1 )
+                                    {
+                                        iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
+                                        if ( iLoc7 != -1 )
+                                        {
+                                            sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
+                                            //System.out.println("(BoundField)sName: '"+sName+"'");
+                                            tNodeFVInfo = new NodeFVInfo(sName);
+                                        }
+                                    }
+            
+                                    // Note:
+                                    // In object pass, it often doesn't have 'typeClass'
+                                    // Like: 'classes\/221'
+                                    iLoc9 = g_sMessage.indexOf(TYPECLASS_STRING, iLoc6);	// Help locate the correct one..
+                                    if ( iLoc9 != -1 )
+                                    {
+                                        iLoc10 = g_sMessage.indexOf("@Class", iLoc9);
+                                        if ( iLoc10 != -1 )
+                                        {
+                                            iLoc4 = g_sMessage.indexOf("classes", iLoc10);
+                                            if ( iLoc4 != -1 )
+                                            {
+                                                iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
+                                                if ( iLoc5 != -1 )
+                                                {
+                                                    sClassId = g_sMessage.substring(iLoc4, iLoc5);
+                                                    //System.out.println("sClassId: '"+sClassId+"'");
+                                                    tNodeFVInfo.sClassId = sClassId;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // "kind":"List"
+                                    // "kind":"Closure" (Function)
+                                    iLoc4 = g_sMessage.indexOf(KIND_STRING, iLoc6);     // From "name"..
+                                    if ( iLoc4 != -1 )
+                                    {
+                                        //System.out.println("Found kind");
+                                        iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
+                                        if ( iLoc5 != -1 )
+                                        {
+                                            sKind = g_sMessage.substring(iLoc4 + 8, iLoc5);
+                                            //System.out.println("sKind: '"+sKind+"'");
+                                        }
+            
+                                        if ( sKind.equals("List") )	
+                                        {
+                                            iKindLoc = iLoc4;
+                                            tNodeFVInfo.sKind = sKind;
+                                            bIsList = true;
+                                            
+                                            // Get "length"..
+                                            iLoc12 = g_sMessage.indexOf(LENGTH_STRING, iLoc4);
+                                            if ( iLoc12 != -1 )
+                                            {
+                                                iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
+                                                if ( iLoc5 != -1 )
+                                                {
+                                                    sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
+                                                    sLength = sLength.trim();
+                                                    //System.out.println("sLength: '"+sLength+"'");
+                                                    
+                                                    // Construct List display info..
+                                                    sB = new StringBuffer();
+                                                    sB.append("List (");
+                                                    sB.append(sLength);
+                                                    sB.append(" item");
+                                                    if ( sLength.equals("1") )
+                                                        ;
+                                                    else
+                                                        sB.append("s");
+                                                    
+                                                    sB.append(")");
+                                                    sDisplayClassName = sB.toString();
+                                                    //System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+                                                    tNodeFVInfo.sDisplayClassName = sDisplayClassName;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Try to locate 2nd "kind" to get past "@Instance"
+                                    // and sometimes "List" is in the 2nd one..
+                                    iLoc7 = g_sMessage.indexOf(KIND_STRING, iLoc4 + 2);     // From "kind"..
+                                    //System.out.println("iLoc7: "+iLoc7);
+                                    //System.out.println("iNextBoundField: "+iNextBoundField);
+                                    if ( iLoc7 != -1 )
+                                    //if ( (iLoc7 != -1) && (iLoc7 < iNextBoundField) )
+                                    {
+                                        iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7 + 8);
+                                        if ( iLoc5 != -1 )
+                                        {
+                                            sKind = g_sMessage.substring(iLoc7 + 8, iLoc5);
+                                            //System.out.println("sKind: '"+sKind+"'");
+                                        }
+                                        
+                                        if ( sKind.equals("List") )
+                                        {
+                                            iKindLoc = iLoc7;
+                                            tNodeFVInfo.sKind = sKind;
+                                            bIsList = true;
+                                            
+                                            // Get "length"..
+                                            iLoc12 = g_sMessage.indexOf(LENGTH_STRING, iLoc7);
+                                            if ( iLoc12 != -1 )
+                                            {
+                                                iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
+                                                if ( iLoc5 != -1 )
+                                                {
+                                                    sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
+                                                    sLength = sLength.trim();
+                                                    //System.out.println("sLength: '"+sLength+"'");
+                                                    
+                                                    // Construct List display info..
+                                                    sB = new StringBuffer();
+                                                    sB.append("List (");
+                                                    sB.append(sLength);
+                                                    sB.append(" item");
+                                                    if ( sLength.equals("1") )
+                                                        ;
+                                                    else
+                                                        sB.append("s");
+                                                    
+                                                    sB.append(")");
+                                                    sDisplayClassName = sB.toString();
+                                                    //System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+                                                    tNodeFVInfo.sDisplayClassName = sDisplayClassName;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Class:		"@Instance","class"
+                                    // Non Class: 	"@Instance","_vmType"
+                                    iLoc8 = g_sMessage.indexOf(VALUE_STRING, iLoc6);	// From "name"..
+                                    if ( iLoc8 != -1 )
+                                    {
+                                        iLoc10 = g_sMessage.indexOf("@Instance", iLoc8);
+                                        if ( iLoc10 != -1 )
+                                        {
+                                            iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10 + 12);
+                                            if ( iLoc11 != -1 )
+                                            {
+                                                sT = g_sMessage.substring(iLoc10 + 12, iLoc11);
+                                                //System.out.println("(_vmType): '"+sT+"'");
+                                                if ( sT.equals("_vmType") )
+                                                    ;
+                                                else
+                                                {
+                                                    //System.out.println("tNodeFVInfo.bIsClass <- true");
+                                                    tNodeFVInfo.bIsClass = true;
+                                                }
+                                            }
+                                            
+                                            iLoc12 = g_sMessage.indexOf(NAME_STRING, iLoc10);   // @Instance
+                                            if ( iLoc12 != -1 )
+                                            {
+                                                iLoc11 = g_sMessage.indexOf((int)0x22, iLoc12 + 8);
+                                                if ( iLoc11 != -1 )
+                                                {
+                                                    sClassName = g_sMessage.substring(iLoc12 + 8, iLoc11);
+                                                    //System.out.println("sClassName: '"+sClassName+"'");
+                                                    tNodeFVInfo.sClassName = sClassName;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    iLoc14 = g_sMessage.indexOf("objects", iLoc8);
+                                    if ( iLoc14 != -1 )
+                                    {
+                                        iLoc11 = g_sMessage.indexOf((int)0x22, iLoc14);
+                                        if ( iLoc11 != -1 )
+                                        {
+                                            sObjectId = g_sMessage.substring(iLoc14, iLoc11);
+                                            //System.out.println("(_widget)sObjectId: '"+sObjectId+"'");
+                                            tNodeFVInfo.sObjectId = sObjectId;
+                                        }
+                                    }
+                                    
+                                    // Like: '"valueAsString":"6600233167816000"'
+                                    iLoc8 = g_sMessage.indexOf(VALUE_AS_STRING_STRING, iLoc6);
+                                    if ( iLoc8 != -1 )
+                                    {
+                                        // Note:
+                                        // if there is no "valueAsString"
+                                        // we need to prevent it from finding the
+                                        // wrong one..
+                                        
+                                        //System.out.println("iNextBoundField: "+iNextBoundField);
+                                        //System.out.println("iLoc8: "+iLoc8);
+                                        if ( (iNextBoundField == -1) ||
+                                            ((iNextBoundField != -1) && (iLoc8 < iNextBoundField)) )
+                                        {
+                                            //System.out.println("Found valueAsString");
+                                            // Note:
+                                            // In some cases it IS a Class
+                                            // but it can also have a "valueAsString"
+                                            // usually "null"..
+                                            iLoc7 = g_sMessage.indexOf((int)0x22, iLoc8 + 17);
+                                            if ( iLoc7 != -1 )
+                                            {
+                                                sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc7);
+                                                //System.out.println("sValueAsString: '"+sValueAsString+"'");
+                                                tNodeFVInfo.sValueAsString = sValueAsString;
+                                            }
+                                        }
+                                    }
+                                    
+                                    //System.out.println("(BoundField put())sName: '"+sName+"'");
+                                    ExpandedNodeLHm.put((String)sName, (NodeFVInfo)tNodeFVInfo);
+                                    
+                                    // Next..
+                                    if ( iNextBoundField != -1 )
+                                    {
+                                        // There is a next BoundField..
+                                        iLoc2 = iNextBoundField - 10;
+                                    }
+                                    else
+                                    {
+                                        // No BoundField, use end ']' location..
+                                        iLoc2 = iFieldEnd;
+                                    }
+                                }
+                                else if ( sType.equals("@Instance") )
+                                {
+                                    // List
+                                    
+                                    // {"type":"@Instance","class":{"type":"@Class","fixedId":true,"id":"classes\/3887",
+                                    // "name":"PlanetWidget"},"kind":"PlainInstance","id":"objects\/300"},
+                                    
+                                    //System.out.println("\n--------------------------------");
+                                    //System.out.println("@Instance");
+            
+                                    // Construct array index..
+                                    sB = new StringBuffer();
+                                    sB.append("[");
+                                    sB.append(iArrayIndex);
+                                    sB.append("]");
+                                    iArrayIndex++;
+                                    
+                                    tNodeFVInfo = new NodeFVInfo(sB.toString());
+                                    
+                                    // Find next @Instance to make sure that
+                                    // when we try to find "valueAsString"
+                                    // we don't go over..
+                                    iInstanceNext = g_sMessage.indexOf("@Instance", iLoc2 + 17);
+                                    
+                                    // Note:
+                                    // For List elements a good way to
+                                    // tell a Class or primative is to look at this:
+                                    // "type":"@Instance","class"
+                                    // "type":"@Instance","_vmType"
+                                    
+                                    // Get @Instance type..
+                                    // iLoc2 @ "type"
+                                    // This is probably a better way to do it
+                                    // then if it we try to use "valueAsString"..
+                                    iLoc6 = g_sMessage.indexOf((int)0x22, iLoc2 + 20);
+                                    if ( iLoc6 != -1 )
+                                    {
+                                        sInstanceType = g_sMessage.substring(iLoc2 + 20, iLoc6);
+                                        if ( sInstanceType.equals("class") )
+                                            tNodeFVInfo.bIsClass = true;
+                                        else
+                                            tNodeFVInfo.bIsClass = false;
+                                    }
+                                        
+                                    // Process List..
+                                    iLoc7 = g_sMessage.indexOf("classes", iLoc2);		// <- Next pointer..
+                                    if ( iLoc7 != -1 )
+                                    {
+                                        iLoc2 = iLoc7;  // Update..
+                                        iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7);
+                                        if ( iLoc5 != -1 )
+                                        {
+                                            sClassId = g_sMessage.substring(iLoc7, iLoc5);
+                                            //System.out.println("(@Instance)sClassId: '"+sClassId+"'");
+                                            tNodeFVInfo.sClassId = sClassId;
+                                        }
+                                    }
+            
+                                    // Note:
+                                    // We want to search for "valueAsString"
+                                    // If we searched for "objects", next, we might get
+                                    // "objects\/int-14"					
+                                    iLoc4 = g_sMessage.indexOf(VALUE_AS_STRING_STRING, iLoc2);
+                                    if ( iLoc4 != -1 )
+                                    {
+                                        // Check if it went over..
+                                        if ( (iInstanceNext == -1) ||
+                                                ((iInstanceNext != -1) && (iLoc4 < iInstanceNext)) )
+                                            bGoodValueAsString = true;
+                                        else
+                                            bGoodValueAsString = false;
+                                    }
+                                            
+                                    if ( bGoodValueAsString )
+                                    {
+                                        iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 17);
+                                        if ( iLoc5 != -1 )
+                                        {
+                                            sValueAsString = g_sMessage.substring(iLoc4 + 17, iLoc5);
+                                            //System.out.println("sValueAsString: '"+sValueAsString+"'");
+                                            tNodeFVInfo.sValueAsString = sValueAsString;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //System.out.println("In else, Object List");
+                                        bIsObjectList = true;
+                                        
+                                        // "name":"PlanetWidget"
+                                        iLoc4 = g_sMessage.indexOf(NAME_STRING, iLoc2);
+                                        if ( iLoc4 != -1 )
+                                        {
+                                            iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
+                                            if ( iLoc5 != -1 )
+                                            {
+                                                sClassName = g_sMessage.substring(iLoc4 + 8, iLoc5);
+                                                //System.out.println("sClassName: '"+sClassName+"'");
+                                                tNodeFVInfo.sClassName = sClassName;
+                                            }
+                                        }
+                                        
+                                        iLoc5 = g_sMessage.indexOf("objects", iLoc4);
+                                        if ( iLoc5 != -1 )
+                                        {
+                                            iLoc6 = g_sMessage.indexOf((int)0x22, iLoc5);
+                                            if ( iLoc6 != -1 )
+                                            {
+                                                sObjectId = g_sMessage.substring(iLoc5, iLoc6);
+                                                //System.out.println("sObjectId: '"+sObjectId+"'");
+                                                tNodeFVInfo.sObjectId = sObjectId;
+                                            }
+                                        }
+                                    }
+                                    
+                                    //System.out.println("(@Instance put())sB: '"+sB.toString()+"'");
+                                    ExpandedNodeLHm.put((String)sB.toString(), (NodeFVInfo)tNodeFVInfo);
+                                }
+                            }
+                        }
+                        else
+                            break;
+                        
+                        iLoc2 += 2;
+                        
+                    }   // End while..
+                }
 			}	// End for..
-
+			
 			//System.out.println("\nDropped out");
 			
 			set = ExpandedNodeLHm.keySet();
@@ -6626,7 +6763,7 @@ public class ADev
 			
 			while ( true )
 			{
-				//System.out.println("\n**TOP**");
+				//System.out.println("**TOP**");
 				if ( iterator.hasNext() )
 				{
 					sKey = (String)iterator.next();
@@ -6634,41 +6771,54 @@ public class ADev
 					
 					nodeFVInfo = (NodeFVInfo)ExpandedNodeLHm.get((String)sKey);
 
-					//System.out.println("\nnodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-					//System.out.println("nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
+					//System.out.println("---- pre evaluate() ----------------------------------------------");
+					//System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
+					//System.out.println("(getter)nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
 					//System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
 					//System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
 					//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-					//System.out.println("nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
+					//System.out.println("(get())nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
+					//System.out.println("nodeFVInfo.sKind: '"+nodeFVInfo.sKind+"'");
 					//System.out.println("nodeFVInfo.sDisplayClassName: '"+nodeFVInfo.sDisplayClassName+"'");
 					//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
+					//System.out.println("--------------------------------------------------");
 
 					sValueAsString = "";
 					bFromPropertyName = false;
-					
-					// Process 'sPropertyName'..					
+                    sEvalKind = "";
+                    bEvalIsClass = false;
+
+/*					
+					if ( nodeFVInfo.sPropertyName == null )
+					    System.out.println("(get())nodeFVInfo.sPropertyName null");
+					else
+					    System.out.println("(get())nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
+/**/
+
+					// Process 'sPropertyName', set for GetterFunction..					
 					if ( (nodeFVInfo.sPropertyName != null) && (nodeFVInfo.sPropertyName.length() > 0) )
 					{
 				
 						sExpression = nodeFVInfo.sName;
-
-/*
+/*						
 						if ( sExpression == null )
-							System.out.println("sExpression null");
+							System.out.println("(evaluate())sExpression null");
 						else
-							System.out.println("sExpression: '"+sExpression+"'");
+							System.out.println("(evaluate())sExpression: '"+sExpression+"'");
 /**/
 
-						sObjectId = sSelectedObjectId;
-
+						sObjectId = sSelectedObjectId;    // From Frame..
+						
 /*						
 						if ( sObjectId == null )
-							System.out.println("sObjectId null");
+							System.out.println("(evaluate())sObjectId null");
 						else
-							System.out.println("sObjectId: '"+sObjectId+"'");
+							System.out.println("(evaluate())sObjectId: '"+sObjectId+"'");
 /**/					
 		
-		
+                        // Note:
+                        // It uses the Class's Object Id:
+                        // "name":"DateTime"  "objects\/2932"
 		
 						try
 						{				
@@ -6722,6 +6872,17 @@ public class ADev
 						else
 						{
 							bFromPropertyName = true;
+							//System.out.println("*** Evaluate OK ***");
+							
+							// Note:
+							// Sometimes the only indication that it's a List
+							// is found in the evaluation result:
+							
+                            // '{"jsonrpc":"2.0", "result":{"type":"@Instance","_vmType":
+                            // "Array","class":{"type":"@Class","fixedId":true,"id":"classes\/72","name":"_List
+                            // ","_vmName":"_List@0150898"},"kind":"List","id":"objects\/145","length":9},"id":
+                            // "500"}'							
+							
 							
 							// {"jsonrpc":"2.0", "result":{"type":"@Instance","class":{"type":"@Class","fixedId":true,
 							// "id":"classes\/222","name":"Duration"},"kind":"PlainInstance","id":"objects\/127"},"id":"497"}
@@ -6734,7 +6895,7 @@ public class ADev
 							//sValueAsString = "";
 							bIsClass = false;
 		
-							// Check for 'class' / '_vmType'
+							// Check for 'class' or '_vmType'
 							iLoc3 = g_sMessage.indexOf("@Instance");
 							if ( iLoc3 != -1 )
 							{
@@ -6746,6 +6907,7 @@ public class ADev
 									if ( sType.equals("class") )
 									{
 										bIsClass = true;
+										bEvalIsClass = true;
 										
 										// Get type/name..
 										iLoc5 = g_sMessage.indexOf(NAME_STRING);
@@ -6756,7 +6918,7 @@ public class ADev
 											{
 												// Like:  'Duration'
 												sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
-												//System.out.println("(PropertyName)sTypeName: '"+sTypeName+"'");
+												//System.out.println("(evaluate())sTypeName: '"+sTypeName+"'");
 											}
 										}
 									}
@@ -6766,13 +6928,58 @@ public class ADev
 									}
 								}
 								
-								//System.out.println("(PropertyName)bIsClass: "+bIsClass);
+								//System.out.println("(evaluate())bIsClass: "+bIsClass);
 							}
 							
 							// Get value..	
 							iLoc5 = g_sMessage.indexOf(KIND_STRING, iLoc3);		// Help locate '}'..
 							if ( iLoc5 != -1 )
 							{
+								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc5 + 8);
+								if ( iLoc7 != -1 )
+								{
+									sEvalKind = g_sMessage.substring(iLoc5 + 8, iLoc7);
+									//System.out.println("sEvalKind: '"+sEvalKind+"'");
+									if ( sEvalKind.equals("List") )
+									{
+/*							
+									    System.out.println("(put())sKey: '"+sKey+"'");
+									    System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
+									    nodeFVInfo.sKind = "List";
+									    //ExpandedNodeLHm.put((String)sKey, (NodeFVInfo)nodeFVInfo);
+									    //ExpandedNodeLHm.replace((String)sKey, (NodeFVInfo)nodeFVInfo);
+									    ExpandedNodeLHm.put((String)sKey, (NodeFVInfo)ExpandedNodeLHm.get(sKey));
+/**/									    
+									    bIsList = true;
+                                        iLoc9 = g_sMessage.indexOf(LENGTH_STRING, iLoc3);		// Help locate '}'..
+                                        if ( iLoc9 != -1 )
+                                        {
+                                            iLoc10 = g_sMessage.indexOf("}", iLoc9 + 9);
+                                            if ( iLoc10 != -1 )
+                                            {
+                                                sLength = g_sMessage.substring(iLoc9 + 9, iLoc10);
+                                                sLength = sLength.trim();
+                                                //System.out.println("sLength: '"+sLength+"'");
+                                                
+                                                // Construct List display info..
+                                                sB = new StringBuffer();
+                                                sB.append("List (");
+                                                sB.append(sLength);
+                                                sB.append(" item");
+                                                if ( sLength.equals("1") )
+                                                    ;
+                                                else
+                                                    sB.append("s");
+                                                
+                                                sB.append(")");
+                                                sDisplayClassName = sB.toString();
+                                                //System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
+                                                //tNodeFVInfo.sDisplayClassName = sDisplayClassName;
+                                            }
+                                        }
+									}
+								}
+							    
 								iLoc6 = g_sMessage.indexOf("}", iLoc5);
 								if ( iLoc6 != -1 )
 								{
@@ -6785,7 +6992,7 @@ public class ADev
 											if ( iLoc4 != -1 )
 											{
 												sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
-												//System.out.println("(PropertyName)sValueAsString: '"+sValueAsString+"'");
+												//System.out.println("sValueAsString: '"+sValueAsString+"'");
 											}
 										}
 									}
@@ -6820,30 +7027,32 @@ public class ADev
 					{
 						//System.out.println("--Create--");
 						//System.out.println("sGetId: '"+sGetId+"'");
-						if ( sGetId.startsWith("objects") )
-						{
-							// These are from BoundField and @Instance..
-							sExpression = nodeFVInfo.sName;
-							
-							if ( bFromPropertyName )
-							{
-								;
-							}
-							else
-							{
-								bIsClass = nodeFVInfo.bIsClass;
-								sValueAsString = nodeFVInfo.sValueAsString;
-								sTypeName = nodeFVInfo.sClassName;
-								sObjectId = nodeFVInfo.sObjectId;
-								sClassId = nodeFVInfo.sClassId;
-							}
-							
-							//System.out.println("(Final)sValueAsString: '"+sValueAsString+"'");
-							
-							sDisplayClassName = nodeFVInfo.sDisplayClassName;
+                        // These are from BoundField and @Instance..
+                        sExpression = nodeFVInfo.sName;
+                        
+                        //System.out.println("bFromPropertyName: "+bFromPropertyName);
+                        if ( bFromPropertyName )
+                        {
+                            ;
+                        }
+                        else
+                        {
+                            bIsClass = nodeFVInfo.bIsClass;
+                            sValueAsString = nodeFVInfo.sValueAsString;
+                            sTypeName = nodeFVInfo.sClassName;
+                            sObjectId = nodeFVInfo.sObjectId;
+                            sClassId = nodeFVInfo.sClassId;
+                        }
+                        
+                        //System.out.println("(Final)sValueAsString: '"+sValueAsString+"'");
+
+                        //System.out.println("bIsList: "+bIsList);
+                        if ( bIsList )
+                            ;
+                        else
+                            sDisplayClassName = nodeFVInfo.sDisplayClassName;
+                            
 	
-						}
-						
 						//System.out.println("\nsExpression: '"+sExpression+"'");
 						//System.out.println("sObjectId: '"+sObjectId+"'");
 						//System.out.println("sClassId: '"+sClassId+"'");
@@ -6853,21 +7062,19 @@ public class ADev
 						//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
 						//System.out.println("sType: '"+sType+"'");
 						//System.out.println("bIsClass: "+bIsClass);
-						//System.out.println("sObjectId: '"+sObjectId+"'");
-						//System.out.println("sObjectId: '"+sObjectId+"'");
 						//System.out.println("sTypeName: '"+sTypeName+"'");
 						//System.out.println("\n");
-						
+
 						newNodeFVInfo = new NodeFVInfo(sExpression);
-						newNodeFVInfo.sTargetId = sTarget;
+						
 						newNodeFVInfo.sObjectId = sObjectId;
 						newNodeFVInfo.sClassId = sClassId;
 	
 						//System.out.println("bIsClass: "+bIsClass);	
 						//System.out.println("bIsObjectList: "+bIsObjectList);
-						//if ( bIsClass )
 						if ( bIsClass || bIsObjectList )
 						{
+						    //System.out.println("In bIsClass || bIsObjectList");
 							newNodeFVInfo.bIsClass = true;
 
 							// Note:
@@ -6891,24 +7098,33 @@ public class ADev
 							//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
 							
 							newNodeFVInfo.sClassName = sTypeName;
+							
+							DefaultMutableTreeNode parentNode = null;
+							TreePath parentPath = variableJTree.getSelectionPath();
+							parentNode = (DefaultMutableTreeNode)
+							    (parentPath.getLastPathComponent());
+
+							childNode = new DefaultMutableTreeNode(newNodeFVInfo);
 						}
 						else
 						{
+						    //System.out.println("In else");
 							newNodeFVInfo.bIsClass = false;
+							
 /*							
 							if ( sDisplayClassName == null )
 								System.out.println("sDisplayClassName null");
 							else
 								System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
 /**/	
-	
-/*
+/*	
 							if ( sValueAsString == null )
 								System.out.println("sValueAsString null");
 							else
 								System.out.println("sValueAsString: '"+sValueAsString+"'");
 /**/								
-	
+
+/*
 							if ( (sDisplayClassName != null) && (sDisplayClassName.length() > 0) &&
 									(! sDisplayClassName.equals("null")) )
 							{
@@ -6918,6 +7134,17 @@ public class ADev
 							{
 								newNodeFVInfo.sValueAsString = sValueAsString;
 							}
+/**/
+
+							if ( (sValueAsString != null) && (sValueAsString.length() > 0) )
+							{
+								newNodeFVInfo.sValueAsString = sValueAsString;
+							}
+							else if ( (sDisplayClassName != null) && (sDisplayClassName.length() > 0) &&
+									(! sDisplayClassName.equals("null")) )
+							{
+								newNodeFVInfo.sValueAsString = sDisplayClassName;
+							}
 							else
 							{
 								// Note:
@@ -6925,20 +7152,39 @@ public class ADev
 								// have a value..
 								newNodeFVInfo.sValueAsString = sTypeName;
 							}
-	
+							
+                            childNode = new DefaultMutableTreeNode(newNodeFVInfo);
 						}
-	
-						//System.out.println("Final ----------------------------");
-						//System.out.println("newNodeFVInfo.sName: '"+newNodeFVInfo.sName+"'");
-						//System.out.println("newNodeFVInfo.sClassName: '"+newNodeFVInfo.sClassName+"'");
+						
+						//System.out.println("\n======== Add emptyNode ====================================");
+						//System.out.println("bEvalIsClass: "+bEvalIsClass);
+						//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
+						//System.out.println("sEvalKind: '"+sEvalKind+"'");
+						//System.out.println("nodeFVInfo.sKind: '"+nodeFVInfo.sKind+"'");
+						//System.out.println("nodeFVInfo.sDisplayClassName: '"+nodeFVInfo.sDisplayClassName+"'");
+						//System.out.println("============================================");
+						
+                        if ( (bEvalIsClass || nodeFVInfo.bIsClass) ||
+                            ((sEvalKind.equals("List")) || (nodeFVInfo.sKind.equals("List"))) )
+                        {
+                            // Add emptyNode to create a branch node..
+                            emptyNode = new DefaultMutableTreeNode();
+                            childNode.add(emptyNode);
+                        }
+						
+						
+
+/*						
+						System.out.println("Final ----------------------------");
+						System.out.println("newNodeFVInfo.sName: '"+newNodeFVInfo.sName+"'");
+						System.out.println("newNodeFVInfo.sClassName: '"+newNodeFVInfo.sClassName+"'");
 						//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
 						//System.out.println("newNodeFVInfo.sObjectId: '"+newNodeFVInfo.sObjectId+"'");
 						//System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-						//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
+						System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
 						//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
 /**/
-	
-						childNode = new DefaultMutableTreeNode(newNodeFVInfo);
+
 						currentNode.add(childNode);
 					}
 				}
@@ -7043,6 +7289,7 @@ public class ADev
 			DefaultMutableTreeNode childNode;
 			DefaultMutableTreeNode root = null;
 			DefaultMutableTreeNode child = null;
+			DefaultMutableTreeNode emptyNode = null;
 			DefaultTreeModel model = null;
 			Enumeration enumeration = null;
 			Object nodeObject;
@@ -7189,6 +7436,9 @@ public class ADev
 							nodeFVInfo.sClassId = variableInfo.sClassId;
 							nodeFVInfo.bIsClass = variableInfo.bIsClass;
 							nodeFVInfo.sObjectId = variableInfo.sObjectId;
+							
+							//System.out.println("variableInfo.sClassName: '"+variableInfo.sClassName+"'");
+							//System.out.println("variableInfo.bShowAsBranchNode: "+variableInfo.bShowAsBranchNode);
 
 							// Note:
 							// In the case of 'List'
@@ -7228,7 +7478,17 @@ public class ADev
 							//System.out.println("(Final)nodeFVInfo.sValueAsString: '"+nodeFVInfo.sValueAsString+"'");
 							
 							child = new DefaultMutableTreeNode(nodeFVInfo);
-								
+
+							//System.out.println("variableInfo.bIsClass: "+variableInfo.bIsClass);
+                            //System.out.println("variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");							
+							//if ( (variableInfo.bIsClass) || (variableInfo.sDisplayClassName.contains("List")) )
+							if ( variableInfo.bShowAsBranchNode )
+							{
+							    // Add emptyNode to create a branch node..
+                                emptyNode = new DefaultMutableTreeNode();
+                                child.add(emptyNode);
+							}
+/**/								
 							((DefaultTreeModel)variableJTree.getModel()).
 								insertNodeInto(
 									child,		// newChild
@@ -7373,14 +7633,12 @@ public class ADev
 						//System.out.println("enumeration breaking");
 						break;
 					}
-					
-/*
+/*					
 					if ( sExpression == null )
 						System.out.println("sExpression null");
 					else
 						System.out.println("sExpression: '"+sExpression+"'");
 /**/
-
 /*
 					if ( sEvalTargetId == null )
 						System.out.println("sEvalTargetId null");
@@ -7439,6 +7697,7 @@ public class ADev
 						}
 						else
 						{
+						    //System.out.println("*** Evaluate OK ***");
 							// Note:
 							// It looks like the way to tell that 'flipped'
 							// is a Class, it to look at the result here.
@@ -7511,6 +7770,8 @@ public class ADev
 				wse.printStackTrace();
 			}
 			
+			//System.out.println("Dropped out");
+			
 			TreePath rootPath = new TreePath(root.getPath());
 			
 			if ( bCreateChildren )
@@ -7575,49 +7836,6 @@ public class ADev
 /**/
 			actListener.actionPerformed(ae);
 
-		}
-	}	//}}}
-
-	//{{{	WalkTree()	
-	public void WalkTree()
-	{
-		//System.out.println("\nWalkTree()");
-		Object nodeObject;
-		Object rootObject;
-		Object dataObject;
-		int iCount;
-		TreeModel treeModel;
-		NodeFVInfo nodeFVInfo;
-		
-		treeModel = variableJTree.getModel();
-		rootObject = treeModel.getRoot();
-/*		
-		if ( rootObject == null )
-			System.out.println("rootObject null");
-		else
-			System.out.println("rootObject not null");
-/**/		
-		iCount = treeModel.getChildCount(rootObject);
-		//System.out.println("iCount: "+iCount);
-		
-		for ( int iJ = 0; iJ < iCount; iJ++ )
-		{
-			//System.out.println("--TOP-- iJ: "+iJ);
-			nodeObject = treeModel.getChild(rootObject, iJ);
-/*
-			if ( nodeObject == null )
-				System.out.println("nodeObject null");
-			else
-				System.out.println("nodeObject not null");
-/**/			
-			dataObject = ((DefaultMutableTreeNode)nodeObject).getUserObject();
-			nodeFVInfo = (NodeFVInfo)dataObject;
-			
-			//System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-			//System.out.println("nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
-			//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
-			//System.out.println("nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
-			
 		}
 	}	//}}}
 	
@@ -9794,8 +10012,8 @@ public class ADev
 			System.out.println("sMessage null");
 		else
 		{
-			System.out.println("sMessage.length(): "+sMessage.length());
-			System.out.println("sMessage: '"+sMessage+"'");
+			//System.out.println("sMessage.length(): "+sMessage.length());
+			//System.out.println("sMessage: '"+sMessage+"'");
 		}
 /**/
 
@@ -10219,14 +10437,17 @@ public class ADev
 		int iLoc12 = 0;
 		int iLoc14 = 0;
 		int iEndBrace = 0;
+		
+		boolean bShowAsBranchNode;
 
 		iLoc7 = 0;
 		
 		// Get variables in this Frame..											
 		while ( true )
 		{
-			//System.out.println("++TOP++ BoundVariable");
+			//System.out.println("++TOP++");
 			sDisplayClassName = "";
+			bShowAsBranchNode = false;
 			
 			// This should collect all Classes
 			// and get their targetId used for evaluate..
@@ -10327,7 +10548,11 @@ public class ADev
 								if ( bDoUpdate == false )
 								{
 									if ( sT.equals("class") )
+									{
+									    bShowAsBranchNode = true;
+									    variableInfo.bShowAsBranchNode = true;
 										variableInfo.bIsClass = true;	// 'class' It's a class..
+									}
 									else
 										variableInfo.bIsClass = false;	// '_vmType'
 								}
@@ -10345,11 +10570,8 @@ public class ADev
 							if ( iLoc4 != -1 )
 							{
 								// Like: '240.46946742441236'
-								//if ( bDoUpdate == false )
-								//{
-									variableInfo.sValueAsString = sMessage.substring(iLoc3 + 17, iLoc4);
-									//System.out.println("variableInfo.sValueAsString: '"+variableInfo.sValueAsString+"'");
-								//}
+                                variableInfo.sValueAsString = sMessage.substring(iLoc3 + 17, iLoc4);
+                                //System.out.println("variableInfo.sValueAsString: '"+variableInfo.sValueAsString+"'");
 							}
 						}
 					}
@@ -10365,6 +10587,9 @@ public class ADev
 							//System.out.println("sKindName: '"+sKindName+"'");
 							if ( sKindName.equals("List") )
 							{
+							    bShowAsBranchNode = true;
+							    variableInfo.bShowAsBranchNode = true;
+							    
 								// Use 'List' as the Class name..
 								if ( bDoUpdate == false )
 								{
@@ -10396,10 +10621,7 @@ public class ADev
 										sDisplayClassName = sB.toString();
 										//System.out.println("sDisplayClassName: '"+sDisplayClassName+"'");
 										
-										//if ( bDoUpdate == false )
-										//{
-											variableInfo.sDisplayClassName = sDisplayClassName;
-										//}
+										variableInfo.sDisplayClassName = sDisplayClassName;
 									}
 								}
 							}
@@ -10418,19 +10640,9 @@ public class ADev
 				if ( bDoUpdate == false )
 				{
 					// Load everything..
-/*
-					if ( VariableInfoLHm.containsKey((String)variableInfo.sName) )
-					{
-						System.out.println("Not updating");
-						;
-					}
-					else
-					{
-/**/
-						//System.out.println("(put())variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
-						VariableInfoLHm.put((String)variableInfo.sName, (VariableInfo)variableInfo);
-						//System.out.println("(Full)(put())variableInfo.sName: '"+variableInfo.sName+"'");
-					//}
+                    //System.out.println("(put())variableInfo.sDisplayClassName: '"+variableInfo.sDisplayClassName+"'");
+                    VariableInfoLHm.put((String)variableInfo.sName, (VariableInfo)variableInfo);
+                    //System.out.println("(Full)(put())variableInfo.sName: '"+variableInfo.sName+"'");
 				}
 				else
 				{
@@ -10438,7 +10650,9 @@ public class ADev
 					if ( variableInfo != null )
 					{
 						variableInfo.sObjectId = g_sObjectId;
+						variableInfo.sClassId = g_sClassId;
 						variableInfo.sDisplayClassName = sDisplayClassName;
+						variableInfo.bShowAsBranchNode = bShowAsBranchNode;
 						//System.out.println("(Update)(put())variableInfo.sName: '"+variableInfo.sName+"'");
 						VariableInfoLHm.put((String)variableInfo.sName, (VariableInfo)variableInfo);
 					}
@@ -18497,6 +18711,7 @@ While_Break:
 			else if ( HOT_RELOAD.equals(actionCommandS) )
 			{
 				//System.out.println("HOT_RELOAD");
+				
 				iDaemonCommand = DAEMON_RELOAD;
 /*				
 				if ( daemonProcess == null )
@@ -23479,7 +23694,7 @@ Break_Out:
 		}
 	};	//}}}
 
-	//{{{	TreeSelectionListener  Variable JTree
+	//{{{	TreeSelectionListener  Variable JTree, Expand
 	TreeSelectionListener variableSelectionListener = new TreeSelectionListener()
 	{
 		public void valueChanged(TreeSelectionEvent e)
@@ -23574,6 +23789,8 @@ Break_Out:
 			//System.out.println("(Selected)nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
 			//System.out.println("(Selected)nodeFVInfo.sClassName: '"+nodeFVInfo.sClassName+"'");
 			//System.out.println("(Selected)nodeFVInfo.sDisplayClassName: '"+nodeFVInfo.sDisplayClassName+"'");
+			//System.out.println("(Selected)nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
+			//System.out.println("(Selected)nodeFVInfo.sKind: '"+nodeFVInfo.sKind+"'");
 			//System.out.println("(Selected)nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
 			//System.out.println("(Selected)nodeFVInfo.sObjectId: '"+nodeFVInfo.sObjectId+"'");
 			//System.out.println("(Selected)nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
@@ -23606,7 +23823,7 @@ Break_Out:
 			bVariableNodeSelected = true;
 
 			currentNode = nodeSel;	// Set up for UpdateVariableJTreeBgThread..
-
+			int iChildCount = currentNode.getChildCount();
 
 			
 			//System.out.println("In variableSelectionListener");
@@ -23614,7 +23831,9 @@ Break_Out:
 			//updateVariableJTreeBgThread.start();
 
 			// Only expand Classes or List..			
-			if ( (nodeFVInfo.bIsClass) || (nodeFVInfo.sClassName.equals("List")) )
+			//if ( (nodeFVInfo.bIsClass) || (nodeFVInfo.sClassName.equals("List")) )
+			//if ( true )
+			if ( iChildCount > 0 )
 			{
 				expandBgThread = new ExpandBgThread();
 				expandBgThread.start();
@@ -24735,6 +24954,8 @@ Break_Out:
 		
 		boolean bIsClass;
 		
+		boolean bShowAsBranchNode;
+		
 		String sClassId;	// Like: 'classes\/1052'
 		
 		String sClassName;	// Like: 'Canvas'
@@ -24757,22 +24978,28 @@ Break_Out:
 		public String sDisplayClassName;
 		public String sObjectId;
 		public String sGetObjectId;
+		public String sKind;
 		public String sTargetId;	// For evaluate
 		public boolean bIsClass;
 		public boolean bUsesObject;
+		//public boolean bShowAsBranchNode;
 		//public int iArrayIndex;
 	
 		
 		public NodeFVInfo(String sName)
 		{
 			this.sName = sName;
-			bUsesObject = false;
 			sDisplayClassName = "";
 			sValueAsString = "";
 			sClassName = "";
+			sClassId = "";
 			sPropertyName = "";
 			sObjectId = "";
+			sKind = "";
+			sGetObjectId = "";
 			bIsClass = false;
+			bUsesObject = false;
+			//bShowAsBranchNode = false;
 		}
 	
 		//@Override
