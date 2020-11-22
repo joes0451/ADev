@@ -392,7 +392,6 @@ public class PacketDispatcher extends Thread
                     break;
                 }
                 
-                
 /*                
 				if ( packet.length < 1000 )
 				{

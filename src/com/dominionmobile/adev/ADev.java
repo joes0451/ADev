@@ -491,6 +491,7 @@ public class ADev
 	static volatile long lClassVariableKey;
 	static volatile long lMethodIdSave;
 	static volatile long lClassIdSave;
+	static volatile long lPrevTime;
 	
 	static volatile String sThreadName;
 	static volatile String sClassSignature;
@@ -498,7 +499,6 @@ public class ADev
 	static volatile String sFullSourcePath;
 	static volatile String sDeviceIPAddress;
 	
-	//static volatile String[] sTokenPosTableAr;
 	static volatile String sKeystorePassword;
 	static volatile String sKeyAliasPassword;
 	static volatile String sKeystorePath;
@@ -564,6 +564,8 @@ public class ADev
 	static volatile String sOrgObjectId;
 	static volatile String sDebugArg;
 	static volatile String sUsingOpenJdk;
+	static volatile String sSelectedMethodName;
+	static volatile String sLastSourcePath;
 	//static volatile String sCurrentScriptId;
 	
 	static String sDebugPackageName;
@@ -658,9 +660,10 @@ public class ADev
 	static ArrayList ConnectDevicesAr;
 	static ArrayList ParamAr;
 	//static ArrayList LibFileAr;
-	static ArrayList ScriptsAr;
+	//static ArrayList ScriptsAr;
 	static ArrayList VariableInfoAr;
 	static ArrayList LibraryAr;
+	static ArrayList ScriptIdAr;
 	
 	//static Hashtable EventInfoHt;
 	static volatile LinkedHashMap VariableInfoLHm;
@@ -804,6 +807,7 @@ public class ADev
 	static final String VARIABLE_SUBMIT = "variable_submit";
 	static final String VARIABLE_CANCEL = "variable_cancel";
 	static final String LIBRARY_CHOOSER = "library_chooser";
+	static final String MARK = "Mark";
 	static final String DUMP_STACK = "Dump Stack";
 	static final String WIRELESS_CONNECT = "wireless_connect";
 	static final String WIRELESS_DISCONNECT = "wireless_disconnect";
@@ -1031,6 +1035,7 @@ public class ADev
 		bLineSelected = false;
 		sBreakpointScriptId = "";
 		//bDebugRan = false;
+		lPrevTime = 0;
 		
 		//messageObject = new Object();
 		
@@ -3162,6 +3167,10 @@ public class ADev
 			bSourceExists = false;
 			sourceBuf = null;
 			StringBuffer statusPathSb;
+			String sStatusPath = "";
+			
+			byte[] bLib = {(byte)0x6c, (byte)0x69, (byte)0x62, (byte)0x5c};    // 'lib\'
+			String sLib = new String(bLib);
 /*			
 			if ( sFullSourcePath == null )
 				System.out.println("sFullSourcePath null");
@@ -3176,11 +3185,26 @@ public class ADev
 				//System.out.println("Exists");
 
 				// Load source path on Status bar..
-				statusPathSb = new StringBuffer();
-				statusPathSb.append(sFullSourcePath);
+				//statusPathSb = new StringBuffer();
+				//statusPathSb.append(sPackageName);
+				//statusPathSb.append("/");
 				
-				//statusPath.setText(Utils.processPath(statusPathSb.toString()));		// Flip '\' -> '/'
-				statusPath.setText(Utils.processPath(sFullSourcePath));		// Flip '\' -> '/'
+				int iLoc2 = sFullSourcePath.indexOf(sLib);
+				if ( iLoc2 != -1 )
+				    sStatusPath = sFullSourcePath.substring(iLoc2);
+				
+				
+				//int iLoc2 = sFullSourcePath.lastIndexOf((int)0x5c);    // '\'
+				//if ( iLoc2 != -1 )
+				    //statusPathSb.append(sFullSourcePath.substring(iLoc2 + 1));
+				
+				//statusPathSb.append(sFullSourcePath);
+				
+				//System.out.println("sStatusPath: '"+sStatusPath+"'");
+				//statusPath.setText(Utils.processPath(sFullSourcePath));		// Flip '\' -> '/'
+				statusPath.setText(Utils.processPath(sStatusPath));		// Flip '\' -> '/'
+				//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
+				//statusPath.setText(statusPathSb.toString());
 				
 				bSourceExists = true;
 				sourceBuf = Utils.readFile(2048, sFullSourcePath);	// iInitialSize..
@@ -3203,6 +3227,8 @@ public class ADev
 			StringBuffer statusPathSb;
 			String sSignature = "";
 			String sStatusSignature = "";
+			TabInfo tabInfo = null;
+			int iSelIndex = 0;
 			
 			bSourceExists = false;
 			sourceBuf = null;
@@ -3210,17 +3236,20 @@ public class ADev
 			// Like: 'com/android/spritemethodtest/opengl/SimpleGLRenderer'
 			sSignature = fixSignature(sClassSignature);
 			//System.out.println("(Org)sSignature: '"+sSignature+"'");
+			
+			iSelIndex = tabbedPane.getSelectedIndex();
+			//System.out.println("iSelIndex: "+iSelIndex);
 
 			int iLoc = sSignature.lastIndexOf('/');
 			if ( iLoc != -1 )
 				sSignature = sSignature.substring(0, iLoc);
+			
 /*			
 			if ( sSignature == null )
 				System.out.println("(New)sSignature null");
 			else
 				System.out.println("(New)sSignature: '"+sSignature+"'");
 /**/
-
 /*
 			if ( sSourceDirectory == null )
 				System.out.println("sSourceDirectory null");
@@ -3264,9 +3293,49 @@ public class ADev
 			sb.append("/");
 			sb.append(sSourceFileName);
 			sFullSourcePath = Utils.processPath(sb.toString());
-/**/			
+			sLastSourcePath = sFullSourcePath;    // Last source path processed..
 
 			//System.out.println("sFullSourcePath: '"+sFullSourcePath+"'");
+/*			
+			if ( TabInfoAr == null )
+			    System.out.println("TabInfoAr null");
+			else
+			    System.out.println("TabInfoAr.size(): "+TabInfoAr.size());
+/**/			
+			if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+			{
+/*
+				for ( int iJ = 0; iJ < TabInfoAr.size(); iJ++ )
+				{
+					tabInfo = (TabInfo)TabInfoAr.get(iJ);
+					System.out.println("--------------------------------");
+					//System.out.println("sScriptId: '"+tabInfo.sScriptId+"'");
+					System.out.println("sSourcePath: '"+tabInfo.sSourcePath+"'");
+					
+					if ( tabInfo.jTextArea == null )
+					    System.out.println("tabInfo.jTextArea null");
+					else
+					    System.out.println("tabInfo.jTextArea not null");
+				}
+/**/
+
+                //System.out.println("tabbedPane.getTabCount(): "+tabbedPane.getTabCount());
+                
+                // It seems like the tab we're trying to update
+                // hasn't been created yet..
+/*
+				//System.out.println("iSelectedIndex: "+iSelectedIndex);
+				System.out.println("\n(Updating)iSelIndex: "+iSelIndex);
+
+				//tabInfo = (TabInfo)TabInfoAr.get(iSelectedIndex);	
+				tabInfo = (TabInfo)TabInfoAr.get(iSelIndex);
+				tabInfo.sSourcePath = sFullSourcePath; 
+				System.out.println("tabInfo.sSourcePath: '"+tabInfo.sSourcePath+"'");
+				//TabInfoAr.set(iSelectedIndex, (TabInfo)tabInfo);    // Update with source path..
+				TabInfoAr.set(iSelIndex, (TabInfo)tabInfo);    // Update with source path..
+/**/				
+			}
+			
 
 
 			//sFullSourcePath = sSourceDirectory;
@@ -3305,11 +3374,17 @@ public class ADev
 			File fileS = new File(sFullSourcePath);
 			if ( fileS.exists() )
 			{
-/*				
+/*			    
 				if ( sSourceFileName == null )
 					System.out.println("sSourceFileName null");
 				else
 					System.out.println("sSourceFileName: '"+sSourceFileName+"'");
+/**/				
+/*
+				if ( sPackageName == null )
+					System.out.println("sPackageName null");
+				else
+					System.out.println("sPackageName: '"+sPackageName+"'");
 /**/				
 
 				// It can be way too long
@@ -3319,6 +3394,7 @@ public class ADev
 				statusPathSb.append("/");
 				statusPathSb.append(sSourceFileName);
 				
+				//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
 				statusPath.setText(statusPathSb.toString());
 				
 				bSourceExists = true;
@@ -3356,6 +3432,7 @@ public class ADev
 						
 						statusPathSb.append("/");
 						statusPathSb.append(sSourceFileName);
+						//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
 						statusPath.setText(statusPathSb.toString());
 						
 						bSourceExists = true;
@@ -3376,6 +3453,8 @@ public class ADev
 			
 			//bLoadFinished = true;
 			completeLatch.countDown();
+			
+			//System.out.println("Exiting LoadMethodSourceBgThread");
 			
 		}
 	}	//}}}
@@ -9375,6 +9454,8 @@ public class ADev
 		sTreeSelectionName = "";
 		bFlutterSetLibraryDebuggableStarted = false;
 		iLibraryStartIndex = 0;
+		sLastSourcePath = "";
+		
 		
 		
 		try
@@ -9733,8 +9814,9 @@ public class ADev
 
 			iLoc2 = 0;
 			String sTScript = "";
-			Scripts scripts;
-			ScriptsAr = new ArrayList();
+			//Scripts scripts;
+			//ScriptsAr = new ArrayList();
+			ScriptIdAr = new ArrayList();
 			
 			while ( true )
 			{
@@ -9751,10 +9833,11 @@ public class ADev
 							iLoc5 = sTScript.indexOf("package");
 							if ( iLoc5 != -1 )
 							{
-								scripts = new Scripts();
-								scripts.sScriptId = sTScript;
+								//scripts = new Scripts();
+								//scripts.sScriptId = sTScript;
 								//System.out.println("(Add)sScriptId: '"+scripts.sScriptId+"'");
-								ScriptsAr.add((Scripts)scripts);
+								//ScriptsAr.add((Scripts)scripts);
+								ScriptIdAr.add((String)sTScript);
 							}
 						}
 					}
@@ -10180,7 +10263,7 @@ public class ADev
 		{
 			//System.out.println("\nProcessEventBgThread run()");
 			VariableInfo variableInfo;
-			TabInfo tabInfo;
+			TabInfo tabInfo = null;
 			VariableInfoAr = new ArrayList();
 			String sReq;
 			String sT;
@@ -10255,6 +10338,7 @@ public class ADev
 			}
 			else if ( sKind.equals("BreakpointAdded") )
 			{
+			    //System.out.println("\nGot -BreakpointAdded-");
 				iLineMode = MODE_BREAKPOINT_ADDED;
 				
 				// Grab Breakpoint Id, like: 'breakpoints\/1'
@@ -10285,6 +10369,7 @@ public class ADev
 				//System.out.println("sBreakpointScriptId: '"+sBreakpointScriptId+"'");
 				
 				breakpointInfo.iLineNumber = iSelectedLine;
+				//System.out.println("(Set)breakpointInfo.iLineNumber: "+breakpointInfo.iLineNumber);
 				breakpointInfo.sBreakpointId = sBreakpointId;
 				breakpointInfo.sScriptId = sBreakpointScriptId;
 				
@@ -10293,6 +10378,7 @@ public class ADev
 			}
 			else if ( sKind.equals("PauseBreakpoint") )
 			{
+			    //System.out.println("\n--PauseBreakpoint--");
 				// Grab Breakpoint Id, like: 'breakpoints\/1'
 				iLoc3 = sMessage.indexOf("breakpoints");
 				if ( iLoc3 != -1 )
@@ -10339,7 +10425,6 @@ public class ADev
 						System.out.println("Exception: "+nfe.toString());
 					}
 				}
-		
 
 				// Determine if we should clear and
 				// reset the variables..
@@ -10363,6 +10448,7 @@ public class ADev
 							//System.out.println("tabInfo.sScriptId: '"+tabInfo.sScriptId+"'");
 							if ( sBreakpointScriptId.equals(tabInfo.sScriptId) )
 							{
+							    //System.out.println("\n(Match)sBreakpointScriptId == tabInfo.sScriptId: "+iX);
 								bMatched = true;
 								break;
 							}
@@ -10383,6 +10469,24 @@ public class ADev
 						}
 					}
 				}
+				
+				// Check if source is on a different tab..
+                if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+                {
+                    bMatched = false;
+                    for ( int iX = 0; iX < TabInfoAr.size(); iX++ )
+                    {
+                        tabInfo = (TabInfo)TabInfoAr.get(iX);
+                        //System.out.println("tabInfo.sScriptId: '"+tabInfo.sScriptId+"'");
+                        //System.out.println("sBreakpointScriptId: '"+sBreakpointScriptId+"'");
+                        if ( sBreakpointScriptId.equals(tabInfo.sScriptId) )
+                        {
+                            //System.out.println("\n(Match)sBreakpointScriptId == tabInfo.sScriptId: "+iX);
+                            tabbedPane.setSelectedIndex(iX);
+                            break;
+                        }
+                    }
+                }
 				
 				// Get variable info..
 				iLoc3 = sMessage.indexOf(VARS_STRING);
@@ -12122,6 +12226,9 @@ public class ADev
 			refreshMenuItem.setEnabled(false);
 		else
 			refreshMenuItem.addActionListener(actListener);
+
+		//JMenuItem markMenuItem = new JMenuItem("Mark");
+		//markMenuItem.addActionListener(actListener);
 		
 		JMenuItem stackMenuItem = new JMenuItem("Dump Stack");
 		stackMenuItem.addActionListener(actListener);
@@ -12130,6 +12237,7 @@ public class ADev
 		
 		debugMenu.add(breakpointsMenuItem);
 		debugMenu.add(refreshMenuItem);
+		//debugMenu.add(markMenuItem);
 		debugMenu.add(stackMenuItem);
 		debugMenu.add(disconnectMenuItem);
 		menuBar.add(debugMenu);
@@ -12620,11 +12728,32 @@ public class ADev
 		JDWPCommands.command_Set(dataPacket, index[0]);
 /**/		
 
+        StringBuffer sB = new StringBuffer();
+
 		//System.out.println("bFlutterSelected: "+bFlutterSelected);
 		if ( bFlutterSelected )
-			getDartSourceTree();
+		{
+            if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+                sB.append(projectHomeS);
+
+            sB.append("/lib");
+			//getDartSourceTree();
+			getSourceTree(sB.toString());
+		}
 		else
 		{
+/*
+		    findSourcePath();
+		    sB = new StringBuffer();
+		    sB.append(sSourceDirectory);
+		    
+		    String sModPackageName = sPackageName.replace('.', (char)0x2f);
+		    sB.append((char)0x2f);
+		    sB.append(sModPackageName);
+		    System.out.println("sB: '"+sB.toString()+"'");
+		    
+		    getSourceTree(sB.toString());
+/**/		    
 			getTreeClasses();
 			findSourcePath();
 		}
@@ -13772,6 +13901,7 @@ public class ADev
 
 		//System.out.println("(setSelectedIndex())iTabCount: "+iTabCount);
 		tabbedPane.setSelectedIndex(iTabCount);		// works
+		bTabSelected = false;    // Reset..
 
 	}	//}}}
 	
@@ -13782,7 +13912,7 @@ public class ADev
 		Font defaultFont = new Font("Monospaced", Font.BOLD, 13);
 		
 		//TabTextAreaInfo tabTextAreaInfo;
-		TabInfo tabInfo;
+		TabInfo tabInfo = null;
 
 		int iTabIndex = 0;
 
@@ -14004,7 +14134,8 @@ public class ADev
 			//System.out.println("(getAbsolutePath()): '"+sPath+"'");
 			DefaultMutableTreeNode childNode = 
 				new DefaultMutableTreeNode(
-					new NodeInfo(0, sPath, sName, false));
+					//new NodeInfo(0, sPath, sName, false));
+				    new NodeInfo(0, sPath, sName, "", false));
 					
 			node.add(childNode);
 			if ( files[iZ].isDirectory() )
@@ -14034,10 +14165,13 @@ public class ADev
 		TreeClass treeClass = null;
 		int iLoc;
 		int iLoc2;
-		int iSize;
 		long lClassId = 0;
+		long lTypeId = 0;
+		boolean bDoContinue;
 		String sSig;
 		String sFixedString;
+		MethodInfo methodInfo;
+		DefaultMutableTreeNode emptyNode;
 
 /*		
 		if ( AllClassesAr == null )
@@ -14048,20 +14182,43 @@ public class ADev
 		
 		if ( (AllClassesAr != null) && (AllClassesAr.size() > 0) )
 		{
-			iSize = AllClassesAr.size();
-			for ( int g = 0; g < iSize; g++ )
+			for ( int g = 0; g < AllClassesAr.size(); g++ )
 			{
 				//System.out.println("--TOP--");
+				bDoContinue = false;
 				classInfo = new ClassInfo();
 				classInfo = (ClassInfo)AllClassesAr.get(g);
-					
+
+				// Get Methods..
+				lTypeId = classInfo.lTypeId;
+				JDWPCommands.command_MethodsWithGeneric(lTypeId);
+				if ( (AllMethodsAr != null) && (AllMethodsAr.size() > 0) )
+				{
+				    for ( int iJ = 0; iJ < AllMethodsAr.size(); iJ++ )
+				    {
+				        methodInfo = (MethodInfo)AllMethodsAr.get(iJ);
+				        //System.out.println("methodInfo.sName: '"+methodInfo.sName+"'");
+				        //System.out.println("AllMethodsAr.size(): "+AllMethodsAr.size());
+				        if ( methodInfo.sName.equals("<init>") && 
+				            AllMethodsAr.size() == 1 )
+				        {
+				            // Only <init>, remove..
+				            AllClassesAr.remove(g);
+				            bDoContinue = true;
+				            break;
+				        }
+				    }
+				}
+				
+				if ( bDoContinue )
+				    continue;
+				
 				treeClass = new TreeClass();
 				
 				sSig = classInfo.sSignature;
-				//System.out.println("sSig: '"+sSig+"'");
-				
-				//System.out.println("byte_refTypeTag: "+classInfo.byte_refTypeTag);
-				//System.out.println("lTypeId: "+classInfo.lTypeId);
+				//System.out.println("(classInfo)sSig: '"+sSig+"'");
+				//System.out.println("(classInfo)byte_refTypeTag: "+classInfo.byte_refTypeTag);
+				//System.out.println("(classInfo)lTypeId: "+classInfo.lTypeId);
 				
 				
 				
@@ -14095,7 +14252,8 @@ public class ADev
 					}
 /**/					
 					treeClass.sSignature = sFixedString;
-					treeClass.lTypeId = classInfo.lTypeId;
+					treeClass.sFullSignature = sSig;
+					treeClass.lTypeId = classInfo.lTypeId;    // referenceTypeID
 	
 					//System.out.println("ADD(sFixedString): '"+sFixedString+"'");
 					TreeClassesAr.add((TreeClass)treeClass);
@@ -14161,8 +14319,17 @@ public class ADev
 
 				child = new DefaultMutableTreeNode(
 					//new NodeInfo(treeClass.lTypeId, treeClass.sSignature, true));
-					new NodeInfo(treeClass.lTypeId, "", treeClass.sSignature, true));
-					
+					new NodeInfo(
+					    treeClass.lTypeId,       // lId
+					    "",                      // sFullPath
+					    treeClass.sSignature,        // sName
+					    treeClass.sFullSignature,    // sSignature
+					    true));                      // bIsClass
+
+                // Add emptyNode to create a branch node..
+                emptyNode = new DefaultMutableTreeNode();
+                child.add(emptyNode);
+
 				// Notify the model, which will add it and create an event..
 				((DefaultTreeModel)jTree.getModel()).
 					insertNodeInto(
@@ -14180,28 +14347,38 @@ public class ADev
 		}
 	}	//}}}
 	
-	//{{{	getDartSourceTree()
-	private void getDartSourceTree()
+	//{{{	getSourceTree()
+	//private void getDartSourceTree()
+	private void getSourceTree(String sSourcePath)
 	{
 		//System.out.println("getDartSourceTree()");
+		//System.out.println("\ngetSourceTree()");
 
 		// Get source files..
-		StringBuffer sB = new StringBuffer();
-		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
-			sB.append(projectHomeS);
+		//StringBuffer sB = new StringBuffer();
+		StringBuffer sB = new StringBuffer(sSourcePath);
 		
-		sB.append("/lib");
+		//if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+			//sB.append(projectHomeS);
+		
+		//sB.append("/lib");
 		
 		//String sLibDir = "C:/Android/Dev/ClockApp-master/lib";
 		
 		// projectHomeS: 'C:/Android/Dev/ClockApp-master'
 		//System.out.println("projectHomeS: '"+projectHomeS+"'");
 		// 'C:/Android/Dev/ClockApp-master/lib'
-		String sLibDir = sB.toString();
-		//System.out.println("sLibDir: '"+sLibDir+"'");
+		
+		String sDir = sB.toString();
+		//System.out.println("sDir: '"+sDir+"'");
 		//LibFileAr = new ArrayList();
 		
-		//DefaultMutableTreeNode root;
+		String sEnd = "";
+		int iLoc2 = sDir.lastIndexOf("/");
+		if ( iLoc2 != -1 )
+		{
+		    sEnd = sDir.substring(iLoc2 + 1);
+		}
 		
 		DefaultTreeModel treeModel = null;
 		
@@ -14216,22 +14393,18 @@ public class ADev
 		DefaultTreeModel model = (DefaultTreeModel)jTree.getModel();
 		root = (DefaultMutableTreeNode)model.getRoot();
 		
-		root.setUserObject("lib");
+		root.setUserObject(sEnd);
 		
 		// Clear..		
 		root.removeAllChildren();
 		model.reload();
 
 		
-		File fileObject = new File(sLibDir);
+		File fileObject = new File(sDir);
 		if ( fileObject.exists() && fileObject.isDirectory() )
 		{
-			
 			createChildren(fileObject, root);
-			//File[] fileAr = fileObject.listFiles();
-			//RecursivePrint(fileAr);
 		}
-
 		
 		// Expand all..
 		for ( int iJ = 0; iJ < jTree.getRowCount(); iJ++ )
@@ -14245,7 +14418,6 @@ public class ADev
 		jTree.setShowsRootHandles(false);
 		//jTree.setShowsRootHandles(true);
 		jTree.setRootVisible(true);
-/**/		
 	}	//}}}
 	
 	//{{{	findSourcePath()
@@ -14266,8 +14438,7 @@ public class ADev
 		{
 			sPackageStart = sPackageName.substring(0, iLoc);
 		}
-
-/*		
+/*
 		if ( projectHomeS == null )
 			System.out.println("projectHomeS null");
 		else
@@ -14570,11 +14741,11 @@ While_Break:
 		int iScriptIndex;
 		int iSourceIndex = 0;
 		int iTextLen;
-		Scripts scripts = null;
+		//Scripts scripts = null;
 		//TabTextAreaInfo tabTextAreaInfo;
-		TabInfo tabInfo;
+		TabInfo tabInfo = null;
 		ArrayList tAr;
-		String[] sTokenPosTableAr = null;
+		//String[] sTokenPosTableAr = null;
 		boolean bTabAdded = false;
 
 		// Get name to search..		
@@ -14599,12 +14770,15 @@ While_Break:
 				sB.append(sScriptsSearchName);
 
 				// Get scriptId..				
-				if ( (ScriptsAr != null) && (ScriptsAr.size() > 0) )
+				//if ( (ScriptsAr != null) && (ScriptsAr.size() > 0) )
+				if ( (ScriptIdAr != null) && (ScriptIdAr.size() > 0) )
 				{
-					for ( iScriptIndex = 0; iScriptIndex < ScriptsAr.size(); iScriptIndex++ )
+					//for ( iScriptIndex = 0; iScriptIndex < ScriptsAr.size(); iScriptIndex++ )
+					for ( iScriptIndex = 0; iScriptIndex < ScriptIdAr.size(); iScriptIndex++ )
 					{
-						scripts = (Scripts)ScriptsAr.get(iScriptIndex);
-						sScriptId = scripts.sScriptId;
+						//scripts = (Scripts)ScriptsAr.get(iScriptIndex);
+						//sScriptId = scripts.sScriptId;
+						sScriptId = (String)ScriptIdAr.get(iScriptIndex);
 						//System.out.println("sScriptId: '"+sScriptId+"'");
 						//iLoc2 = sScriptId.indexOf(sScriptsSearchName);
 						iLoc2 = sScriptId.indexOf(sB.toString());
@@ -14690,20 +14864,15 @@ While_Break:
 					}
 					
 					// Convert to String[]..
-					sTokenPosTableAr = new String[tAr.size()];
-					//String[] tSAr = new String[tAr.size()];
+					//sTokenPosTableAr = new String[tAr.size()];
 					tSAr = new String[tAr.size()];
 					for ( int iZ = 0; iZ < tAr.size(); iZ++ )
 					{
 						tSAr[iZ] = (String)tAr.get(iZ);
-						
-						// Load sTokenPosTableAr..
-						sTokenPosTableAr[iZ] = (String)tAr.get(iZ);
-						
 						//System.out.println("["+iZ+"]: '"+tSAr[iZ]+"'");
 					}
 					
-					scripts.sTokenPosTable = tSAr;
+					//scripts.sTokenPosTable = tSAr;
 				}
 			}
 		}
@@ -14729,22 +14898,6 @@ While_Break:
 		{
 		}
 
-/*		
-		// Wait for Thread to finish..
-		while ( true )
-		{
-			if ( bLoadFinished )
-				break;
-
-			try
-			{
-				Thread.sleep(100);
-			}
-			catch (InterruptedException ie)
-			{
-			}
-		}
-/**/		
 		// Source in 'sourceBuf'..
 		sSourceText = new String(sourceBuf);
 		
@@ -14841,7 +14994,9 @@ While_Break:
 				//System.out.println("Selecting tab with source on (iSourceIndex): "+iSourceIndex);
 				// Select Tab with Method..						
 				//tabbedPane.setSelectedIndex(iMethodIndex);
+				//System.out.println("Doing setSelectedIndex() on iSourceIndex: "+iSourceIndex);
 				tabbedPane.setSelectedIndex(iSourceIndex);
+				bTabSelected = false;    // Reset..
 			}
 		}
 
@@ -14866,7 +15021,9 @@ While_Break:
 			// Note:
 			// if tab was added, iGetIndex is now at the
 			// proper, last, position..
+			//System.out.println("Doing setSelectedIndex() on iGetIndex: "+iGetIndex);
 			tabbedPane.setSelectedIndex(iGetIndex);
+			bTabSelected = false;    // Reset..
 		}
 		else
 		{
@@ -14903,9 +15060,9 @@ While_Break:
 			System.out.println("TabInfoAr.size(): "+TabInfoAr.size());
 /**/
 		
-		//if ( (TabTextAreaAr != null) && (TabTextAreaAr.size() > 0) )
 		if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 		{
+		    //System.out.println("\n(Updating)iGetIndex: "+iGetIndex);
 			//jTextArea = (JTextArea)TabTextAreaAr.get(iGetIndex);	// (iTabCount - 1)
 			//tabTextAreaInfo = (TabTextAreaInfo)TabTextAreaAr.get(iGetIndex);
 			//jTextArea = tabTextAreaInfo.jTextArea;
@@ -14915,14 +15072,14 @@ While_Break:
 			// Load 'sScriptId'..
 			//System.out.println("(Load)sScriptId: '"+sScriptId+"'");
 			tabInfo.sScriptId = sScriptId;
-
-/*			
+			
+/*
 			if ( tSAr == null )
-				System.out.println("(Load)tSAr null");
+				System.out.println("(Load sTokenPosTable)tSAr null");
 			else
 			{
 				//System.out.println("(Load)tSAr.length: "+tSAr.length);
-				System.out.println("(Load):");
+				System.out.println("(Load sTokenPosTable):");
 				for ( int iJ = 0; iJ < tSAr.length; iJ++ )
 					System.out.println("["+iJ+"]: '"+tSAr[iJ]+"'");
 			}
@@ -14940,6 +15097,7 @@ While_Break:
 			
 			// Load 'sTokenPosTable'..
 			tabInfo.sTokenPosTable = tSAr;
+
 			
 			// Update..
 			TabInfoAr.set(iGetIndex, (TabInfo)tabInfo);
@@ -14979,10 +15137,10 @@ While_Break:
 
 	}	//}}}
 	
-	//{{{	updateSource(long, long)  Add tab
+	//{{{	updateSource(long, long)
 	private void updateSource(long lClassId, long lMethodId)
 	{
-		//System.out.println("\n== updateSource() ==");
+		//System.out.println("\n== updateSource(long, long) ==");
 		//System.out.println("lClassId: "+lClassId);
 		//System.out.println("lMethodId: "+lMethodId);
 		
@@ -14995,18 +15153,22 @@ While_Break:
 		byte[] lRet = {(byte)0x0a};
 		
 		int iTabCount;
+		int iSelIndex = 0;
+		JTextArea tJTextArea;
 		boolean bAddClassMethodInfo = false;
+		boolean bNewTab = false;
 		String sMName = "";
+		String sT = "";
 
 		iTabCount = tabbedPane.getTabCount();
 		
 		ClassMethodInfo classMethodInfo;	
 		//TabTextAreaInfo tabTextAreaInfo;
-		TabInfo tabInfo;
+		TabInfo tabInfo = null;
 		
 		iMethodIndex = 0;
-		
-/*
+
+/*		
 		if ( ClassMethodAr == null )
 			System.out.println("ClassMethodAr null");
 		else
@@ -15027,7 +15189,34 @@ While_Break:
 			System.out.println("\n\n");
 		}
 /**/		
+/*
+        if ( TabInfoAr == null )
+            System.out.println("TabInfoAr null");
+        else
+            System.out.println("TabInfoAr.size() :"+TabInfoAr.size());
+/**/
 
+        if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+        {
+            iSelIndex = tabbedPane.getSelectedIndex();
+            //System.out.println("(Selected tab)iSelIndex: "+iSelIndex);
+            tabInfo = (TabInfo)TabInfoAr.get(iSelIndex);
+            tJTextArea = tabInfo.jTextArea;
+            sT = tJTextArea.getText();
+/*            
+            if ( sT == null )
+                System.out.println("(JTextArea.getText())sT: null");
+            else
+                System.out.println("(JTextArea.getText())sT.length(): "+sT.length());
+/**/ 
+/*
+            if ( tabInfo.lLineCodeIndexAr == null )
+                System.out.println("tabInfo.lLineCodeIndexAr null");
+            else
+                System.out.println("tabInfo.lLineCodeIndexAr.length: "+tabInfo.lLineCodeIndexAr.length);
+/**/
+        }
+        
 		// At this point, the classMethodInfo was
 		// created, but a tab hasn't been created yet.. 		
 		if ( ClassMethodAr != null )
@@ -15038,6 +15227,7 @@ While_Break:
 				if ( lMethodId == classMethodInfo.lMethodId )
 				{
 					sMName = classMethodInfo.sMethodName;
+					//System.out.println("sMName: '"+sMName+"'");
 					break;
 				}
 			}
@@ -15051,7 +15241,7 @@ While_Break:
 		boolean bAdjusted = false;
 		StringBuffer sSb;
 		StringBuffer srcSb;
-		String sT;
+		//String sT;
 		int iLoc40;
 
 		// Try to get the Class's signature..
@@ -15073,11 +15263,16 @@ While_Break:
 		LineTableInfo lineTableInfo;
 		long lLineIndex = 0;
 		int iTextLen;
+/*		
+		if ( LineTableAr == null )
+		    System.out.println("LineTableAr null");
+		else
+		    System.out.println("LineTableAr.size(): "+LineTableAr.size());
+/**/
 
 		if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
 		{
 			lineTableInfo = (LineTableInfo)LineTableAr.get(0);
-
 			lLineIndex = lineTableInfo.lLineCodeIndex;
 		
 			// Check if source file exists..
@@ -15096,28 +15291,6 @@ While_Break:
 			{
 			}
 			
-/*
-			// Wait for Thread to finish..
-			while ( true )
-			{
-				//Thread.yield();
-				//try
-				//{
-					//Thread.sleep(100);
-				//}
-				//catch (InterruptedException ie)
-				//{
-				//}
-				
-				Thread.yield();
-				
-				if ( bLoadFinished )
-				{
-					break;
-				}
-			}
-/**/
-
 			String sTabMethodName = "";
 			
 			//System.out.println("bSourceExists: "+bSourceExists);
@@ -15131,7 +15304,8 @@ While_Break:
 			if ( (bSourceExists) && (sourceBuf != null) && (sourceBuf.length > 0) )
 			{
 				//System.out.println("Inside");
-				int[] iMethodScope = Utils.GetSourceScope(sourceBuf, LineTableAr);
+				//int[] iMethodScope = Utils.GetSourceScope(sourceBuf, LineTableAr);
+				int[] iMethodScope = Utils.GetSourceScope(sourceBuf, LineTableAr, sSelectedMethodName);
 				
 				//System.out.println("iMethodScope[0]: "+iMethodScope[0]);
 				//System.out.println("iMethodScope[1]: "+iMethodScope[1]);
@@ -15189,6 +15363,7 @@ While_Break:
 	
 						 addTab(sTabMethodName);
 
+						 bNewTab = true;
 						 bAddClassMethodInfo = true;
 						 
 
@@ -15282,6 +15457,7 @@ While_Break:
 
 					// Try to get current Tab..
 					int iSelect = tabbedPane.getSelectedIndex();
+					//System.out.println("(tabbedPane.getSelectedIndex())iSelect: "+iSelect);
 					
 					iTabCount = tabbedPane.getTabCount();
 					
@@ -15294,11 +15470,63 @@ While_Break:
 						// Method is on different Tab..
 						if ( iMethodIndex < iTabCount )
 						{
-							// Select Tab with Method..						
+							// Select Tab with Method..	
+							//System.out.println("Doing setSelectedIndex() on iMethodIndex: "+iMethodIndex);
 							tabbedPane.setSelectedIndex(iMethodIndex);
+							bTabSelected = false;    // Reset..
 						}
 					}
+					
+					//System.out.println("sLastSourcePath: '"+sLastSourcePath+"'");
+					//System.out.println("bNewTab: "+bNewTab);
+					
+					if ( bNewTab )
+					{
+					    if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+					    {
+					        // Update sSourcePath, iSourceLineAdjust..
+					        tabInfo = (TabInfo)TabInfoAr.get(iSelect);
+					        tabInfo.sSourcePath = sLastSourcePath;
+					        tabInfo.iSourceLineAdjust = iSourceLineAdjust;
 
+					        if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					        {
+					            int[] iTAr = new int[LineTableAr.size()];
+					            long[] lTAr = new long[LineTableAr.size()];
+					            for ( int iJ = 0; iJ < LineTableAr.size(); iJ++ )
+					            {
+					                lineTableInfo = (LineTableInfo)LineTableAr.get(iJ);
+					                iTAr[iJ] = lineTableInfo.iLineNumber;
+					                //System.out.println("["+iJ+"]: "+iTAr[iJ]);
+					                lTAr[iJ] = lineTableInfo.lLineCodeIndex;
+					                //System.out.println("["+iJ+"]: "+lTAr[iJ]);
+					            }
+					            
+					            tabInfo.iLineNumberAr = iTAr;
+					            tabInfo.lLineCodeIndexAr = lTAr;
+					        }
+					        
+					        TabInfoAr.set(iSelect, (TabInfo)tabInfo);
+					    }
+					}
+					
+/*
+					if ( TabInfoAr == null )
+					    System.out.println("TabInfoAr null");
+					else
+					{
+					    for ( int iJ = 0; iJ < TabInfoAr.size(); iJ++ )
+					    {
+					        tabInfo = (TabInfo)TabInfoAr.get(iJ);
+					        System.out.println("["+iJ+"]------------------------------");
+					        System.out.println("tabInfo.sSourcePath: '"+tabInfo.sSourcePath+"'");
+					        if ( tabInfo.jTextArea == null )
+					            System.out.println("tabInfo.jTextArea null");
+					        else
+					            System.out.println("tabInfo.jTextArea not null");
+					    }
+					}
+/**/					
 					
 					// Get JTextArea from selected tab..
 					iTabCount = tabbedPane.getTabCount();	// Refresh..
@@ -15326,7 +15554,6 @@ While_Break:
 						}
 					}
 
-					//if ( iGetIndex >= TabTextAreaAr.size() )
 					if ( iGetIndex >= TabInfoAr.size() )
 					{
 						// Wrong size, adjust..
@@ -15334,12 +15561,8 @@ While_Break:
 						iGetIndex = TabInfoAr.size() - 1;
 					}
 					
-					//if ( (TabTextAreaAr != null) && (TabTextAreaAr.size() > 0) )
 					if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 					{
-						//jTextArea = (JTextArea)TabTextAreaAr.get(iGetIndex);	// (iTabCount - 1)
-						//tabTextAreaInfo = (TabTextAreaInfo)TabTextAreaAr.get(iGetIndex);
-						//jTextArea = tabTextAreaInfo.jTextArea;
 						tabInfo = (TabInfo)TabInfoAr.get(iGetIndex);
 						jTextArea = tabInfo.jTextArea;
 					}
@@ -15417,16 +15640,20 @@ While_Break:
 					lLineCodeIndex = lBreakpointLocationIndex;
 					bAdjusted = false;
 							
-					if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 					{
 						while ( true )
 						{
-							for ( int iG = 0; iG < LineTableAr.size(); iG++ )
+							//for ( int iG = 0; iG < LineTableAr.size(); iG++ )
+							for ( int iG = 0; iG < tabInfo.lLineCodeIndexAr.length; iG++ )
 							{
-								lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
-								if ( lLineCodeIndex == lineTableInfo.lLineCodeIndex )
+								//lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
+								//if ( lLineCodeIndex == lineTableInfo.lLineCodeIndex )
+								if ( lLineCodeIndex == tabInfo.lLineCodeIndexAr[iG] )
 								{
-									iLineNumber = lineTableInfo.iLineNumber;
+									//iLineNumber = lineTableInfo.iLineNumber;
+									iLineNumber = tabInfo.iLineNumberAr[iG];
 									break;
 								}
 							}
@@ -15470,7 +15697,8 @@ While_Break:
 			// Source error..
 			bDoError = true;
 		}
-		
+
+        //System.out.println("bDoError: "+bDoError);		
 		if ( bDoError )
 		{
 			// Could not find source or not available..
@@ -15485,6 +15713,9 @@ While_Break:
 				JOptionPane.ERROR_MESSAGE);
 			
 		}
+		
+		//System.out.println("\n##############################");
+		//System.out.println("Exiting updateSource()");
 	}	//}}}
 
 	//{{{	updateVariables()
@@ -15728,6 +15959,7 @@ While_Break:
 		int iEndTokenPos = 0;
 		int iLine = 0;
 		int iTab;
+		int iLineAdjust = 0;
 		String[] sTokenPosTableAr = null;
 		//String sScriptId = "";
 		String sTScript;
@@ -15764,7 +15996,6 @@ While_Break:
 		ClassMethodInfo classMethodInfo;
 		iMethodIndex = 0;
 		
-		//System.out.println("At A");
 		if ( bFlutterSelected )
 		{
 			
@@ -15785,7 +16016,6 @@ While_Break:
 			}
 		}
 		
-		//System.out.println("At B");
 		// Get current Tab..
 		int iTabSel = 0;
 		if ( tabbedPane != null )
@@ -15796,14 +16026,13 @@ While_Break:
 		if ( iTabSel == -1 )
 			iTabSel = 0;
 		
-		//System.out.println("(getSelectedIndex())iTabSel: "+iTabSel);
+		//System.out.println("(tabbedPane)iTabSel: "+iTabSel);
 		
 		long lRefreshMethodId;
 		long lRefreshClassId;
 		
 		//System.out.println("\nbHaveSDKSource: "+bHaveSDKSource);
-
-/*		
+/*
 		if ( TabInfoAr == null )
 			System.out.println("TabInfoAr null");
 		else
@@ -15812,53 +16041,17 @@ While_Break:
 
 		if ( bFlutterSelected )
 		{
-			// Check if source is on different tab..
-			if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
-			{
-				tabInfo = (TabInfo)TabInfoAr.get(iTabSel);
-				sScriptId = tabInfo.sScriptId;
-/*				
-				if ( sScriptId == null )
-					System.out.println("sScriptId null");
-				else
-					System.out.println("sScriptId: '"+sScriptId+"'");
-/**/						
-/*
-				if ( sBreakpointScriptId == null )
-					System.out.println("sBreakpointScriptId null");
-				else
-					System.out.println("sBreakpointScriptId: '"+sBreakpointScriptId+"'");
-/**/						
-
-				if ( sBreakpointScriptId.equals(sScriptId) )
-				{
-					//System.out.println("--- On same tab ---");
-					;
-				}
-				else
-				{
-					// Tab changed..
-					//System.out.println("--- On different tab ---");
-					// Find tab that matches scritId..
-					for ( iTab = 0; iTab < TabInfoAr.size(); iTab++ )
-					{
-						tabInfo = (TabInfo)TabInfoAr.get(iTab);
-						sTScript = tabInfo.sScriptId;
-						if ( sBreakpointScriptId.equals(sTScript) )
-						{
-							iTabSel = iTab;
-							tabbedPane.setSelectedIndex(iTabSel);
-							break;
-						}
-					}
-				}
-			}
+		    // Note:
+		    // The checking for changing tabs
+		    // is now done in ProcessEventBgThread in PauseBreakpoint..
+		    ;
 		}
 		else
 		{
 			if ( bHaveSDKSource == false )
 			{
 				tabbedPane.setSelectedIndex(iTabSel);
+				bTabSelected = false;    // Reset..
 				
 				// Get updated LineTableInfo..
 				classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iTabSel);
@@ -15872,7 +16065,6 @@ While_Break:
 			}
 		}
 		
-		//System.out.println("At B1");
 /*
 		if ( TabInfoAr == null )
 			System.out.println("TabInfoAr null");
@@ -15897,7 +16089,8 @@ While_Break:
 			//scrollPane = tabTextAreaInfo.jScrollPane;
 			jTextArea = tabInfo.jTextArea;
 			scrollPane = tabInfo.jScrollPane;
-			 
+			iLineAdjust = tabInfo.iSourceLineAdjust;
+			
 			scrollbar = scrollPane.getVerticalScrollBar();
 		}
 /*
@@ -15914,13 +16107,11 @@ While_Break:
 /**/
 
 
-		//System.out.println("At C");
 		// Get Tab's JScrollPane
 		// This is critical for it to be able to
 		// adjust the scrolling to keep the
 		// current line in view
 		
-		//System.out.println("At D");
 		
 		if ( scrollbar != null )
 		{
@@ -15952,7 +16143,8 @@ While_Break:
 			// Note:
 			// If Location is at '0', jdb sets to first line.
 			// Find matching LineCodeIndex, and get Unadjusted line number..
-			if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+			//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+			if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 			{
 				iLen = LineTableAr.size();
 				long lTempLocation = lLocationIndex;
@@ -15960,19 +16152,16 @@ While_Break:
 				
 				while ( true )
 				{
-					for ( int iG = 0; iG < iLen; iG++ )
+					for ( int iG = 0; iG < tabInfo.lLineCodeIndexAr.length; iG++ )
 					{
-						lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
-						if ( lineTableInfo != null )
-						{
-							if ( (lineTableInfo.lLineCodeIndex == lTempLocation) ||
-								((lTempLocation == 0) && (iG == 0)) )
-							{
-								iUnadjustedLineNumber = lineTableInfo.iLineNumber;
-								bMatchedIndex = true;
-								break;
-							}
-						}
+                        if ( (tabInfo.lLineCodeIndexAr[iG] == lTempLocation) ||
+                            ((lTempLocation == 0) && (iG == 0)) )
+                        {
+                            //iUnadjustedLineNumber = lineTableInfo.iLineNumber;
+                            iUnadjustedLineNumber = tabInfo.iLineNumberAr[iG];
+                            bMatchedIndex = true;
+                            break;
+                        }
 					}
 					
 					if ( bMatchedIndex )
@@ -16146,7 +16335,6 @@ While_Break:
 					
 					iPreviousLine = iLine;
 				}
-
 				
 				//System.out.println("(Line highlight)bFound: "+bFound);
 				if ( bFound )
@@ -16207,7 +16395,8 @@ While_Break:
 					
 					// Get adjusted line number..
 					// Zero based display line number..
-					iAdjustedLine = iUnadjustedLineNumber - iSourceLineAdjust;
+					//iAdjustedLine = iUnadjustedLineNumber - iSourceLineAdjust;
+					iAdjustedLine = iUnadjustedLineNumber - iLineAdjust;
 		
 					// Get adjusted..
 					iAdjustedStartOffset = jTextArea.getLineStartOffset((int)iAdjustedLine);
@@ -16245,7 +16434,6 @@ While_Break:
 				System.out.println("BreakpointAr.size(): "+BreakpointAr.size());
 /**/
 
-			//System.out.println("At G");
 			
 			//
 			// Highlight Breakpoints..
@@ -16272,6 +16460,7 @@ While_Break:
 				String sName;
 				//String sTScript;
 				
+				//System.out.println("\n----------- Breakpoint highlight --------------");
 				if ( bFlutterSelected )
 				{
 					//System.out.println("\n----------- Breakpoint highlight --------------");
@@ -16346,9 +16535,10 @@ While_Break:
 				else
 				{
 
-					if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 					{
-						iLLen = LineTableAr.size();					
+						//iLLen = LineTableAr.size();					
 						for ( int iB = 0; iB < iBLen; iB++ )
 						{
 							breakpointInfo = (BreakpointInfo)BreakpointAr.get(iB);
@@ -16356,23 +16546,31 @@ While_Break:
 							lBpLineIndex = breakpointInfo.lLineCodeIndex;
 	
 							bMatched = false;						
-							for ( int iL = 0; iL < iLLen; iL++ )
+							//for ( int iL = 0; iL < iLLen; iL++ )
+							for ( int iL = 0; iL < tabInfo.lLineCodeIndexAr.length; iL++ )
 							{
-								lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
-								lLnCodeIndex = lineTableInfo.lLineCodeIndex;
+								//lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
+								//lLnCodeIndex = lineTableInfo.lLineCodeIndex;
+								lLnCodeIndex = tabInfo.lLineCodeIndexAr[iL];
 								
 								if ( (lMethodID == lCurrentSelectedMethod) &&
 									(lLnCodeIndex == lBpLineIndex) )
 								{
 									// Matched..
 									bMatched = true;
-									iLineTableLineNumber = lineTableInfo.iLineNumber;
+									//iLineTableLineNumber = lineTableInfo.iLineNumber;
+									iLineTableLineNumber = tabInfo.iLineNumberAr[iL];
 									
 									// Get adjusted line number..
-									iAdjLn = iLineTableLineNumber - iSourceLineAdjust;
+									//iAdjLn = iLineTableLineNumber - iSourceLineAdjust;
+									iAdjLn = iLineTableLineNumber - iLineAdjust;
 									
+									//System.out.println("iLineTableLineNumber: "+iLineTableLineNumber);
+									//System.out.println("iSourceLineAdjust: "+iSourceLineAdjust);
+									//System.out.println("iAdjLn: "+iAdjLn);
 									// Get adjusted..
 									iAdjustedStartOff = jTextArea.getLineStartOffset((int)iAdjLn);
+									//System.out.println("iAdjustedStartOff: "+iAdjustedStartOff);
 						
 									// Try to highlight line..
 									Rectangle bRect = jTextArea.modelToView(iAdjustedStartOff);
@@ -16391,12 +16589,10 @@ While_Break:
 					}
 				}
 			}
-/**/
 			
 			int iScrollY;
 			int iQuarter = viewRectangle.height / 4;
 
-			//System.out.println("At H");
 			if ( rect != null )
 			{
 				if ( (rect.y <= viewRectangle.y) ||
@@ -19293,17 +19489,26 @@ While_Break:
 				long lMethodId = 0;
 				long lClassId;
 				int iLen;
+				int iSelIndex = 0;
+				TabInfo tabInfo = null;
 				
 				//System.out.println("currentClassId: "+currentClassId);
 				BreakpointInfo breakpointInfo = new BreakpointInfo();
 
+                if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+                {
+                    iSelIndex = tabbedPane.getSelectedIndex();
+                    //System.out.println("(Selected tab)iSelIndex: "+iSelIndex);
+                    tabInfo = (TabInfo)TabInfoAr.get(iSelIndex);
+                }
 				
 /*				
 				if ( LineTableAr == null )
 					System.out.println("LineTableAr null");
 				else
 					System.out.println("LineTableAr.size(): "+LineTableAr.size());
-/**/						
+/**/
+
 				//System.out.println("bLineSelected: "+bLineSelected);
 					
 				// Try to detect if line was selected..
@@ -19327,20 +19532,25 @@ While_Break:
 					
 						// Line..
 						// Find match and get Index..
-						if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+						//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+						if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 						{
-							iLen = LineTableAr.size();
-							for ( int iG = 0; iG < iLen; iG++ )
+							//iLen = LineTableAr.size();
+							//for ( int iG = 0; iG < iLen; iG++ )
+							for ( int iG = 0; iG < tabInfo.lLineCodeIndexAr.length; iG++ )
 							{
-								lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
+								//lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
 								//System.out.println("lineTableInfo.iLineNumber: "+lineTableInfo.iLineNumber);
-								if ( iSelectedLine == lineTableInfo.iLineNumber )
+								//if ( iSelectedLine == lineTableInfo.iLineNumber )
+								if ( iSelectedLine == tabInfo.iLineNumberAr[iG] )
 								{
 									//System.out.println("--MATCHED--");
-									lLineCodeIndex = lineTableInfo.lLineCodeIndex;
+									//lLineCodeIndex = lineTableInfo.lLineCodeIndex;
+									lLineCodeIndex = tabInfo.lLineCodeIndexAr[iG];
 									//System.out.println("lLineCodeIndex: "+lLineCodeIndex);
 									breakpointInfo.lLineCodeIndex = lLineCodeIndex;
-									breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
+									//breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
+									breakpointInfo.iLineNumber = tabInfo.iLineNumberAr[iG];
 									//System.out.println("lineTableInfo.iLineNumber: "+lineTableInfo.iLineNumber);
 									break;
 								}
@@ -19358,15 +19568,18 @@ While_Break:
 					{
 						// Method..
 						// Get first line Index..
-						if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+						//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+						if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 						{
 							// Get first Line Index..
-							lineTableInfo = (LineTableInfo)LineTableAr.get(0);
-							lLineCodeIndex = lineTableInfo.lLineCodeIndex;
+							//lineTableInfo = (LineTableInfo)LineTableAr.get(0);
+							//lLineCodeIndex = lineTableInfo.lLineCodeIndex;
+							lLineCodeIndex = tabInfo.lLineCodeIndexAr[0];
 						}
 	
 						breakpointInfo.lLineCodeIndex = lLineCodeIndex;
-						breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
+						//breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
+						breakpointInfo.iLineNumber = tabInfo.iLineNumberAr[0];
 					}
 				}
 				
@@ -19380,7 +19593,7 @@ While_Break:
 						try
 						{
 							bLineSelected = false;	// Reset selected..
-							//System.out.println("Doing 'addBreakpoint'");
+							//System.out.println("\n(Flutter)Doing 'addBreakpoint'");
 							
 							//System.out.println("sIsolateId: '"+sIsolateId+"'");
 							//System.out.println("sScriptId: '"+sScriptId+"'");
@@ -19421,9 +19634,6 @@ While_Break:
 							
 							updateSourceLines((long)0);
 							
-							
-							
-/**/							
 						}
 						catch (WebSocketException wse)
 						{
@@ -19434,15 +19644,18 @@ While_Break:
 				else
 				{
 					// Get Method name..
+					//System.out.println("(Get Method name)lMethodId: "+lMethodId);
 					MethodInfo methodInfo;
 					if ( (AllMethodsAr != null) && (AllMethodsAr.size() > 0) )
 					{
 						for ( int iG = 0; iG < AllMethodsAr.size(); iG++ )
 						{
 							methodInfo = (MethodInfo)AllMethodsAr.get(iG);
+							//System.out.println("(Get Method name)methodInfo.lMethodId: "+methodInfo.lMethodId);
 							if ( lMethodId == methodInfo.lMethodId )
 							{
 								breakpointInfo.sMethodName = methodInfo.sName;
+								//System.out.println("(MATCHED)breakpointInfo.sMethodName: '"+breakpointInfo.sMethodName+"'");
 								break;
 							}
 						}
@@ -19460,10 +19673,7 @@ While_Break:
 					BreakpointAr.add((BreakpointInfo)breakpointInfo);
 					
 					updateSourceLines(lBreakpointLocationIndex);	// Refresh.
-
 				}
-
-				//updateSourceLines(lBreakpointLocationIndex);	// Refresh..
 			}
 			else if ( (STEP_INTO.equals(actionCommandS)) && (iCardShowing == DEBUG_CARD) )
 			{
@@ -19890,19 +20100,27 @@ While_Break:
 						{
 							sType = "KOTLIN";
 							
-							uGradleMenuItem.setSelected(true);
-							uNDKMenuItem.setSelected(false);
-							uKotlinMenuItem.setSelected(true);
-							uFlutterMenuItem.setSelected(false);
+							//uGradleMenuItem.setSelected(true);
+							uGradleMenuItem.setState(true);
+							//uNDKMenuItem.setSelected(false);
+							uNDKMenuItem.setState(false);
+							//uKotlinMenuItem.setSelected(true);
+							uKotlinMenuItem.setState(true);
+							//uFlutterMenuItem.setSelected(false);
+							uFlutterMenuItem.setState(false);
 						}
 						else
 						{
 							sType = "GRADLE";
 							
-							uGradleMenuItem.setSelected(true);
-							uNDKMenuItem.setSelected(false);
-							uKotlinMenuItem.setSelected(false);
-							uFlutterMenuItem.setSelected(false);
+							//uGradleMenuItem.setSelected(true);
+							uGradleMenuItem.setState(true);
+							//uNDKMenuItem.setSelected(false);
+							uNDKMenuItem.setState(false);
+							//uKotlinMenuItem.setSelected(false);
+							uKotlinMenuItem.setState(false);
+							//uFlutterMenuItem.setSelected(false);
+							uFlutterMenuItem.setState(false);
 						}
 
 						// Modify app/build.gradle..	
@@ -19927,7 +20145,7 @@ While_Break:
 					}
 					else
 					{
-						// Check Flutter..
+						// No build.gradle, check Flutter..
 						fSb = new StringBuffer(projectHomeS);
 						fSb.append("/android/app/build.gradle");
 						file = new File(fSb.toString());
@@ -19936,10 +20154,14 @@ While_Break:
 							// Flutter..
 							sType = "FLUTTER";
 							
-							uGradleMenuItem.setSelected(true);
-							uNDKMenuItem.setSelected(false);
-							uKotlinMenuItem.setSelected(false);
-							uFlutterMenuItem.setSelected(true);
+							//uGradleMenuItem.setSelected(true);
+							uGradleMenuItem.setState(true);
+							//uNDKMenuItem.setSelected(false);
+							uNDKMenuItem.setState(false);
+							//uKotlinMenuItem.setSelected(false);
+							uKotlinMenuItem.setState(false);
+							//uFlutterMenuItem.setSelected(true);
+							uFlutterMenuItem.setState(true);
 							
 							// Modify app/build.gradle..	
 							bGradleConfigFinished = false;
@@ -19964,15 +20186,20 @@ While_Break:
 						{
 							sType = "ANT";
 							
-							uGradleMenuItem.setSelected(false);
-							uNDKMenuItem.setSelected(false);
-							uKotlinMenuItem.setSelected(false);
-							uFlutterMenuItem.setSelected(false);
+							//uGradleMenuItem.setSelected(false);
+							uGradleMenuItem.setState(false);
+							//uNDKMenuItem.setSelected(false);
+							uNDKMenuItem.setState(false);
+							//uKotlinMenuItem.setSelected(false);
+							uKotlinMenuItem.setState(false);
+							//uFlutterMenuItem.setSelected(false);
+							uFlutterMenuItem.setState(false);
 						}
 					}
 					
 					//System.out.println("sType: '"+sType+"'");	
-					uSdkMenuItem.setSelected(false);
+					//uSdkMenuItem.setSelected(false);
+					uSdkMenuItem.setState(false);
 					
 					// Add to storage..
 					boolean bWrite = false;
@@ -20035,6 +20262,7 @@ While_Break:
 					subMenuItem.addActionListener(actListener);
 					subMenu.add(subMenuItem);
 
+					System.out.println("(statusLabel.setText())projectHomeS: '"+projectHomeS+"'");
 					statusLabel.setText(projectHomeS);
 					statusPath.setText(" ");	// Clear status..
 				}
@@ -21612,13 +21840,48 @@ While_Break:
 				// Search dialog..
 				searchDialog();
 			}
+/*
+			else if ( (MARK.equals(actionCommandS)) && (iCardShowing == DEBUG_CARD) )
+			{
+			    System.out.println("\nMark");
+			    // Internal testing
+			    //System.out.println("\n***************************************************");
+			    //System.out.println("***************************************************\n");
+			    
+				try
+				{	
+					doc = textPane.getStyledDocument();	
+					int iLen = doc.getLength();
+					System.out.println("iLen: "+iLen);
+					
+					StringBuffer outSb = new StringBuffer();
+					outSb.append("\n=============================================");
+					outSb.append("=============================================\n");
+					
+					doc.insertString(iLen, outSb.toString(), normalStyle);
+					if ( iLen > 0 )
+					{
+						textPane.setCaretPosition(doc.getLength() - 1);
+						textPane.repaint();
+					}
+				}
+				catch (IllegalArgumentException iae)
+				{
+					iae.printStackTrace();
+				}
+				catch (BadLocationException ble)
+				{
+					ble.printStackTrace();
+				}
+			}
+/**/
 			else if ( (DUMP_STACK.equals(actionCommandS)) && (iCardShowing == DEBUG_CARD) )
 			{
 				FramesInfo framesInfo;
 				MethodInfo methodInfo;
 				LineTableInfo lineTableInfo;
 				//TabTextAreaInfo tabTextAreaInfo;
-				TabInfo tabInfo;
+				TabInfo tabInfo = null;
 				
 				FramesAr = null;
 				
@@ -21841,16 +22104,20 @@ While_Break:
 								iLineNumber = -1;
 								lLineCodeIndex = lLocationIndex;
 								
-								if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+								//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+								if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 								{
 									while ( true )
 									{
-										for ( int iL = 0; iL < LineTableAr.size(); iL++ )
+										//for ( int iL = 0; iL < LineTableAr.size(); iL++ )
+										for ( int iL = 0; iL < tabInfo.lLineCodeIndexAr.length; iL++ )
 										{
-											lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
-											if ( lLineCodeIndex == lineTableInfo.lLineCodeIndex )
+											//lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
+											//if ( lLineCodeIndex == lineTableInfo.lLineCodeIndex )
+											if ( lLineCodeIndex == tabInfo.lLineCodeIndexAr[iL] )
 											{
-												iLineNumber = lineTableInfo.iLineNumber;
+												//iLineNumber = lineTableInfo.iLineNumber;
+												iLineNumber = tabInfo.iLineNumberAr[iL];
 												break;
 											}
 										}
@@ -23317,7 +23584,7 @@ While_Break:
 			//System.out.println("\n~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+~+");
 			//System.out.println("MouseListener mousePressed()");
 			LineTableInfo lineTableInfo;
-			TabInfo tabInfo;
+			TabInfo tabInfo = null;
 			boolean bLineMatched = false;
 			boolean bDoLineSelect;
 			bLineSelected = false;
@@ -23327,7 +23594,9 @@ While_Break:
 			int iLineTableLineNumber;
 			int iLineNumber;
 			int iRequestId;
+			int iLineAdjust = 0;
 			int iLoc2;
+			int[] iTAr = null;
 			String[] sTokenPosTableAr = null;
 			String sBreakpointId;
 			String sTScript;
@@ -23336,13 +23605,19 @@ While_Break:
 			{
 				// Try to get current Tab..
 				int iSelect = tabbedPane.getSelectedIndex();
-				//System.out.println("(getSelectedIndex())iSelect: "+iSelect);
+				//System.out.println("(tabbedPane)iSelect: "+iSelect);
 				
 				if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 				{
 					tabInfo = (TabInfo)TabInfoAr.get(iSelect);
 					jTextArea = tabInfo.jTextArea;
 					sTokenPosTableAr = tabInfo.sTokenPosTable;	// String[]
+					iLineAdjust = tabInfo.iSourceLineAdjust;
+					//System.out.println("iLineAdjust: "+iLineAdjust);
+					
+					//iTAr = tabInfo.iLineTableAr;
+					iTAr = tabInfo.iLineNumberAr;
+					
 /*					
 					if ( sTokenPosTableAr != null )
 					{
@@ -23359,21 +23634,32 @@ While_Break:
 				String sText = jTextArea.getText();
 				
 				byte[] bytes = sText.getBytes();
-				//System.out.println("bytes.length: "+bytes.length);
+				//System.out.println("(getText())bytes.length: "+bytes.length);
 				
 				int iAdjustedLine;
 				int iActualLineNumber = 0;
+				
+				// Note:
+				// The offset is also where in
+				// the line it was tapped, so it
+				// can vary..
 				int iOffset = jTextArea.viewToModel(e.getPoint());
 				//System.out.println("iOffset: "+iOffset);
 
 				// Zero based line number..				
 				int iZeroLineNumber = jTextArea.getLineOfOffset(iOffset);
 				int iOneLineNumber = iZeroLineNumber + 1;
-				//System.out.println("iZeroLineNumber: "+iZeroLineNumber);
+				//System.out.println("(getLineOfOffset())iZeroLineNumber: "+iZeroLineNumber);
 				//System.out.println("iOneLineNumber: "+iOneLineNumber);
+
+                //System.out.println("iSourceLineAdjust: "+iSourceLineAdjust);				
+				// Convert into actual line number, 'iSourceLineAdjust' set in Utils..
+				//iActualLineNumber = iZeroLineNumber + iSourceLineAdjust;
 				
-				// Convert into actual line number..
-				iActualLineNumber = iZeroLineNumber + iSourceLineAdjust;
+				// Note:
+				// We now get 'iSourceLineAdjust' from
+				// TabInfo because it was changing between tabs..
+				iActualLineNumber = iZeroLineNumber + iLineAdjust;
 				//System.out.println("iActualLineNumber: "+iActualLineNumber);
 				
 				if ( bFlutterSelected )
@@ -23434,20 +23720,27 @@ While_Break:
 				else
 				{
 					// Check if selected, actual, line is in LineTable..
-					if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+					if ( (iTAr != null) && (iTAr.length > 0) )
 					{
-						for ( int iG = 0; iG < LineTableAr.size(); iG++ )
+						//for ( int iG = 0; iG < LineTableAr.size(); iG++ )
+						for ( int iG = 0; iG < iTAr.length; iG++ )
 						{
-							lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
-							
-							if ( lineTableInfo.iLineNumber == iActualLineNumber )
+							//lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
+							//System.out.println("lineTableInfo.iLineNumber: "+lineTableInfo.iLineNumber);
+							//System.out.println("iActualLineNumber: "+iActualLineNumber);
+							//System.out.println("iTAr["+iG+"]: "+iTAr[iG]);
+							//if ( lineTableInfo.iLineNumber == iActualLineNumber )
+							if ( iTAr[iG] == iActualLineNumber )
 							{
 								// !! Note:
 								//
 								// The 'iSelectedLine' needs to be the actual
 								// line number, so it can look for a match in the LineTable
 								// to get the LineCodeIndex..
+								//System.out.println("--Matched--");
 								iSelectedLine = iActualLineNumber;
+								//System.out.println("\n(Final)iSelectedLine: "+iSelectedLine);
 								bLineMatched = true;
 								bLineSelected = true;
 								break;
@@ -23590,18 +23883,27 @@ Break_Out:
 							else
 							{
 							
-								if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+								//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
+								if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
 								{
-									int iLLen = LineTableAr.size();
-									for ( int iL = 0; iL < iLLen; iL++ )
+									//int iLLen = LineTableAr.size();
+									//for ( int iL = 0; iL < iLLen; iL++ )
+									for ( int iL = 0; iL < tabInfo.lLineCodeIndexAr.length; iL++ )
 									{
-										lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
-										lLnCodeIndex = lineTableInfo.lLineCodeIndex;
-										iLineTableLineNumber = lineTableInfo.iLineNumber;
+										//lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
+										//lLnCodeIndex = lineTableInfo.lLineCodeIndex;
+										lLnCodeIndex = tabInfo.lLineCodeIndexAr[iL];
+										//iLineTableLineNumber = lineTableInfo.iLineNumber;
+										iLineTableLineNumber = tabInfo.iLineNumberAr[iL];
+										//System.out.println("breakpointInfo.iLineNumber: "+breakpointInfo.iLineNumber);
+										//System.out.println("iActualLineNumber: "+iActualLineNumber);
+										//System.out.println("breakpointInfo.lMethodId: "+breakpointInfo.lMethodId);
+										//System.out.println("lMethodSelection: "+lMethodSelection);
 										
 										if ( (breakpointInfo.iLineNumber == iActualLineNumber) &&
 											(breakpointInfo.lMethodId == lMethodSelection) )
 										{
+										    //System.out.println("Breakpoint matched");
 											// Matched..
 											int iChoice = JOptionPane.showConfirmDialog(
 												frame,
@@ -23638,10 +23940,6 @@ Break_Out:
 						}	// End for..
 					}
 
-					//
-					// Normal line selection highlight..
-					//
-					
 					if ( (BreakpointAr != null) && (BreakpointAr.size() > 0) )
 					{
 						for ( int iX = 0; iX < BreakpointAr.size(); iX++ )
@@ -23666,7 +23964,7 @@ Break_Out:
 					
 					//System.out.println("------ Normal line selection ------");
 
-					//System.out.println("bDoLineSelect: "+bDoLineSelect);					
+					//System.out.println("\nbDoLineSelect: "+bDoLineSelect);					
 					if ( bDoLineSelect )
 					{
 						//System.out.println("Drawing line select");
@@ -23850,8 +24148,13 @@ Break_Out:
 			//System.out.println("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 			//System.out.println("(Source JTree)TreeSelectionListener valueChanged()");
 			
+			boolean bIsLeaf;
+			boolean bIsExpanded;
 			DefaultMutableTreeNode parentNode = null;
-			TabInfo tabInfo;
+			DefaultMutableTreeNode firstNode;
+			DefaultTreeModel model = (DefaultTreeModel)(jTree.getModel());
+			
+			TabInfo tabInfo = null;
 			//int iExpandRow;
 			
 			// Note:
@@ -23871,7 +24174,8 @@ Break_Out:
 			if ( bIsAdded == false )
 				return;
 
-			TreePath parentPath = jTree.getSelectionPath();
+			//TreePath parentPath = jTree.getSelectionPath();
+			TreePath selectedPath;
 			
 /*			
 			if ( parentPath == null )
@@ -23880,10 +24184,11 @@ Break_Out:
 				System.out.println("parentPath not null");
 /**/
 
-
-			DefaultMutableTreeNode nodeX = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
-
-/*			
+            // Selected node..
+            selectedPath = e.getPath();
+            DefaultMutableTreeNode nodeX = (DefaultMutableTreeNode)selectedPath.getLastPathComponent();
+			//DefaultMutableTreeNode nodeX = (DefaultMutableTreeNode)e.getPath().getLastPathComponent();
+/*
 			if ( nodeX == null )
 				System.out.println("nodeX null");
 			else
@@ -23892,21 +24197,37 @@ Break_Out:
 			// Reset..
 			bIsBreakpointStepEvent = false;
 			
+			bIsLeaf = nodeX.isLeaf();
+			//System.out.println("bIsLeaf: "+bIsLeaf);
+			if ( bIsLeaf )
+			    ;    // Try to load source..
+			else
+			{
+			    bIsExpanded = jTree.isExpanded(selectedPath);
+			    //System.out.println("bIsExpanded: "+bIsExpanded);
+			    if ( bIsExpanded )
+			    {
+			        // Collapse..
+			        jTree.collapsePath(selectedPath);
+			        return;
+			    }
+			}
+			
+			
 			Object nodeObject = nodeX.getUserObject();
 			
 			//System.out.println("nodeObject: "+nodeObject);
 			NodeInfo nInfo = (NodeInfo)nodeX.getUserObject();
-			
-/*
+/*			
 			if ( nInfo == null )
 				System.out.println("nInfo null");
 			else
 				System.out.println("nInfo not null");
 /**/
 			
-			//System.out.println("nInfo.lId: "+nInfo.getId());
-			//System.out.println("nInfo.sName: '"+nInfo.getName()+"'");		// Like:  'main.dart'
-			//System.out.println("nInfo.bIsClass: "+nInfo.getIsClass());
+			//System.out.println("(Selected node)nInfo.lId: "+nInfo.getId());
+			//System.out.println("(Selected node)nInfo.sName: '"+nInfo.getName()+"'");		// Like:  'main.dart'
+			//System.out.println("(Selected node)nInfo.bIsClass: "+nInfo.getIsClass());
 			
 			boolean bIsClass = nInfo.getIsClass();
 			
@@ -23915,26 +24236,61 @@ Break_Out:
 			int iArIndex = (int)nInfo.getId();
 			int iLevel;
 			int iLoc2;
+			int iLoc3;
+			int iLoc4;
+			int iLoc5;
+			int iChildCount = 0;
 			String sSourceFilePath = "";
+			String sSignature = "";
+			String sT = "";
+			String sSourceFileName = "";
+			String sSourceText = "";
+			StringBuffer sB;
 			boolean bDoTab = false;
 			boolean bMatched;
+			Object nodeObj;
 			
-
 			//System.out.println("bIsClass: "+bIsClass);			
 			if ( bIsClass )
 			{
-				//System.out.println("Selected Class");
-				iLevel = 3;
-				jTree.expandRow(iLevel);
+				//System.out.println("\nSelected Class");
+				//iLevel = 3;
+				//jTree.expandRow(iLevel);
 				
 				// Selected Class..
-				parentNode = (DefaultMutableTreeNode)parentPath.getLastPathComponent();
+				//parentNode = (DefaultMutableTreeNode)parentPath.getLastPathComponent();
+				parentNode = (DefaultMutableTreeNode)selectedPath.getLastPathComponent();
 
 				NodeInfo nodeInfo;
 				Object object = parentNode.getUserObject();
 				nodeInfo = (NodeInfo)object;
 				lRefTypeId = nodeInfo.getId();
 				bIsClass = nodeInfo.getIsClass();
+				sSignature = nodeInfo.sSignature;
+				//System.out.println("nodeInfo.sFullPath: '"+nodeInfo.sFullPath+"'");
+				//System.out.println("nodeInfo.sName: '"+nodeInfo.sName+"'");
+				//System.out.println("nodeInfo.sSignature: '"+nodeInfo.sSignature+"'");
+				
+				sSourceFileName = JDWPCommands.command_SourceFile(lRefTypeId);
+				//System.out.println("sSourceFileName: '"+sSourceFileName+"'");
+				
+				iChildCount = parentNode.getChildCount();
+				//System.out.println("(parentNode)iChildCount: "+iChildCount);
+				if ( iChildCount == 1 )
+				{
+				    // Remove empty node..
+                    firstNode = parentNode.getFirstLeaf();
+                    nodeObj = (Object)firstNode.getUserObject();
+/*                    
+                    if ( nodeObj == null )
+                        System.out.println("nodeObj null");
+                    else
+                        System.out.println("nodeObj: "+nodeObj.toString());
+/**/                        
+                        
+                    if ( nodeObj == null )
+                        model.removeNodeFromParent(firstNode);
+				}
 					
 				JDWPCommands.command_MethodsWithGeneric(lRefTypeId);
 	
@@ -23942,20 +24298,75 @@ Break_Out:
 				int iLen;
 				int iJ;
 				DefaultMutableTreeNode child;
-/*				
-				if ( AllMethodsAr == null )
-					System.out.println("AllMethodsAr null");
-				else
-					System.out.println("AllMethodsAr.size(): "+AllMethodsAr.size());
-/**/				
+				
+				//if ( AllMethodsAr == null )
+					//System.out.println("AllMethodsAr null");
+				//else
+					//System.out.println("AllMethodsAr.size(): "+AllMethodsAr.size());
+					
 				if ( (AllMethodsAr != null) && (AllMethodsAr.size() > 0) )
 				{
+				    if ( sSourceFileName.endsWith(".kt") )
+				    {
+				        // Construct full path..
+				        sB = new StringBuffer();
+				        findSourcePath();
+				        sB.append(sSourceDirectory);
+				        
+				        iLoc3 = sSignature.lastIndexOf("/");
+				        if ( iLoc3 != -1 )
+				        {
+				            sB.append("/");
+				            sB.append(sSignature.substring(1, iLoc3 + 1));
+				            sB.append(sSourceFileName);
+				        }
+				        
+				        sFullSourcePath = sB.toString();
+				        //System.out.println("sFullSourcePath: '"+sFullSourcePath+"'");
+				        
+                        completeLatch = new CountDownLatch(1);
+                        
+                        loadSourceBgThread = new LoadSourceBgThread();
+                        loadSourceBgThread.start();
+                
+                        try
+                        {
+                            completeLatch.await();
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+				    }
+				    
 					iLen = AllMethodsAr.size();
 					for ( iJ = 0; iJ < iLen; iJ++ )
 					{
+					    //System.out.println("--TOP--");
 						methodInfo = new MethodInfo();
 						methodInfo = (MethodInfo)AllMethodsAr.get(iJ);
-							
+						//System.out.println("iModBits: "+methodInfo.iModBits);
+						//System.out.println("sName: '"+methodInfo.sName+"'");
+						//System.out.println("sSignature: '"+methodInfo.sSignature+"'");
+						
+/*						
+                        // Don't include anything where the
+                        // sSignature starts with:
+                        // Both 'java' and 'com' have cases where
+                        // good ones are rejected..
+						sSignature = methodInfo.sSignature;
+						iLoc4 = sSignature.indexOf("L");
+						if ( iLoc4 != -1 )
+						{
+                            iLoc5 = sSignature.indexOf((int)0x2f);  // '/'
+                            if ( iLoc5 != -1 )
+                            {
+                                sT = sSignature.substring(iLoc4 + 1, iLoc5);
+                                //if ( sT.equals("java") )
+                                if ( sT.equals("com") )
+                                    continue;
+                            }
+						}
+/**/							
 						// Don't include '<clinit>' or '<init>'..						
 						if ( (methodInfo.sName.equals("<clinit>")) ||
 								(methodInfo.sName.equals("<init>")) )
@@ -23963,28 +24374,66 @@ Break_Out:
 							
 						if ( methodInfo.iModBits == 256 )
 							continue;
-
+						
+						// In Kotlin, most sub Methods with
+						// ModBits of like: -268431295
+						// just cause problems..
+						if ( methodInfo.iModBits < 0 )
+							continue;
+						
 						// Skip some single line Methods which
 						// can cause command_LineTable() to get a
 						// connection Exception and cause a disconnect..
 						if ( methodInfo.iModBits == 1281 )
 							continue;
 						
-						// Also block 'enum' (methodInfo.iModBits = 9)
-						if ( (methodInfo.iModBits != 4104) && (methodInfo.iModBits != 9) &&
-							(! (methodInfo.sName).startsWith("access$")) )
+						if ( (methodInfo.sName).startsWith("access$") )
+						    continue;
+						
+						if ( sSourceFileName.endsWith(".kt") )
 						{
+						    // Check if Method is in source..
+						    sSourceText = new String(sourceBuf);
+/*						    
+						    if ( sSourceText == null )
+						        System.out.println("sSourceText null");
+						    else
+						        System.out.println("sSourceText.length(): "+sSourceText.length());
+/**/
+                            sB = new StringBuffer();
+                            sB.append(methodInfo.sName);
+                            sB.append("(");
+
+                            if ( sSourceText.contains(sB.toString()) )
+                                ;
+                            else
+                                continue;
+						}
+						
+						// Also block 'enum' (methodInfo.iModBits = 9)
+						//if ( (methodInfo.iModBits != 4104) && (methodInfo.iModBits != 9) &&
+						if ( (methodInfo.iModBits != 4104) && (methodInfo.iModBits != 9) )
+							//(! (methodInfo.sName).startsWith("access$")) )
+						{
+						    //System.out.println("Adding child");
 							child = new DefaultMutableTreeNode(
 								//new NodeInfo(methodInfo.lMethodId, methodInfo.sName, false));
-								new NodeInfo(methodInfo.lMethodId, "", methodInfo.sName, false));
-			
+								//new NodeInfo(methodInfo.lMethodId, "", methodInfo.sName, false));
+							    new NodeInfo(methodInfo.lMethodId, "", methodInfo.sName, "", false));
+							
+/*			
 							((DefaultTreeModel)jTree.getModel()).
 							insertNodeInto(
 								child,		// new Child
 								parentNode,	// parent
 								parentNode.getChildCount());	// index
+/**/							
+							parentNode.add(child);
 						}
 					}
+					
+					// Expand..
+					jTree.expandPath(selectedPath);
 				}
 			}
 			else
@@ -23997,8 +24446,12 @@ Break_Out:
 				{
 					//System.out.println("In bFlutterSelected");
 
+					//System.out.println("nInfo.sName: '"+nInfo.sName+"'");
 					// Differentiate between directory and file selection..					
 					iLoc2 = nInfo.sName.indexOf(".dart");	// Like: 'main.dart'
+					//if ( (nInfo.sName.contains(".dart")) ||
+					    //(nInfo.sName.contains(".java")) ||
+					    //(nInfo.sName.contains(".kt")) )
 					if ( iLoc2 != -1 )
 					{
 						// Source file selected..
@@ -24060,30 +24513,32 @@ Break_Out:
 				else
 				{
 	
-					ClassMethodInfo classMethodInfo;
-/*					
-					if ( ClassMethodAr == null )
-						System.out.println("ClassMethodAr null");
-					else
-						System.out.println("ClassMethodAr.size(): "+ClassMethodAr.size());
-/**/
+					ClassMethodInfo classMethodInfo = null;
+					
+					//if ( ClassMethodAr == null )
+						//System.out.println("ClassMethodAr null");
+					//else
+						//System.out.println("ClassMethodAr.size(): "+ClassMethodAr.size());
 
-/*
-					if ( ClassMethodAr != null )
-					{
-						for ( int g = 0; g < ClassMethodAr.size(); g++ )
-						{
-							classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(g);
-							System.out.println("----------------------------");
-							System.out.println("(lClassId): "+classMethodInfo.lClassId);
-							System.out.println("(lMethodId): "+classMethodInfo.lMethodId);
-							System.out.println("(sMethodName): '"+classMethodInfo.sMethodName+"'");
-							System.out.println("(sSourcePath): '"+classMethodInfo.sSourcePath+"'");
-						}
-						System.out.println();
-					}
-/**/				
-	
+					//if ( ClassMethodAr != null )
+					//{
+						//for ( int g = 0; g < ClassMethodAr.size(); g++ )
+						//{
+							//classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(g);
+							//System.out.println("----------------------------");
+							//System.out.println("(lClassId): "+classMethodInfo.lClassId);
+							//System.out.println("(lMethodId): "+classMethodInfo.lMethodId);
+							//System.out.println("(sMethodName): '"+classMethodInfo.sMethodName+"'");
+							//System.out.println("(sSourcePath): '"+classMethodInfo.sSourcePath+"'");
+						//}
+						//System.out.println();
+					//}
+					
+/*					
+                    lMethodId = classMethodInfo.lMethodId;
+                    sSourceFileName = JDWPCommands.command_SourceFile(lMethodId);
+                    System.out.println("sSourceFileName: '"+sSourceFileName+"'");
+/**/	
 					//System.out.println("Setting bTabSelected to false");
 					bTabSelected = false;	// Tab Panel Selected
 					bLineSelected = false;
@@ -24097,10 +24552,12 @@ Break_Out:
 					lClassId = nodeInfo.getId();
 					//System.out.println("lClassId: "+lClassId);
 					currentClassId = lClassId;		// Save for breakpoint info..
+					//System.out.println("nodeInfo.getName(): '"+nodeInfo.getName()+"'");
 	
 					// Get Method info..
 					String sMethodName = nInfo.getName();
-					//System.out.println("sMethodName: '"+sMethodName+"'");
+					//System.out.println("(nInfo.getName())sMethodName: '"+sMethodName+"'");
+					sSelectedMethodName = sMethodName;
 					lMethodId = nInfo.getId();
 					//System.out.println("lMethodId: "+lMethodId);
 					bDoTab = true;	// Do Tab by default
@@ -24134,14 +24591,13 @@ Break_Out:
 				{
 					if  ( bFlutterSelected )
 					{
-/*
+/*					
 						if ( sSourceFilePath == null )
 							System.out.println("sSourceFilePath null");
 						else
 							System.out.println("sSourceFilePath: '"+sSourceFilePath+"'");
-/**/							
+/**/						
 						updateSource(sSourceFilePath);
-						
 					}
 					else
 					{
@@ -24158,20 +24614,21 @@ Break_Out:
 					// Select Tab..
 					int iSelIndex = 0;
 					
-					//System.out.println("(setSelectedIndex())iMethodIndex: "+iMethodIndex);
+					//System.out.println("Doing setSelectedIndex() on iMethodIndex: "+iMethodIndex);
 					tabbedPane.setSelectedIndex(iMethodIndex);
+					bTabSelected = false;    // Reset..
 					
 				}
-
+				
+/*
 				// For Flutter, try to load
 				// lengthy SetLibraryDebuggable after source is selected and loaded..
 				if ( (bFlutterSelected) && (bFlutterSetLibraryDebuggableStarted == false) )
 				{
-/*
 					libraryTimingBgThread = new LibraryTimingBgThread();
 					libraryTimingBgThread.start();
-/**/
 				}
+/**/
 			}
 		}
 	};	//}}}
@@ -24227,7 +24684,7 @@ Break_Out:
 		}
 	};	//}}}
 	
-	//{{{	ItemListener	'Use Gradle' 'Use Flutter', 'Use Kotlin', & 'Use NDK' 
+	//{{{	ItemListener	'Use Gradle', 'Use Flutter', 'Use Kotlin' & 'Use NDK' 
 	/**
      * Listen for changes to 'Use Gradle', 'Use Flutter', 'Use Kotlin', 'Use NDK'
      */
@@ -24259,8 +24716,8 @@ Break_Out:
 				{
 					bNDKSelected = true;
 					
-					if ( (statusLabel != null) && (bHomeJustSet == false) )
-						statusLabel.setText(" ");
+					//if ( (statusLabel != null) && (bHomeJustSet == false) )
+						//statusLabel.setText(" ");
 					
 					// Unselect 'Use Gradle'..
 					if ( uGradleMenuItem != null )
@@ -24309,8 +24766,8 @@ Break_Out:
 					
 					if ( (bFlutterSelected == false) && (bKotlinSelected == false) )
 					{
-						if ( (statusLabel != null) && (bHomeJustSet == false) )
-							statusLabel.setText(" ");
+						//if ( (statusLabel != null) && (bHomeJustSet == false) )
+							//statusLabel.setText(" ");
 						
 						// Hide Flutter buttons..
 						if ( runButton != null )
@@ -24355,8 +24812,8 @@ Break_Out:
 					
 					RefreshProperties();
 					
-					if ( (statusLabel != null) && (bHomeJustSet == false) )
-						statusLabel.setText(" ");
+					//if ( (statusLabel != null) && (bHomeJustSet == false) )
+						//statusLabel.setText(" ");
 
 					// Unselect 'Use NDK'..
 					if ( bNDKSelected )
@@ -24421,8 +24878,8 @@ Break_Out:
 				{
 					bKotlinSelected = true;
 					
-					if ( (statusLabel != null) && (bHomeJustSet == false) )
-						statusLabel.setText(" ");
+					//if ( (statusLabel != null) && (bHomeJustSet == false) )
+						//statusLabel.setText(" ");
 					
 					if ( updateMenuItem != null )
 						updateMenuItem.setVisible(false);
@@ -24668,11 +25125,19 @@ Break_Out:
 			
 			//System.out.println("\n***************************");
 			//System.out.println("tabChangeListener stateChanged()");
+			//System.out.println("changeEvent.toString(): '"+changeEvent.toString()+"'");
 			
+			int iSelIndex = tabbedPane.getSelectedIndex();
+			//System.out.println("(tabbedPane)iSelIndex: "+iSelIndex);
 			
 			ClassMethodInfo classMethodInfo;
-			TabInfo tabInfo;
+			TabInfo tabInfo = null;
+			JTextArea tJTextArea;
+			String sT = "";
+			String sSourcePath = "";
 			int iIndex;
+			byte[] bLib = {(byte)0x6c, (byte)0x69, (byte)0x62, (byte)0x5c};    // 'lib\'
+			String sLib = new String(bLib);
 			
 			// Signal that we got the event..			
 			bGotStateChanged = true;
@@ -24687,21 +25152,27 @@ Break_Out:
 
 			// Returns -1 if there is no currently selected tab			
 			iSelectedIndex = pane.getSelectedIndex();
-			//System.out.println("iSelectedIndex: "+iSelectedIndex);
-			
+			//iSelectedIndex = tabbedPane.getSelectedIndex();
+			//System.out.println("(tabbedPane)iSelectedIndex: "+iSelectedIndex);
+			//System.out.println("(source)iSelectedIndex: "+iSelectedIndex);
+
 /*			
 			if ( TabInfoAr != null )
 			{
 				for ( int iJ = 0; iJ < TabInfoAr.size(); iJ++ )
 				{
 					tabInfo = (TabInfo)TabInfoAr.get(iJ);
-					System.out.println("--------------------------------");
-					System.out.println("sScriptId: '"+tabInfo.sScriptId+"'");
+					System.out.println("["+iJ+"]--------------------------------");
+					//System.out.println("sScriptId: '"+tabInfo.sScriptId+"'");
 					System.out.println("sSourcePath: '"+tabInfo.sSourcePath+"'");
+					
+					if ( tabInfo.jTextArea == null )
+					    System.out.println("jTextArea null");
+					else
+					    System.out.println("jTextArea not null");
 				}
 			}
 /**/			
-			
 			
 			int iTabCount = pane.getTabCount();
 
@@ -24757,6 +25228,10 @@ Break_Out:
 				// Tab selected..
 				//System.out.println("-Tab selected-");
 
+                // When a tab is selected we should
+                // update the source because the Breakpoint
+                // information might have changed..
+
 				bTabSelected = true;	// Tab Panel Selected
 				
 				if ( bFlutterSelected )
@@ -24769,72 +25244,99 @@ Break_Out:
 					if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 					{
 						tabInfo = (TabInfo)TabInfoAr.get(iIndex);
-						String sSourcePath = tabInfo.sSourcePath;
-						//System.out.println("sSourcePath: '"+sSourcePath+"'");	
+						sSourcePath = tabInfo.sSourcePath;
+						//System.out.println("(statusPath)sSourcePath: '"+sSourcePath+"'");	
+						
+                        int iLoc2 = sSourcePath.indexOf(sLib);
+                        if ( iLoc2 != -1 )
+                            sSourcePath = sSourcePath.substring(iLoc2);
 						
 						sSelectedScriptId = tabInfo.sScriptId;
 						//System.out.println("sSelectedScriptId: '"+sSelectedScriptId+"'");
 						
-						//updateSource(sSourcePath);
 						statusPath.setText(Utils.processPath(sSourcePath));		// Flip '\' -> '/'
 					}
-/**/
 				}
 				else
 				{
-					if ( (ClassMethodAr != null) && (ClassMethodAr.size() > 0) )
+					if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 					{
-						
-/*					
-						for ( int g = 0; g < ClassMethodAr.size(); g++ )
-						{
-							classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(g);
-							System.out.println("----------------------------  "+g);
-							System.out.println("(lClassId): "+classMethodInfo.lClassId);
-							System.out.println("(lMethodId): "+classMethodInfo.lMethodId);
-							System.out.println("(sMethodName): '"+classMethodInfo.sMethodName+"'");
-							System.out.println("(sSourcePath): '"+classMethodInfo.sSourcePath+"'");
-							
-							if ( classMethodInfo.jScrollPane == null )
-								System.out.println("classMethodInfo.jScrollPane null");
-							else
-								System.out.println("classMethodInfo.jScrollPane not null");
-						}
-						System.out.println();
-/**/						
-						
-						long lClassId;
-						long lMethodId;
-						
-						classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iSelectedIndex);
-	
-						bLineSelected = false;
-		
-						
-						lClassId = classMethodInfo.lClassId;
-						if ( lClassId > 0 )
-						{
-							currentClassId = lClassId;		// Save for breakpoint info..
-							
-							// Get Method info..
-							String sMethodName = classMethodInfo.sMethodName;
-							//System.out.println("sMethodName: '"+sMethodName+"'");
-							
-							lMethodId = classMethodInfo.lMethodId;
-							//System.out.println("lMethodId: "+lMethodId);
-		
-							lMethodSelection = lMethodId;
-							lCurrentSelectedMethod = lMethodId;
-							
-							updateSource(lClassId, lMethodId);
-							
-						}
+						tabInfo = (TabInfo)TabInfoAr.get(iSelectedIndex);
+						sSourcePath = tabInfo.sSourcePath;
+/*						
+						if ( sSourcePath == null )
+						    System.out.println("sSourcePath null");
 						else
-						{
-							statusPath.setText(" ");
-						}
+						    System.out.println("sSourcePath: '"+sSourcePath+"'");
+/**/						
+						StringBuffer pathSb = new StringBuffer();
+						pathSb.append(sPackageName);
+						pathSb.append("/");
+						
+                        int iLoc2 = sSourcePath.lastIndexOf((int)0x2f);    // '/'
+                        if ( iLoc2 != -1 )
+                            pathSb.append(sSourcePath.substring(iLoc2 + 1));
+						
+                        //System.out.println("pathSb: '"+pathSb.toString()+"'");
+						//statusPath.setText(Utils.processPath(sSourcePath));		// Flip '\' -> '/'
+						statusPath.setText(pathSb.toString());
 					}
+				    
+				    
+				    
+                    
+/*						
+                    for ( int g = 0; g < ClassMethodAr.size(); g++ )
+                    {
+                        classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(g);
+                        System.out.println("----------------------------  "+g);
+                        System.out.println("(lClassId): "+classMethodInfo.lClassId);
+                        System.out.println("(lMethodId): "+classMethodInfo.lMethodId);
+                        System.out.println("(sMethodName): '"+classMethodInfo.sMethodName+"'");
+                        System.out.println("(sSourcePath): '"+classMethodInfo.sSourcePath+"'");
+                        
+                        if ( classMethodInfo.jScrollPane == null )
+                            System.out.println("classMethodInfo.jScrollPane null");
+                        else
+                            System.out.println("classMethodInfo.jScrollPane not null");
+                    }
+                    System.out.println();
+/**/						
+
+                    long lClassId;
+                    long lMethodId;
+                    
+                    classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iSelectedIndex);
+
+                    bLineSelected = false;
+                    
+                    lClassId = classMethodInfo.lClassId;
+                    //System.out.println("lClassId: "+lClassId);
+                    if ( lClassId > 0 )
+                    {
+                        currentClassId = lClassId;		// Save for breakpoint info..
+                        
+                        // Get Method info..
+                        String sMethodName = classMethodInfo.sMethodName;
+                        //System.out.println("sMethodName: '"+sMethodName+"'");
+                        
+                        lMethodId = classMethodInfo.lMethodId;
+                        //System.out.println("lMethodId: "+lMethodId);
+    
+                        lMethodSelection = lMethodId;
+                        lCurrentSelectedMethod = lMethodId;
+                        
+                        //updateSource(lClassId, lMethodId);
+                    }
+                    else
+                    {
+                        statusPath.setText(" ");
+                    }
+/**/               
 				}
+
+                // Refresh..				
+				updateSourceLines((long)0);
 			}
 			
 
@@ -24844,6 +25346,25 @@ Break_Out:
 
 			// Reset..
 			bTabCreated = false;
+
+/*			
+			if ( TabInfoAr != null )
+			{
+				for ( int iJ = 0; iJ < TabInfoAr.size(); iJ++ )
+				{
+					tabInfo = (TabInfo)TabInfoAr.get(iJ);
+					System.out.println("["+iJ+"]--------------------------------");
+					//System.out.println("sScriptId: '"+tabInfo.sScriptId+"'");
+					System.out.println("sSourcePath: '"+tabInfo.sSourcePath+"'");
+					
+					if ( tabInfo.jTextArea == null )
+					    System.out.println("jTextArea null");
+					else
+					    System.out.println("jTextArea not null");
+				}
+			}
+/**/			
+
 			
 			//System.out.println("Exiting tabChangeListener");
 		}
@@ -24931,13 +25452,25 @@ Break_Out:
 	
 		// Like:
 		// 'libraries\/@477433113\/scripts\/package%3Aflutter%2Fsrc%2Fwidgets%2Fvalue_listenable_builder.dart\/16f0547fbd8'
-		String sScriptId;
+		String sScriptId;    // Flutter
+
+        // When changing tabs the 'iSourceLineAdjust'
+        // from GetSourceScope() can get messed up
+        // so we store it here..
+        //
+        // The same can happen with the LineTable
+        // info so we also store that..		
+		int iSourceLineAdjust;
+		//int[] iLineTableAr;
+		
+		long[] lLineCodeIndexAr;
+		int[] iLineNumberAr;
 		
 		// Full source path
 		String sSourcePath;
 	
 		// Like: '9,225,5,232,12' for each line..	
-		String[] sTokenPosTable;
+		String[] sTokenPosTable;    // Flutter
 		
 	}	//}}}
 
@@ -25124,19 +25657,9 @@ Break_Out:
 	{
 		long lTypeId;
 		String sSignature;
+		String sFullSignature;
 	}	//}}}
 
-	//{{{	Scripts	
-	class Scripts
-	{
-		// Like:
-		// 'libraries\/@477433113\/scripts\/package%3Aflutter%2Fsrc%2Fwidgets%2Fvalue_listenable_builder.dart\/16f0547fbd8'
-		String sScriptId;
-	
-		// Like: '9,225,5,232,12' for each line..	
-		String[] sTokenPosTable;
-	}	//}}}
-	
 	//{{{	NodeInfo	
 	class NodeInfo
 	{
@@ -25151,14 +25674,18 @@ Break_Out:
 		// directory or source file..
 		protected String sName;
 		
+		protected String sSignature;
+		
 		protected boolean bIsClass;
 	
 		//public NodeInfo(long lId, String sName, boolean bIsClass)
-		public NodeInfo(long lId, String sFullPath, String sName, boolean bIsClass)
+		//public NodeInfo(long lId, String sFullPath, String sName, boolean bIsClass)
+		public NodeInfo(long lId, String sFullPath, String sName, String sSignature, boolean bIsClass)
 		{
 			this.lId = lId;
 			this.sFullPath = sFullPath;
 			this.sName = sName;
+			this.sSignature = sSignature;
 			this.bIsClass = bIsClass;
 		}
 		

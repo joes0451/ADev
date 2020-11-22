@@ -27,7 +27,7 @@ version of the Android SDK tools package.
 	and run:    sdkmanager "platform-tools" "build-tools;30.0.0-rc3"
 	
 - You should also install at least one target,
-	the minimum is one of the 'platforms;..' like:   sdkmanager "platforms;android-26"
+	the minimum is one of the 'platforms;..' like:   sdkmanager "platforms;android-29"
 	but if you want to run that Emulator, select the additional ones you need, like:
 	
 system-images;android-26;default;x86
@@ -223,7 +223,8 @@ Use Flutter:
 		When using Run it's important to use Stop to kill the
 		background daemon Thread when you're finished.
 		
-		A Command Option for adding to 'build apk', like "--split-per-abi" or "--flavor app2".
+		A Command Option for adding to 'build apk', like "--split-per-abi" or "--flavor app2"
+		is available in config.properties.
 		
 		An Emulator, or device, must be running before you select 'Run'.
 		
@@ -396,83 +397,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-2.6.8:
-	Improved logcat console output.  Automatically re-connects after logcat
-	terminates if using wireless.
-	
-ADev-2.6.9:
-	Added 'allprojects' to Kotlin build.gradle to fix build errors.
-	Improved wireless Disconnect.
-	
-ADev-2.7.0:
-	Added support for creating and building Flutter projects including Hot Reload.
-	Keystore passwords now handled by key.properties file.
-	Improved Keystore Password Dialog.
-	Improved use of gradlew.
-
-ADev-2.7.1:
-	Improved updating old projects to use key.properties file.
-
-ADev-2.7.2:
-	Re-enabled killing adb processes as long as wireless was off.
-	Too many adb processes could build-up, slowing it down.
-	
-ADev-2.7.4:
-	Option for Gradle and Kotlin projects to have a more standard "app" directory
-	and build.gradle structure.
-	Install button now uses "-r" to do Uninstall.
-	Improved the way it gets Android Plugin Version and Kotlin version.
-	Improved build.gradle for Kotlin.
-	Improved Flutter.
-	Note: For Gradle and Kotlin projects, give Create some time.
-	
-ADev-2.7.6:
-	Gradle, Kotlin and Flutter projects can now use the latest Android SDK,
-	it creates projects without needing 'android create project'.
-	Note: For Gradle and Kotlin projects, give Create some time.
-	Several changes to config.properties.
-
-ADev-2.7.7:
-	Fixed Project->Update.
-	Improved breaking of long un-broken lines in console output.
-	
-ADev-2.7.8:
-	Improved the way it figures out what Android Plugin Version to use.
-	Improved build.gradle.
-
-ADev-2.7.9:
-	Fixed some issues and adjusted some settings for more successful builds.
-
-ADev-2.8.0:
-	Initial support for App Bundle for Gradle and Kotlin, not yet for Flutter.
-	Faster console output.
-
-ADev-2.8.1:
-	Initial App Bundle support for Flutter.
-	
-ADev-2.8.2:
-	Flutter command options.
-	Improved getting package name from AndroidManifest.xml.
-	Some potential Linux/Mac fixes.
-	Supports LibGdx projects.
-
-ADev-2.9.0:
-	Initial version of Flutter debugger.
-	Fixed some Exceptions in the JDWP debugger, made some improvements,
-	and improved finding source directories.
-	Both debuggers can work wirelessly.
-	
-ADev-2.9.2:
-	Some improvements to Flutter debugger, still in development.
-	Other improvements.
-	
-ADev-2.9.4:
-	Improvements to Flutter debugger, now fully supports List.
-	
-ADev-2.9.5:
-    Added option to Gradle for debugs like -Xlint:unchecked.
-    Minor improvement to Gradle Install.
-    
 ADev-2.9.6:
     Improvements to project level and app/build.gradle for Android Gradle builds.
     Now supports latest versions of Android Gradle Plugin using the OpenJdk.
@@ -480,6 +404,10 @@ ADev-2.9.6:
 
 ADev-2.9.8:  
     Many improvements to the Flutter debugger.
+
+ADev-3.0.0:
+    Many improvements to the Flutter and JDWP debuggers.
+    Other improvements.
     
 
 I use it for all of my own development, and try to fix what issues I see,

@@ -235,6 +235,7 @@ class Utils
 		//System.out.println("== readFile() ==");
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(iInitialSize);
 		byte[] tempBuf = new byte[iInitialSize];
+		byte[] fileBuf = null;
 		
 		int iBufLength = tempBuf.length;		
     	int bytes_read = 0;
@@ -275,31 +276,58 @@ class Utils
 			}
 		}
 		
-		return baos.toByteArray();
+        try
+        {
+            baos.flush();
+            fileBuf = baos.toByteArray();
+            baos.reset();
+        }
+        catch (IOException ioe)
+        {
+        }
+		
+		return fileBuf;
 		
 	}	//}}}
 
 	//{{{	GetSourceScope()
-	static int[] GetSourceScope(byte[] inByte, ArrayList LineAr)
+	//static int[] GetSourceScope(byte[] inByte, ArrayList LineAr)
+	static int[] GetSourceScope(byte[] inByte, ArrayList LineAr, String sMethodName)
 	{
 		//System.out.println("\n== GetSourceScope() ==");
+		//System.out.println("sMethodName: '"+sMethodName+"'");
 		int[] out = new int[2];
 		int iStart;
 		int iPEnd = 0;
 		int iLine;
 		int iLoc;
 		int iLoc2;
-		int iLoc4;
+		int iLoc4 = 0;
 		int iLoc5;
-		int iCbSave = 0;
 		int iParenSave = 0;
 		int iLen = 0;
 		int iIndentlevel;
+		int iLastLine;
+		int iCBSave = 0;
+		int iStartSave = 0;
+		int iRestart = 0;
+		int iOpenParenLoc = 0;
 		char cChr;
 		boolean bInComment = false;
 		boolean bInLineComment = false;
+		boolean bFoundNonWhitespace;
+		boolean bFoundColon;
 		LineTableInfo lineTableInfo;
 		String sSource = "";
+		String sMethodStart = "";
+		String sT = "";
+		StringBuffer sB;
+/*		
+		if ( LineAr == null )
+		    System.out.println("LineAr null");
+		else
+		    System.out.println("LineAr.size(): "+LineAr.size());
+/**/
 		
 		// !! Note:
 		// It's possible that 'LineAr' could be null
@@ -318,12 +346,103 @@ class Utils
 		else
 			return out;
 		
+		//System.out.println("(sSource.length())iLen: "+iLen);
+		
+        sB = new StringBuffer(sMethodName);	
+        sB.append("(");
+        sMethodStart = sB.toString();
+        //System.out.println("sMethodStart: '"+sMethodStart+"'");
+
+        // Sometimes it's not in the source..        
+        iLoc5 = sSource.indexOf(sMethodName);
+        if ( iLoc5 == -1 )
+            return out;
+
+        //System.out.println("--FOUND--");		
 		if ( (LineAr != null) && (LineAr.size() > 0) )
 		{
+		    iLoc5 = 0;
+Break_Out:
+            while ( true )
+            {
+                //System.out.println("--TOP-- iLoc5: "+iLoc5);
+                iLoc5 = sSource.indexOf(sMethodStart, iLoc5); 
+                if ( iLoc5 != -1 )
+                {
+                    iStartSave = iLoc5;
+                    
+                    // To match the original, find the first '('
+                    // and save it..
+                    for ( ; sSource.charAt(iLoc5) != '('; iLoc5++ );
+                    iOpenParenLoc = iLoc5;
+                    
+                    for ( ; sSource.charAt(iLoc5) != ')'; iLoc5++ );
+                    //System.out.println("Found ) at "+iLoc5);
+                    // In Kotlin you can have this:
+                    // '): View? {'
+                    iLoc5++;
+                    iRestart = iLoc5;
+                    bFoundColon = false;
+                    bFoundNonWhitespace = false;
+                    for ( ;; iLoc5++ )
+                    {
+                        if ( sSource.charAt(iLoc5) == '{' )
+                        {
+                            //System.out.println("Found {");
+                            // Found possible Method..
+                            if ( bFoundColon )
+                                ;
+                            else if ( bFoundNonWhitespace )
+                            {
+                                // Not a Method..
+                                iLoc5 = iRestart;   // Restart search from here..
+                                break;
+                                //break Break_Out;
+                            }
+                            
+                            iCBSave = iLoc5;
+                            //System.out.println("iCBSave: "+iCBSave);
+                            for ( ; sSource.charAt(iStartSave) != 0x0a; iStartSave-- );
+                            iStartSave++;
+                            out[0] = iStartSave;
+                            
+                            break Break_Out;
+                        }
+                        else if ( sSource.charAt(iLoc5) == ':' )
+                        {
+                            //System.out.println("Found :");
+                            //System.out.println("bFoundNonWhitespace: "+bFoundNonWhitespace);
+                            if ( bFoundNonWhitespace )
+                            {
+                                // Found non-Whitespace chars before ':'
+                                // so it's not the Method..
+                                iLoc5 = iRestart;   // Restart search from here..
+                                break;
+                            }
+                            
+                            bFoundColon = true;
+                            continue;
+                        }
+                        else if ( Character.isWhitespace(sSource.charAt(iLoc5)) )
+                            continue;
+                        else
+                        {
+                            bFoundNonWhitespace = true;
+                            continue;
+                        }
+                    }
+                    
+                    //System.out.println("Dropped out");
+                }
+                else
+                    return out;
+            }   // End while..
+		    
 			lineTableInfo = (LineTableInfo)LineAr.get(0);
 			iStart = lineTableInfo.iLineNumber;
+			//System.out.println("iStart: "+iStart);
 			
-			// Scan to 0x0a of Start line..
+			// Scan forward to 0x0a of Start line..
 			iLoc = 0;
 			iLine = -1;		// So it will be zero based for the adjusted..
 			
@@ -333,187 +452,146 @@ class Utils
 				if ( iLoc != -1 )
 				{
 					iLine++;
-					if ( (iLine + 1) == iStart )
+					if ( (iLine + 1) >= iStart )
 						break;
 				}
 				else
 					break;
 			}
 			
-			int iPCount = 0;
-			int iCBSave = 0;
-			String sParams;
-			StringTokenizer sT;
+			//System.out.println("(Dropped out, at iStart)iLine: "+iLine);
+			//System.out.println("iLoc: "+iLoc);
 
-			iLoc4 = iLoc;
-			while ( true )
-			{
-				// Scan back to '{' taking into account comments..
-				for ( iLoc4-- ; iLoc4 >= 0; iLoc4-- )
-				{
-					cChr = sSource.charAt(iLoc4);
-					if ( cChr == '/' )
-					{
-						if ( sSource.charAt(iLoc4 - 1) == '*' )
-						{
-							// End of comment..
-							bInComment = true;
-						}
-						
-						if ( sSource.charAt(iLoc4 - 1) == '/' )
-						{
-							if ( iCBSave != 0 )
-							{
-								// '{' was inside line comment, so turn it off..
-								iCBSave = 0;
-							}
-						}
-					}
-					
-					if ( cChr == '*' )
-					{
-						if ( sSource.charAt(iLoc4 - 1) == '/' )
-						{
-							// Check for '/**/'..
-							//             ^
-							if ( ((iLoc4 + 2) < iLen ) && (sSource.charAt(iLoc4 + 1) == '*')
-								&& (sSource.charAt(iLoc4 + 2) == '/') )
-							{
-								// Not at start of comment..
-							}
-							else
-							{
-								// Start of comment..
-								bInComment = false;
-							}
-						}
-					}
-					
-					if ( cChr == '{' )
-					{
-						if ( bInComment == false)
-						{
-							iCBSave = iLoc4;
-							break;
-						}
-					}
-				}	// End for..
-				
-				for ( ; sSource.charAt(iLoc4) != ')'; iLoc4-- );
-				iPEnd = iLoc4;
-				
-				for ( ; sSource.charAt(iLoc4) != '('; iLoc4-- );
-	
-				sParams = sSource.substring((iLoc4 + 1), iPEnd);
-				
-				iLoc5 = sParams.indexOf(",");
-				if ( iLoc5 != -1 )
-					break;
-				
-				sT = new StringTokenizer(sParams);
-				iPCount = sT.countTokens();
-				
-				if ( iPCount == 0 )
-					break;
-				
-				if ( (iPCount & 1) == 0 )
-					break;	// Even number..
-					
-			}	// End while..
-			
-			// An 0x0a could occur before we hit the '('			
-			// Scan back to '('..
-			for ( ; (iPEnd >= 0) && (sSource.charAt(iPEnd) != (char)'('); iPEnd-- );
-			
-			// Scan back to 0x0a to capture the start of the Param info..
-			for ( ; (iPEnd >= 0) && (sSource.charAt(iPEnd) != (char)0x0a); iPEnd-- );
-			
-			// Set start of Parameter info past 0x0a..
-			out[0] = iPEnd + 1;
-			
-			
-			// Convert current iLoc location to a line number
-			// in the source, which will become our 'zero' line..
-			int iLoc6 = 0;
-			iLine = -1;
-			for ( ; iLoc6 < iLen; iLoc6++ )
-			{
-				iLoc6 = sSource.indexOf((char)0x0a, iLoc6);
-				if ( iLoc6 != -1 )
-				{
-					iLine++;
-					if ( iLoc6 > iLoc4 )
-						break;
-				}
-				else
-					break;
-			}
-			
-			ADev.iSourceLineAdjust = iLine + 1;
-			
-			iLoc = iCBSave;
-			iLoc++;		// get past..
+/*			
+			// Scan back to start of first line..
+			iLoc--;    // Get past 0x0a..
+			for ( ; sSource.charAt(iLoc) != 0x0a; iLoc-- );
+			System.out.println("(Start of first line)iLoc: "+iLoc);
 
-			iIndentlevel = 1;
-			bInComment = false;
-			bInLineComment = false;
-			
-			// Find end '}' taking into account comments..
-			for ( ; iLoc < iLen; iLoc++ )
-			{
-				cChr = sSource.charAt(iLoc);
-				
-				if ( cChr == (char)0x0a )
-				{
-					bInLineComment = false;		// Reset..
-				}
+            for ( ; iLoc > 0; iLoc-- )
+            {
+                sT = sSource.substring(iLoc, (iLoc + sMethodStart.length()));
+                //System.out.println("sT: '"+sT+"'");
+                if ( sT.equals(sMethodStart) )
+                    break;
+            }
+            
+            System.out.println("(Method name)iLoc: "+iLoc);
+            
+            // Scan forward to locate '{'..
+            iLoc2 = iLoc;
+            for ( ; sSource.charAt(iLoc2) != '{'; iLoc2++ );
+            iCBSave = iLoc2;
+            System.out.println("iCBSave: "+iCBSave);
+            
+            // Scan back to 0x0a..
+            for ( ; sSource.charAt(iLoc) != 0x0a; iLoc-- );
+            iLoc++;
+            out[0] = iLoc;
+/**/
 
-				if ( cChr == '/' )
-				{
-					if ( sSource.charAt(iLoc + 1) == '/' )
-					{
-						bInLineComment = true;
-					}
-					
-					if ( sSource.charAt(iLoc + 1) == '*' )
-					{
-						// Start of comment..
-						bInComment = true;
-					}
-				}
-				
-				if ( cChr == '*' )
-				{
-					if ( sSource.charAt(iLoc + 1) == '/' )
-					{
-						// End of comment..
-						bInComment = false;		// Reset..
-					}
-				}
-				
-				if ( cChr == '{' )
-				{
-					if ( (! bInComment) && (! bInLineComment) )
-					{
-						iIndentlevel++;
-					}
-				}
-					
-				if ( cChr == '}' )
-				{
-					if ( (! bInComment) && (! bInLineComment) )
-					{
-						iIndentlevel--;
-						if ( iIndentlevel == 0 )
-						{
-							// Found end '}'..
-							out[1] = iLoc + 1;
-							break;
-						}
-					}
-				}
-			}	// End for..
+            //System.out.println("iOpenParenLoc: "+iOpenParenLoc);
+            int iLoc6 = 0;
+            iLine = -1;
+            for ( ; iLoc6 < iLen; iLoc6++ )
+            {
+                iLoc6 = sSource.indexOf((char)0x0a, iLoc6);
+                if ( iLoc6 != -1 )
+                {
+                    iLine++;
+                    
+                    // In the original this was going off of the
+                    // Method's open paren location..
+                   //if ( iLoc6 >= iLoc )
+                   if ( iLoc6 >= iOpenParenLoc )
+                        break;
+                }
+                else
+                    break;
+            }
+            
+            //System.out.println("(Dropped out, first line)iLoc6: :"+iLoc6);
+            //System.out.println("(Dropped out)iLine: "+iLine);
+            //System.out.println("(Set iSourceLineAdjust): "+(iLine + 1));
+            
+            ADev.iSourceLineAdjust = iLine + 1;
+ 
+
+            //System.out.println("out[0]: "+out[0]);
+            
+            
+            // Using the last line from LineAr
+            // doesn't always put you in the right spot..
+            iLoc = iCBSave;
+            iLoc++;		// get past..
+            //System.out.println("(Before finding end } )iLoc: "+iLoc);
+
+            iIndentlevel = 1;
+            bInComment = false;
+            bInLineComment = false;
+            
+            // Find end '}' taking into account comments..
+            for ( ; iLoc < iLen; iLoc++ )
+            {
+                cChr = sSource.charAt(iLoc);
+                
+                if ( cChr == (char)0x0a )
+                {
+                    bInLineComment = false;		// Reset..
+                }
+
+                if ( cChr == '/' )
+                {
+                    if ( sSource.charAt(iLoc + 1) == '/' )
+                    {
+                        bInLineComment = true;
+                    }
+                    
+                    if ( sSource.charAt(iLoc + 1) == '*' )
+                    {
+                        // Start of comment..
+                        bInComment = true;
+                    }
+                }
+                
+                if ( cChr == '*' )
+                {
+                    if ( sSource.charAt(iLoc + 1) == '/' )
+                    {
+                        // End of comment..
+                        bInComment = false;		// Reset..
+                    }
+                }
+                
+                if ( cChr == '{' )
+                {
+                    if ( (! bInComment) && (! bInLineComment) )
+                    {
+                        iIndentlevel++;
+                    }
+                }
+                    
+                if ( cChr == '}' )
+                {
+                    if ( (! bInComment) && (! bInLineComment) )
+                    {
+                        iIndentlevel--;
+                        if ( iIndentlevel == 0 )
+                        {
+                            // Found end '}'..
+                            out[1] = iLoc + 1;
+                            break;
+                        }
+                    }
+                }
+            }	// End for..
+
+			//System.out.println("out[1]: "+out[1]);
 		}
+		
+		//System.out.println("out[0]: "+out[0]);
+		//System.out.println("out[1]: "+out[1]);
+		//System.out.println("Exiting GetSourceScope");
 		return out;		
 	}	//}}}
 	
