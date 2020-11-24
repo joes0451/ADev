@@ -3458,7 +3458,7 @@ public class ADev
 			
 		}
 	}	//}}}
-
+	
 	//{{{	IOBgThread
 	/**
      * Handle commands and console output 
@@ -6350,7 +6350,6 @@ public class ADev
                 iLoc7 = iLoc8 + 2;	// Next..
             }    // End while..
 
-
 			for ( int iIndex = 0; iIndex <= 1; iIndex++ )
 			{
 				//System.out.println("~~TOP~~  iIndex: "+iIndex);
@@ -6849,7 +6848,7 @@ public class ADev
 					//System.out.println("sKey: '"+sKey+"'");
 					
 					nodeFVInfo = (NodeFVInfo)ExpandedNodeLHm.get((String)sKey);
-
+					
 					//System.out.println("---- pre evaluate() ----------------------------------------------");
 					//System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
 					//System.out.println("(getter)nodeFVInfo.sPropertyName: '"+nodeFVInfo.sPropertyName+"'");
@@ -6866,8 +6865,7 @@ public class ADev
 					bFromPropertyName = false;
                     sEvalKind = "";
                     bEvalIsClass = false;
-
-/*					
+/*
 					if ( nodeFVInfo.sPropertyName == null )
 					    System.out.println("(get())nodeFVInfo.sPropertyName null");
 					else
@@ -6887,7 +6885,6 @@ public class ADev
 /**/
 
 						sObjectId = sSelectedObjectId;    // From Frame..
-						
 /*						
 						if ( sObjectId == null )
 							System.out.println("(evaluate())sObjectId null");
@@ -7177,12 +7174,15 @@ public class ADev
 							//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
 							
 							newNodeFVInfo.sClassName = sTypeName;
-							
+/*							
 							DefaultMutableTreeNode parentNode = null;
-							TreePath parentPath = variableJTree.getSelectionPath();
-							parentNode = (DefaultMutableTreeNode)
-							    (parentPath.getLastPathComponent());
-
+							TreePath parentPath = variableJTree.getSelectionPath();    // parentPath was null
+                            if ( parentPath != null )
+                            {
+                                parentNode = (DefaultMutableTreeNode)
+                                    (parentPath.getLastPathComponent());
+                            }
+/**/
 							childNode = new DefaultMutableTreeNode(newNodeFVInfo);
 						}
 						else
@@ -7253,16 +7253,14 @@ public class ADev
 						
 						
 
-/*						
-						System.out.println("Final ----------------------------");
-						System.out.println("newNodeFVInfo.sName: '"+newNodeFVInfo.sName+"'");
-						System.out.println("newNodeFVInfo.sClassName: '"+newNodeFVInfo.sClassName+"'");
+						//System.out.println("Final ----------------------------");
+						//System.out.println("newNodeFVInfo.sName: '"+newNodeFVInfo.sName+"'");
+						//System.out.println("newNodeFVInfo.sClassName: '"+newNodeFVInfo.sClassName+"'");
 						//System.out.println("nodeFVInfo.sClassId: '"+nodeFVInfo.sClassId+"'");
 						//System.out.println("newNodeFVInfo.sObjectId: '"+newNodeFVInfo.sObjectId+"'");
 						//System.out.println("nodeFVInfo.sTargetId: '"+nodeFVInfo.sTargetId+"'");
-						System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
+						//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
 						//System.out.println("nodeFVInfo.bIsClass: "+nodeFVInfo.bIsClass);
-/**/
 
 						currentNode.add(childNode);
 					}
@@ -7272,7 +7270,6 @@ public class ADev
 				
 			}	// End while..
 
-				
 			//
 			// Expand the row..
 			//

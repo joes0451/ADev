@@ -323,8 +323,8 @@ Java Debug Wire Protocol debugger:
 		
 Breakpoints:
 
-		Breakpoints can be set either by selecting a Method name from the Class Tree, or by
-		selecting a source line, and hitting the "Breakpoint" button.
+        Breakpoints can be set by selecting a source line.  If the line highlights
+        you can then hit the "Breakpoint" button to set it.
 		The current line, and any set breakpoints, will be highlighted.
 		There is a Breakpoints Menu to look at or clear any selected breakpoints.
 		You can select a line, where a breakpoint is set, and a Dialog will pop-up asking
