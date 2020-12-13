@@ -79,7 +79,7 @@ How to use ADev:
 	does not have a build.xml, from the menu choose Project->Update.
 	The 'android' tool will generate any files or folders that need to be updated,
 	as needed for the Android project.
-	If the project already has a target defined in it's project.properties file,
+	If the project already has a target defined in its project.properties file,
 	leave the Target SDK, in the Update Dialog, blank.
 	Or you can check the project's 'project.properties' file and try to match the target Id.
 
@@ -124,7 +124,7 @@ Select Device:
 		
 
 Search: Search Dialog for searching through long Logcat or other output
-		in the console window.  'Reset Next' starts the search over from the top.
+		in the console window.  'Reset Next' starts the search from the top.
 		
 		You can select part of a line where you want to start the
 		search and use 'Reset Next'.
@@ -170,6 +170,9 @@ Gradle builds:
 		entry in 'local.properties' pointing to your SDK, like:
 		
 		sdk.dir=C:\\Program Files (x86)\\Android\\android-sdk
+		
+		If your build fails, you can try using a higher	or lower Gradle version,
+		and that can sometimes get it to successfully build the project.
 
 Release builds:
 		For Gradle, you can define your Keystore path, Key Alias, Keystore password
@@ -257,7 +260,7 @@ Keystore passwords:
 		
 Clean:
 		Clean also deletes the key.properties file, used for signing, so that you can safely
-		archive your project.  And for older projects, that are not set up
+		archive your project.  And for older projects that are not set up
 		for the key.properties file, it will modify the app/build.gradle file to support it.
 		
 Pull Files:
@@ -282,12 +285,12 @@ Wireless debugging:
 		Allows you to use adb wireless debugging over Wi-Fi, no root required.
 		You can optionally add your device's IP address in config.properties.
 		Ideally, you should use the USB driver from your device's manufacturer.
-		If you loose your wireless connection you can reconnect by
+		If you lose your wireless connection you can reconnect by
 		selecting Wireless->Re/Connect.
 		It should also work with both debuggers.
 		
 		You can check if your device is still connected by hitting the 'Devices' button
-		and see if it's listed, or it's status.
+		and see if it's listed, or its status.
 
 		- Attach your Android device to your computer with USB cable.
 		
@@ -332,7 +335,7 @@ Breakpoints:
 		
 Stepping:
 
-		When possible, it will try to follow the source of it's current location,
+		When possible, it will try to follow the source of its current location,
 		and when you use Step-Into and Step-Out.
 		
 Dump Stack:
@@ -391,23 +394,21 @@ Build Errors:
 BlueStacks Emulator:
 		If you have the BlueStacks Emulator on your machine, and you want to
 		use a different Emulator or device, you have to stop the Services that BlueStacks
-		automatically runs, or they will interfere with uninstalls, installs and debuging.
-
+		automatically runs, or they will interfere with uninstalls, installs and debugging.
 		
 
 Release notes:
 	
-ADev-2.9.6:
-    Improvements to project level and app/build.gradle for Android Gradle builds.
-    Now supports latest versions of Android Gradle Plugin using the OpenJdk.
-    Some Kotlin build.gradle improvements.
-
 ADev-2.9.8:  
     Many improvements to the Flutter debugger.
 
 ADev-3.0.0:
     Many improvements to the Flutter and JDWP debuggers.
     Other improvements.
+
+ADev-3.0.2:
+    Major improvements to the JDWP debugger, it's now source file based
+    instead of being Class/Method based.
     
 
 I use it for all of my own development, and try to fix what issues I see,

@@ -1088,6 +1088,7 @@ class JDWPCommands
 					//System.out.println("classInfo.byte_refTypeTag: '"+classInfo.byte_refTypeTag+"'");
 					classInfo.lTypeId = lRefTypeId_RefType;
 					//System.out.println("classInfo.lTypeId: "+classInfo.lTypeId+"  "+Long.toHexString(classInfo.lTypeId));
+					//System.out.println("classInfo.lTypeId: "+classInfo.lTypeId);
 					
 					ADev.AllClassesAr.add((ClassInfo)classInfo);
 				}
