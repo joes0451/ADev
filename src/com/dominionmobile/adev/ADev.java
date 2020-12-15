@@ -1160,7 +1160,6 @@ public class ADev
          * Get number of running Emulators or devices..
          */
 
-/*
 		// Don't show the Progress Bar,
 		// so just run it directly..   
 		//bDevicesFinished = false;
@@ -1176,7 +1175,6 @@ public class ADev
 		catch (InterruptedException ie)
 		{
 		}
-/**/
 
 		if ( (DevicesAr	!= null) && (DevicesAr.size() > 0) )
 		{
@@ -12491,14 +12489,14 @@ public class ADev
 			{
 			}
 		}
-/*
+		
 		if ( bFlutterSelected == false )
 		{
 			bAdbThreadFinished = false;
 			adbBgThread = new AdbBgThread();
 			adbBgThread.start();
 		}
-/**/		
+		
 		//EventInfoHt = new Hashtable();
 		defaultListModel = new DefaultListModel();
 		 
@@ -12514,7 +12512,7 @@ public class ADev
 
 		StringBuffer sb = new StringBuffer();
 		String pidS = "";
-/*
+		
 		if ( bFlutterSelected == false )
 		{
 			// Wait for Thread to finish..
@@ -12534,7 +12532,7 @@ public class ADev
 				}
 			}
 		}
-/**/		
+		
 		//System.out.println("Past bAdbThreadFinished");
 
 		if ( bFlutterSelected == false )
@@ -19434,8 +19432,6 @@ While_Break:
 
 					commandSb.append(apkNameS);
 					commandSb.append("\n");
-
-					//bDoKill = true;		// Calls KillAdbBgThread() on IOBgThread exit..
 				}
 /*
 				if ( bWirelessConnected == false )
@@ -22442,23 +22438,6 @@ While_Break:
 				{
 				}
 
-/*
-				while ( true )
-				{
-					try
-					{
-						Thread.sleep(20);
-					}
-					catch (InterruptedException ie)
-					{
-					}
-		
-					//Thread.yield();
-				
-					if ( bDevicesFinished )
-						break;
-				}
-/**/
 
 				if ( (DevicesAr != null) && (DevicesAr.size() > 1) )
 				{
@@ -22655,24 +22634,6 @@ While_Break:
 				{
 				}
 
-/*
-				while ( true )
-				{
-					
-					try
-					{
-						Thread.sleep(20);
-					}
-					catch (InterruptedException ie)
-					{
-					}
-					
-					//Thread.yield();
-				
-					if ( bDevicesFinished )
-						break;
-				}
-/**/
 						
 /*						
 				if ( DevicesAr == null )
@@ -22823,7 +22784,7 @@ While_Break:
 	{
 		public void run()
 		{
-			System.out.println("KillAdbBgThread run()");
+			//System.out.println("KillAdbBgThread run()");
 			Process proc = null;
 			Runtime rt = null;
 			int iExitVal;
@@ -22991,7 +22952,7 @@ While_Break:
 	//{{{	getPackageName()
 	private void getPackageName()
 	{
-		System.out.println("getPackageName()");
+		//System.out.println("getPackageName()");
 /*		
 		if ( projectHomeS == null )
 			System.out.println("projectHomeS null");
