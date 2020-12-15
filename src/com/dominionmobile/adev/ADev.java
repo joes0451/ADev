@@ -575,6 +575,7 @@ public class ADev
 	static volatile String sSelectedMethodName;
 	static volatile String sLastSourcePath;
 	static volatile String sPackageNameLead;
+	static volatile String packageNameS;
 	//static volatile String sCurrentScriptId;
 	
 	static String sDebugPackageName;
@@ -710,7 +711,6 @@ public class ADev
 	private boolean bReIssueRelease;
 	private int iOS;
 	private String apkNameS;
-	private String packageNameS;
 	private String downloadPathS;
 	private String sdCardPathS;
 	private String commandS;
@@ -860,7 +860,6 @@ public class ADev
 	private CheckPubBgThread checkPubBgThread;
 	private ShellBgThread shellBgThread;
 	
-	private LoadMethodSourceBgThread loadMethodSourceBgThread;
 	private static EventThread eventThread;
 	private AdbBgThread adbBgThread;
     private static PacketDispatcher packetDispatcher;
@@ -1161,6 +1160,7 @@ public class ADev
          * Get number of running Emulators or devices..
          */
 
+/*
 		// Don't show the Progress Bar,
 		// so just run it directly..   
 		//bDevicesFinished = false;
@@ -1176,6 +1176,7 @@ public class ADev
 		catch (InterruptedException ie)
 		{
 		}
+/**/
 
 		if ( (DevicesAr	!= null) && (DevicesAr.size() > 0) )
 		{
@@ -3262,246 +3263,6 @@ public class ADev
 		}
 	}	//}}}
 	
-	//{{{	LoadMethodSourceBgThread
-	protected class LoadMethodSourceBgThread extends Thread
-	{
-		public void run()
-		{
-			//System.out.println("\nLoadMethodSourceBgThread run()");
-			// Construct full Source path..
-			StringBuffer sb = new StringBuffer();
-			StringBuffer statusPathSb;
-			String sSignature = "";
-			String sStatusSignature = "";
-			TabInfo tabInfo = null;
-			int iSelIndex = 0;
-			
-			bSourceExists = false;
-			sourceBuf = null;
-			
-			// Like: 'com/android/spritemethodtest/opengl/SimpleGLRenderer'
-			sSignature = fixSignature(sClassSignature);
-			//System.out.println("(Org)sSignature: '"+sSignature+"'");
-			
-			iSelIndex = tabbedPane.getSelectedIndex();
-			//System.out.println("iSelIndex: "+iSelIndex);
-
-			int iLoc = sSignature.lastIndexOf('/');
-			if ( iLoc != -1 )
-				sSignature = sSignature.substring(0, iLoc);
-			
-/*			
-			if ( sSignature == null )
-				System.out.println("(New)sSignature null");
-			else
-				System.out.println("(New)sSignature: '"+sSignature+"'");
-/**/
-/*
-			if ( sSourceDirectory == null )
-				System.out.println("sSourceDirectory null");
-			else
-				System.out.println("sSourceDirectory: '"+sSourceDirectory+"'");
-/**/			
-
-
-			findSourcePath();
-			
-			// Like:    'C:/Android/Dev/android-kotlin-samples-master/KotlinTest/app/src/main/java'
-/*			
-			if ( sSourceDirectory == null )
-				System.out.println("sSourceDirectory null");
-			else
-				System.out.println("sSourceDirectory: '"+sSourceDirectory+"'");
-/**/			
-
-			
-			// Note:
-			// As is, it can be wrong.
-			
-			// From: .../src
-			// To:   .../app/src/main/java/
-			
-			// .../app/src/main/java/[package name]/[sSourceFileName]
-			
-			// Like:    .../app/src/main/java/  nisrulz/github/example/radiobutton/  MainActivity.java
-			
-			// Like: 'C:\Android\Dev\WeatherMenuDebug\src'
-			sb.append(sSourceDirectory);
-
-			// Note:
-			// We want to use the signature path.
-			// The package name might not be the same
-			// as the path in the signature
-			sb.append("/");
-			sb.append(Utils.convertToSlashes(sSignature));
-
-			// Add Source file name..
-			sb.append("/");
-			sb.append(sSourceFileName);
-			sFullSourcePath = Utils.processPath(sb.toString());
-			sLastSourcePath = sFullSourcePath;    // Last source path processed..
-
-			//System.out.println("sFullSourcePath: '"+sFullSourcePath+"'");
-/*			
-			if ( TabInfoAr == null )
-			    System.out.println("TabInfoAr null");
-			else
-			    System.out.println("TabInfoAr.size(): "+TabInfoAr.size());
-/**/			
-			if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
-			{
-/*
-				for ( int iJ = 0; iJ < TabInfoAr.size(); iJ++ )
-				{
-					tabInfo = (TabInfo)TabInfoAr.get(iJ);
-					System.out.println("--------------------------------");
-					//System.out.println("sScriptId: '"+tabInfo.sScriptId+"'");
-					System.out.println("sSourcePath: '"+tabInfo.sSourcePath+"'");
-					
-					if ( tabInfo.jTextArea == null )
-					    System.out.println("tabInfo.jTextArea null");
-					else
-					    System.out.println("tabInfo.jTextArea not null");
-				}
-/**/
-
-                //System.out.println("tabbedPane.getTabCount(): "+tabbedPane.getTabCount());
-                
-                // It seems like the tab we're trying to update
-                // hasn't been created yet..
-/*
-				//System.out.println("iSelectedIndex: "+iSelectedIndex);
-				System.out.println("\n(Updating)iSelIndex: "+iSelIndex);
-
-				//tabInfo = (TabInfo)TabInfoAr.get(iSelectedIndex);	
-				tabInfo = (TabInfo)TabInfoAr.get(iSelIndex);
-				tabInfo.sSourcePath = sFullSourcePath; 
-				System.out.println("tabInfo.sSourcePath: '"+tabInfo.sSourcePath+"'");
-				//TabInfoAr.set(iSelectedIndex, (TabInfo)tabInfo);    // Update with source path..
-				TabInfoAr.set(iSelIndex, (TabInfo)tabInfo);    // Update with source path..
-/**/				
-			}
-			
-
-
-			//sFullSourcePath = sSourceDirectory;
-			
-
-			// Add Source Path..
-			if ( (ClassMethodAr != null) && (ClassMethodAr.size() > 0) )
-			{
-				//System.out.println("\nAdding source path");
-				int iTIndex;
-				ClassMethodInfo classMethodInfo;
-				
-				// Get tab index..
-				iTIndex = tabbedPane.getSelectedIndex();
-				iTIndex--;
-				if ( iTIndex < 0 )
-					iTIndex = 0;
-				
-				classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iTIndex);
-			}
-/*			
-			if ( sFullSourcePath == null )
-				System.out.println("sFullSourcePath null");
-			else
-				System.out.println("sFullSourcePath: '"+sFullSourcePath+"'");
-/**/				
-
-// Like: 
-//  'C:/Android/Dev/android-kotlin-samples-master/KotlinTest/app/src/main/java/com/irontec/examples/kotlintest/adapters/ActivityAdapter.kt'
-
-			
-			// Check if it exisits..
-			File fileS = new File(sFullSourcePath);
-			if ( fileS.exists() )
-			{
-/*			    
-				if ( sSourceFileName == null )
-					System.out.println("sSourceFileName null");
-				else
-					System.out.println("sSourceFileName: '"+sSourceFileName+"'");
-/**/				
-/*
-				if ( sPackageName == null )
-					System.out.println("sPackageName null");
-				else
-					System.out.println("sPackageName: '"+sPackageName+"'");
-/**/				
-
-				// It can be way too long
-				// so keep it as this..
-				statusPathSb = new StringBuffer();
-				statusPathSb.append(sPackageName);
-				statusPathSb.append("/");
-				statusPathSb.append(sSourceFileName);
-				
-				//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
-				statusPath.setText(statusPathSb.toString());
-				
-				bSourceExists = true;
-				bHaveSDKSource = true;
-				sourceBuf = Utils.readFile(2048, sFullSourcePath);
-			}
-			else
-			{
-				// Check if we have the SDK source..
-				if ( (! sSdkDir.equals("")) && (sSdkDir.length() > 0) )
-				{
-					StringBuffer pathSb = new StringBuffer();
-					
-					// Try to construct path..
-					pathSb.append(androidSdkPathS);
-					pathSb.append("/sources/");
-					pathSb.append(sSdkDir);
-					pathSb.append("/");
-					pathSb.append(sSignature);
-					pathSb.append("/");
-					pathSb.append(sSourceFileName);
-					//System.out.println("pathSb: '"+pathSb.toString()+"'");
-					
-					File fileSystem = new File(pathSb.toString());
-					if ( fileSystem.exists() )
-					{
-						statusPathSb = new StringBuffer();
-						statusPathSb.append(sSignature);
-						
-						for ( int iG = 0; iG < statusPathSb.length(); iG++ )
-						{
-							if ( statusPathSb.charAt(iG) == '/' )
-								statusPathSb.setCharAt(iG, '.');
-						}
-						
-						statusPathSb.append("/");
-						statusPathSb.append(sSourceFileName);
-						//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
-						statusPath.setText(statusPathSb.toString());
-						
-						bSourceExists = true;
-						bHaveSDKSource = true;
-						sourceBuf = Utils.readFile(2048, pathSb.toString());
-					}
-				}
-				else
-				{
-					/**
-					 * We don't have the SDK source..
-					 */
-
-					bHaveSDKSource = false;
-					bSourceExists = false;
-				}
-			}
-			
-			//bLoadFinished = true;
-			completeLatch.countDown();
-			
-			//System.out.println("Exiting LoadMethodSourceBgThread");
-			
-		}
-	}	//}}}
-	
 	//{{{	IOBgThread
 	/**
      * Handle commands and console output 
@@ -4299,6 +4060,7 @@ public class ADev
 				}
 			}
 
+			
 			if ( bKillLogcat )
 			{
 				if ( bKillLogcat )
@@ -4307,7 +4069,7 @@ public class ADev
 				killAdbBgThread = new KillAdbBgThread();
 				killAdbBgThread.start();
 			}
-
+/**/
 			//System.gc();
 
 			bIOBgThreadFinished = true;
@@ -12729,7 +12491,7 @@ public class ADev
 			{
 			}
 		}
-
+/*
 		if ( bFlutterSelected == false )
 		{
 			bAdbThreadFinished = false;
@@ -12752,7 +12514,7 @@ public class ADev
 
 		StringBuffer sb = new StringBuffer();
 		String pidS = "";
-
+/*
 		if ( bFlutterSelected == false )
 		{
 			// Wait for Thread to finish..
@@ -12772,7 +12534,7 @@ public class ADev
 				}
 			}
 		}
-		
+/**/		
 		//System.out.println("Past bAdbThreadFinished");
 
 		if ( bFlutterSelected == false )
@@ -12991,10 +12753,7 @@ public class ADev
 		    sB.append(sModPackageName);
 		    //System.out.println("sB: '"+sB.toString()+"'");
 		    
-		    //getSourceTree(sB.toString());
 			getTreeClasses(sB.toString());
-			//testSourceTree();
-			//findSourcePath();
 		}
 
 		if ( bFlutterSelected == false )
@@ -16950,7 +16709,7 @@ While_Break:
 			}	// End for..
 
 			// Get Package name..
-			getPackageName();
+			//getPackageName();
 			
 			// Reset..			
 			bHomeJustSet = false;
@@ -17955,6 +17714,10 @@ While_Break:
 	
 											updateStorage();
 											init();		// Reset..
+											
+                                            // Get Package name..
+                                            getPackageName();
+											
 											break;
 										}
 									}
@@ -19276,6 +19039,7 @@ While_Break:
 			}
 			else if ( KILL_SERVER.equals(actionCommandS) )
 			{
+			    //System.out.println("KILL_SERVER");
 				// Kill-Server..
 				StringBuffer mSb;
 				if ( bLogcatOn )
@@ -19448,8 +19212,9 @@ While_Break:
 					// Restore..
 					actionCommandS = UNINSTALL;
 				}
-				
+
 				getPackageName();
+
 /*
 				if ( packageNameS == null )				
 					System.out.println("packageNameS null");
@@ -19477,8 +19242,6 @@ While_Break:
 					
 					commandSb.append("uninstall ");
 					commandSb.append(packageNameS);
-					
-					//bDoKill = true;
 				}
 				else
 				{
@@ -19490,7 +19253,7 @@ While_Break:
 					commandSb.append(";%PATH%");
 					
 					commandSb.append("&&adb ");
-
+					
 					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 					{
 						commandSb.append("-s ");
@@ -19502,15 +19265,15 @@ While_Break:
 					commandSb.append(packageNameS);
 					commandSb.append("\n");
 					
-					//bDoKill = true;		// Calls KillAdbBgThread() on IOBgThread exit..
 				}
 
+/*				
 				if ( bWirelessConnected == false )
 				{
 					// Signal to kill adb..
 					bKillLogcat = true;
 				}
-
+/**/
 				commandS = commandSb.toString();
 				
 				ioBgThread = new IOBgThread();
@@ -19611,8 +19374,6 @@ While_Break:
 						commandSb.append("/bin/");
 					
 					commandSb.append(apkNameS);
-					
-					//bDoKill = true;
 				}
 				else
 				{
@@ -19676,13 +19437,13 @@ While_Break:
 
 					//bDoKill = true;		// Calls KillAdbBgThread() on IOBgThread exit..
 				}
-
+/*
 				if ( bWirelessConnected == false )
 				{
 					// Signal to kill adb..
 					bKillLogcat = true;
 				}
-
+/**/
 				commandS = commandSb.toString();
 				
 				ioBgThread = new IOBgThread();
@@ -20562,6 +20323,10 @@ While_Break:
 
 				updateStorage();
 				init();		// Reset..
+				
+                // Get Package name..
+                getPackageName();
+				
 			}
 			else if ( CREATE.equals(actionCommandS) )
 			{
@@ -22871,7 +22636,7 @@ While_Break:
 			}
 			else if ( SELECT_DEVICE.equals(actionCommandS) )
 			{
-				//System.out.println("SELECT_DEVICE");
+				System.out.println("SELECT_DEVICE");
 
 				// Show the Progress Bar..
 				DevicesAr = new ArrayList();				
@@ -23058,7 +22823,7 @@ While_Break:
 	{
 		public void run()
 		{
-			//System.out.println("KillAdbBgThread run()");
+			System.out.println("KillAdbBgThread run()");
 			Process proc = null;
 			Runtime rt = null;
 			int iExitVal;
@@ -23226,7 +22991,7 @@ While_Break:
 	//{{{	getPackageName()
 	private void getPackageName()
 	{
-		//System.out.println("getPackageName()");
+		System.out.println("getPackageName()");
 /*		
 		if ( projectHomeS == null )
 			System.out.println("projectHomeS null");
@@ -25347,6 +25112,7 @@ Break_Out:
                                 buildMenuItem.setSelected(true);
                                 return;
                             }
+/**/                            
                         //}
 
 						cardLayout.show(cardPanel, (String)"DEBUG_CARD");
