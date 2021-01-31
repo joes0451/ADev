@@ -235,6 +235,7 @@ public class ADev
 	
 	Icon build24Icon;
 	Icon debug24Icon;
+	SwingWorker swingWorker;
 	
 	static CountDownLatch completeLatch;
 	static CountDownLatch requestLatch;
@@ -427,6 +428,9 @@ public class ADev
 	static volatile boolean bFoundPackageName;
 	static volatile boolean bWirelessEnabled;
 	static volatile boolean bShellThreadFinished;
+	static volatile boolean bIOBgThreadBreak;
+	static volatile boolean bKillProgressBar;
+	static volatile boolean bFlutterPubGetFinished;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -993,6 +997,8 @@ public class ADev
 		bNDKSelected = false;
 		bFlutterSelected = false;
 		bKotlinSelected = false;
+		bIOBgThreadBreak = false;
+		bKillProgressBar = false;
 		
 		// Initialize..
 		bIsReply = false;
@@ -1202,6 +1208,9 @@ public class ADev
 				bUsingAppProject = false;
 			
 		}
+		
+		getPackageName();
+		
 	}	//}}}
 
 	//{{{	CreateGradleProjectBgThread
@@ -3357,7 +3366,6 @@ public class ADev
 
 			//System.out.println("\n\n(IOBgThread)commandS: '"+commandS+"'");
 			//System.out.println("\nIOBgThread run()");
-
 /*
 			if ( commandS == null )
 				System.out.println("commandS null");
@@ -3489,6 +3497,9 @@ public class ADev
 					// Kill for Logcat..					
 					if ( bBreakOut )
 						break;
+					
+					if ( bIOBgThreadBreak )
+					    break;
 					
 					if ( out_bis.available() > 0 )	// Check Output Stream..
 					{
@@ -4013,7 +4024,9 @@ public class ADev
 					
 				}	// End while..
 				
-				//System.out.println("Dropped out");
+				bIOBgThreadBreak = false;    // Reset..
+				
+				//System.out.println("\nIOBgThread dropped out");
 			}
 			catch (Exception e)
 			{
@@ -4535,6 +4548,7 @@ public class ADev
 			int iLoc4 = 0;
 			int iLoc5 = 0;
 			int iLen;
+			//int iExitVal;
 			String sT = "";
 			String sT2 = "";
 			String sMessage = "";
@@ -4598,6 +4612,8 @@ public class ADev
 				}
 			}
 
+			//System.out.println("DebugReleaseBgThread dropped out of wait");
+			
 			// Construct command..
 			StringBuffer cmdSb = new StringBuffer();
 			
@@ -4729,16 +4745,19 @@ public class ADev
 				}
 				else
 				{
-					//daemonProcess = rt.exec(new String[] {"cmd.exe", "/C", cmdSb.toString()});
+					daemonProcess = rt.exec(new String[] {"cmd.exe", "/C", cmdSb.toString()});
+					
+/*					
 					daemonProcess = rt.exec("cmd.exe");
 					
 					// Command..				
 					daemonOutputStream = daemonProcess.getOutputStream();
 					daemonOutputStream.write(cmdSb.toString().getBytes());
 					daemonOutputStream.flush();
+/**/					
 				}
-
-/*
+				
+/*				
 				if ( daemonProcess == null )
 					System.out.println("daemonProcess null");
 				else
@@ -4750,11 +4769,13 @@ public class ADev
 				
 				
 				bProgressBarFinished = false;
-				SwingWorker swingWorker = new SwingWorker()
+				//bKillProgressBar = false;
+				swingWorker = new SwingWorker()
 				{
 					@Override
 					public Void doInBackground()
 					{
+					    //System.out.println("doInBackground()");
 						progressJFrame = new JFrame();
 						jProgressBar = new JProgressBar();
 						jProgressBar.setIndeterminate(true);
@@ -4767,7 +4788,8 @@ public class ADev
 						progressJFrame.setLocationRelativeTo(mainJFrame);
 						progressJFrame.setAlwaysOnTop(true);
 
-						while ( true )
+						//while ( true )
+						while ( swingWorker.isCancelled() == false )
 						{
 							try
 							{
@@ -4777,11 +4799,14 @@ public class ADev
 							{
 							}
 							
-							if ( bProgressBarFinished )
+							//if ( bProgressBarFinished )
+							if ( bProgressBarFinished || bKillProgressBar )   
 							{
 								break;
 							}
 						}
+						
+						//System.out.println("doInBackground() dropped out");
 						
 						return null;
 					}
@@ -4793,12 +4818,14 @@ public class ADev
 						progressJFrame.dispose();
 					}
 				};
-				
+
+                //System.out.println("Doing swingWorker.execute()");				
 				swingWorker.execute();
 				
 				
 				while ( true )
 				{
+				    //System.out.println("--TOP--");
 					iBytesRead = 0;
 					
 					if ( bKillDaemonThread )
@@ -4833,8 +4860,7 @@ public class ADev
 					else
 					{
 						// Didn't get anything..
-						
-/*
+						//System.out.println("Didn't get anything");
 						// If still getting data
 						// gets Exception:
 						// 'Exception: java.lang.IllegalThreadStateException: process hasn't exited'
@@ -4842,8 +4868,9 @@ public class ADev
 						try
 						{
 							iExitVal = daemonProcess.exitValue();
-							//System.out.println("iExitVal: "+iExitVal);
-							//break;
+							//System.out.println("(A)iExitVal: "+iExitVal);
+							swingWorker.cancel(true);
+							break;
 						}
 						catch (IllegalThreadStateException itse)
 						{
@@ -4851,12 +4878,13 @@ public class ADev
 /**/
 					}
 
+					//System.out.println("\n\niBytesRead: "+iBytesRead);
 					if ( iBytesRead > 1 )
 					{
 						
 						sT = new String(baos.toByteArray());
 
-/*
+/*						
 						// ------ Debugging from here ------
 						if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
 						{
@@ -4894,7 +4922,10 @@ public class ADev
 						}
 /**/
 
+/*
+                        //System.out.println("bHitStart: "+bHitStart);
 						if ( bHitStart == false )
+						//if ( true )
 						{
 							//System.out.println("sT.length(): "+sT.length());
 							//System.out.println("sT: '"+sT+"'");
@@ -4908,21 +4939,23 @@ public class ADev
 									bHitStart = true;
 									sT = sT.substring(iLoc);
 								}
-								else
-									continue;
+								//else
+									//continue;
 							}
 							else
 							{
 								iLoc = sT.indexOf("SET");
 								if ( iLoc != -1 )
 								{
+								    System.out.println("\nFound SET");
 									bHitStart = true;
 									sT = sT.substring(iLoc);
 								}
-								else
-									continue;
+								//else
+									//continue;
 							}
 						}
+/**/
 
 						sT2 = "";
 						
@@ -5015,7 +5048,9 @@ public class ADev
 						}
 						else
 						{
-/*							
+/**/
+
+/*						    
 							if ( sT == null )
 								System.out.println("sT null");
 							else
@@ -5025,8 +5060,13 @@ public class ADev
 							}
 /**/
 
+                            // Sometimes it was getting a String
+                            // with several spaces only and was causing an Exception..
+                            if ( sT != null )
+                                sT = sT.trim();
+                            
 							// No lead '['..
-							//System.out.println("bLookForEnd: "+bLookForEnd);
+							//System.out.println("\n\nbLookForEnd: "+bLookForEnd);
 							if ( bLookForEnd )
 							{
 								iLoc4 = sT.indexOf("]");
@@ -5046,93 +5086,116 @@ public class ADev
 								// 'Error launching application on sdk phone armv7.'
 								
 								// Kill new version text..
-								tSb = new StringBuffer(sT);
-								
-								// Skip any leading spaces..
-								int iX = 0;
-								for ( ; iX < tSb.length(); iX++ )
-								{
-									if ( tSb.charAt(iX) != (char)0x20 )
-										break;
-								}
-								
-								if ( tSb.charAt(iX) == (char)0xe2 )
-								{
-									if ( tSb.charAt(iX + 1) == (char)0x2c6 )
-									{
-										// Kill weird leading characters..								
-										int iJ = 0;
-										
-										while ( true )
-										{
-											if ( (tSb.charAt(iJ) >= (char)0x21) &&
-													(tSb.charAt(iJ) <= (char)0x7e) )
-											{
-												sT = tSb.toString();
-												sT = sT.trim();
-												break;
-											}
-											else
-												tSb.deleteCharAt(iJ);
-										}
-										
-										sT2 = sT;
-									}
-									else
-									{
-										// Don't use any of it..
-										sT2 = "";
-									}
-								}
+/*								
+								if ( sT == null )
+								    System.out.println("(Else)sT null");
 								else
+								    System.out.println("(Else)sT: '"+sT+"'");
+								
+/**/								
+								if ( (sT != null) && (! sT.equals("")) )
 								{
-									sT = sT.trim();
-	
-									// Kill weird leading characters..								
-									tSb = new StringBuffer(sT);
-									int iJ = 0;
-									
-									while ( true )
-									{
-										if ( (tSb.charAt(iJ) >= (char)0x21) &&
-												(tSb.charAt(iJ) <= (char)0x7e) )
-										{
-											sT = tSb.toString();
-											break;
-										}
-										else
-											tSb.deleteCharAt(iJ);
-									}
-									
-									iLoc4 = sT.indexOf("SET PATH");
-									if ( iLoc4 != -1 )
-									{
-										// Don't let it use..
-									}
-									else
-									{
-									
-	
-									//if ( (sT.length() >= 2) && (sT.charAt(1) == (char)0x2f) )	// '/'								
-										//;	// Don't show logcat-like output..
-									//else
-									//{
-										//System.out.println("sT: '"+sT+"'");
-										iLoc2 = sT.indexOf("Error");
-										if ( iLoc2 != -1 )
-										{
-											// Signal finished..
-											bProgressBarFinished = true;
-										}
-										
-										sT2 = sT;
-									//}
-									
-									}
-								}
+                                    tSb = new StringBuffer(sT);
+                                    
+                                    // Skip any leading spaces..
+                                    int iX = 0;
+                                    
+                                    for ( ; iX < tSb.length(); iX++ )
+                                    {
+                                        if ( tSb.charAt(iX) != (char)0x20 )
+                                            break;
+                                    }
+                                    
+                                    if ( tSb.charAt(iX) == (char)0xe2 )
+                                    {
+                                        if ( tSb.charAt(iX + 1) == (char)0x2c6 )
+                                        {
+                                            // Kill weird leading characters..								
+                                            int iJ = 0;
+                                            
+                                            while ( true )
+                                            {
+                                                if ( (tSb.charAt(iJ) >= (char)0x21) &&
+                                                        (tSb.charAt(iJ) <= (char)0x7e) )
+                                                {
+                                                    sT = tSb.toString();
+                                                    sT = sT.trim();
+                                                    break;
+                                                }
+                                                else
+                                                    tSb.deleteCharAt(iJ);
+                                            }
+                                            
+                                            sT2 = sT;
+                                        }
+                                        else
+                                        {
+                                            // Don't use any of it..
+                                            sT2 = "";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ( (sT != null) && (! sT.equals("")) )
+                                        {
+                                            sT = sT.trim();
+                                            //System.out.println("(Else)sT: '"+sT+"'");
+            
+                                            // Kill weird leading characters..								
+                                            tSb = new StringBuffer(sT);
+                                            int iJ = 0;
+                                            
+                                            while ( true )
+                                            {
+                                                if ( (tSb.charAt(iJ) >= (char)0x21) &&
+                                                        (tSb.charAt(iJ) <= (char)0x7e) )
+                                                {
+                                                    sT = tSb.toString();
+                                                    sT = sT.trim();
+                                                    break;
+                                                }
+                                                else
+                                                    tSb.deleteCharAt(iJ);
+                                            }
+                                            
+                                            iLoc4 = sT.indexOf("SET PATH");
+                                            if ( iLoc4 != -1 )
+                                            {
+                                                // Don't let it use..
+                                            }
+                                            else
+                                            {
+                                            
+            
+                                            //if ( (sT.length() >= 2) && (sT.charAt(1) == (char)0x2f) )	// '/'								
+                                                //;	// Don't show logcat-like output..
+                                            //else
+                                            //{
+                                                //System.out.println("sT: '"+sT+"'");
+                                                iLoc2 = sT.indexOf("Error");
+                                                if ( iLoc2 != -1 )
+                                                {
+                                                    // Signal finished..
+                                                    bProgressBarFinished = true;
+                                                }
+                                                
+                                                sT2 = sT;
+                                            //}
+                                            
+                                            }
+                                        }
+                                    }
+                                }
 							}
 						}
 
+/*						
+						if ( sT2 == null )
+						    System.out.println("sT2 null");
+						else
+						    System.out.println("sT2.length(): "+sT2.length());
+/**/						        
+						        
 						if ( (sT2 != null) && (sT2.length() > 0) )
 						{
 							// Output to console..
@@ -5153,23 +5216,40 @@ public class ADev
 							}
 							catch (IllegalArgumentException iae)
 							{
+							    //System.out.println("Output to console Exception");
 								iae.printStackTrace();
 							}
 							catch (BadLocationException ble)
 							{
+							    //System.out.println("Output to console Exception");
 								ble.printStackTrace();
 							}
 						}
 					}
 					
 					baos.reset();
-					
+
+/*					
+                    try
+                    {
+                        iExitVal = daemonProcess.exitValue();
+                        //System.out.println("(B)iExitVal: "+iExitVal);
+                        break;
+                    }
+                    catch (IllegalThreadStateException itse)
+                    {
+                    }
+/**/					
 				}	// End while..
+				
+				//System.out.println("FlutterDaemonBgThread dropped out of while");
 				
 			}
 			catch (Exception e)
 			{
-				System.out.println("Daemon Exception");
+			    System.out.println("Daemon Exception");
+			    swingWorker.cancel(true);
+
 				e.printStackTrace();
 			}
 			finally
@@ -5187,13 +5267,12 @@ public class ADev
 				}
 				catch (IOException ioe)
 				{
-					System.out.println("Daemon finally Exception");
 					ioe.printStackTrace();
 				}
 			}
 
 			daemonProcess.destroy();
-			
+/*			
 			while ( true )
 			{
 				try
@@ -5205,7 +5284,9 @@ public class ADev
 				{
 				}
 			}
-			
+/**/
+
+            //System.out.println("Exiting FlutterDaemonBgThread");
 		}
 	}	//}}}
 
@@ -8525,6 +8606,16 @@ public class ADev
 		    
 			// Construct filename..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
+			
+			if ( bFlutterSelected )
+			{
+			    sB = new StringBuffer(projectHomeS);
+			    sB.append("/android");
+			    File tFile = new File(sB.toString());
+			    if ( tFile.exists() )
+			        fileNameSb.append("/android");
+			}
+			
 			fileNameSb.append("/build.gradle");
 			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
 			
@@ -8547,6 +8638,12 @@ public class ADev
 			buildBuf = readFile(
 				512,					// iInitialSize
 				fileNameSb.toString());	// fileName
+/*			
+			if ( buildBuf == null )
+			    System.out.println("buildBuf null");
+			else
+			    System.out.println("buildBuf.length: "+buildBuf.length);
+/**/			        
 
 			if ( (buildBuf != null) && (buildBuf.length > 0) )
 			{
@@ -8981,6 +9078,8 @@ public class ADev
 					if ( bFinished )
 						break;
 				}
+				
+				//System.out.println("Dropped out of IOBgThread wait");
 			}
 			else if ( bIsDebug )
 			{
@@ -16579,7 +16678,6 @@ While_Break:
 	//{{{	init()
 	/**
      * Read Project Home from Persistent storage
-     * Get package name from AndroidManifest.xml
      */
 	private void init()
 	{
@@ -17743,6 +17841,8 @@ While_Break:
 				//System.out.println("\nCLEAN");
 				//System.out.println("isEventDispatchThread(): "+
 					//SwingUtilities.isEventDispatchThread());
+				StringBuffer sB;
+				int iLen;
 				
 				if ( bLogcatOn )
 				{
@@ -17803,6 +17903,8 @@ While_Break:
 						{
 						}
 					}
+					
+					//System.out.println("DeleteKeyPropertiesBgThread dropped out");
 
 					// Comment out signingConfigs storeFile
 					bInitBuildGradleFinished = false;
@@ -17823,6 +17925,8 @@ While_Break:
 						}
 					}
 					
+					//System.out.println("InitializeBuildGradleBgThread dropped out");
+					
 					// Comment out projectsEvaluated debug
 					bCheckGradleProjectFinished = false;
 					checkGradleProjectBgThread = new CheckGradleProjectBgThread();
@@ -17841,7 +17945,94 @@ While_Break:
 						{
 						}
 					}
+					
+					//System.out.println("CheckGradleProjectBgThread dropped out");
 				}
+
+                if ( bFlutterSelected )
+                {
+                    // Check for .packages
+                    sB = new StringBuffer(projectHomeS);
+                    sB.append("/.packages");
+                    File file = new File(sB.toString());
+                    if ( file.exists() )
+                        ;
+                    else
+                    {
+                        // Run 'flutter pub get'..
+                        StringBuffer cmdSb = new StringBuffer();
+                        
+                        if ( iOS == LINUX_MAC )
+                        {
+                            cmdSb.append("export PATH=${PATH}:");
+                            cmdSb.append(sFlutterSdkPath);
+                            
+                            cmdSb.append(";cd ");
+                            cmdSb.append(projectHomeS);
+            
+                            cmdSb.append(";flutter pub get");	
+                        }
+                        else
+                        {
+                            cmdSb.append("SET PATH=");
+                            cmdSb.append(sFlutterSdkPath);
+                            cmdSb.append(";%PATH%");
+            
+                            cmdSb.append("&&CD ");
+                            cmdSb.append(projectHomeS);
+            
+                            cmdSb.append("&&flutter pub get");
+                            cmdSb.append("\n");
+                        }
+                        
+                        bInternalFinished = false;		
+                        internalCommandS = cmdSb.toString();
+                        commandBgThread = new CommandBgThread();
+                        commandBgThread.start();
+                
+                        // Wait for Thread to finish..
+                        while ( true )
+                        {
+                            try
+                            {
+                                Thread.sleep(100);
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                
+                            if ( bInternalFinished )
+                                break;
+                        }
+
+/*                        
+                        if ( commandResultS == null )
+                            System.out.println("commandResultS null");
+                        else
+                            System.out.println("commandResultS: '"+commandResultS+"'");
+/**/
+
+                        try
+                        {				
+                            doc = textPane.getStyledDocument();	
+                            iLen = doc.getLength();
+                            doc.insertString(iLen, commandResultS, normalStyle);
+                            if ( iLen > 0 )
+                            {
+                                textPane.setCaretPosition(doc.getLength() - 1);
+                                textPane.repaint();
+                            }
+                        }
+                        catch (IllegalArgumentException iae)
+                        {
+                            iae.printStackTrace();
+                        }
+                        catch (BadLocationException ble)
+                        {
+                            ble.printStackTrace();
+                        }
+                    }
+                }
 
 				commandSb = new StringBuffer();
 				
@@ -17851,7 +18042,6 @@ While_Break:
 					{
 						if ( bFlutterSelected )
 						{
-							//commandPhrase = "Deleting";
 							commandPhrase = "flutter clean";
 							
 							commandSb.append(";export PATH=${PATH}:");						
@@ -17860,7 +18050,6 @@ While_Break:
 							commandSb.append(";cd ");
 							commandSb.append(projectHomeS);
 							
-							//commandSb.append(";flutter clean\n");
 							commandSb.append(";flutter clean");
 						}
 						else
@@ -17925,6 +18114,7 @@ While_Break:
 				}
 				else
 				{
+				    //System.out.println("In else");
 					if ( bGradleSelected )
 					{
 						if ( bFlutterSelected )
@@ -18824,7 +19014,6 @@ While_Break:
 					bKillDaemonThread = false;
 					flutterDaemonBgThread = new FlutterDaemonBgThread();
 					flutterDaemonBgThread.start();
-
 					
 				}
 				else
@@ -19038,6 +19227,7 @@ While_Break:
 			else if ( KILL_SERVER.equals(actionCommandS) )
 			{
 			    //System.out.println("KILL_SERVER");
+			    
 				// Kill-Server..
 				StringBuffer mSb;
 				if ( bLogcatOn )
@@ -19210,8 +19400,6 @@ While_Break:
 					// Restore..
 					actionCommandS = UNINSTALL;
 				}
-
-				getPackageName();
 
 /*
 				if ( packageNameS == null )				
@@ -22963,128 +23151,132 @@ While_Break:
 		int iLoc;
 		int iLoc2;
 		String sIn = "";
-		StringBuffer sb = new StringBuffer(projectHomeS);
 		StringBuffer tSb;		
 		File fileT3;
 
-		while ( true )
+		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 		{
-			// Flutter..
-			try
-			{
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/android/app/src/main/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/android/app/src/main/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-
-			try
-			{
-				// Gradle..	
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/app/src/main/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/app/src/main/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-
-			try
-			{
-				// Gradle..
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/src/main/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/src/main/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-
-			// In Home..
-			try
-			{
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-
-			try
-			{
-				// LibGdx..
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/android/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/android/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-
-			try
-			{
-				// My LibGdx..
-				tSb = new StringBuffer(projectHomeS);
-				tSb.append("/app/AndroidManifest.xml");
-				fileT3 = new File(tSb.toString());
-				if ( fileT3.exists() )
-				{
-					sb.append("/app/AndroidManifest.xml");
-					break;
-				}
-			}
-			catch (Exception e)
-			{
-			}
-			
-			break;
-		}
-				
-		//System.out.println("sb: '"+sb.toString()+"'");
-			
-		byte[] buf = null;
-
-		buf = readFile(896, sb.toString());
-		if ( (buf != null) && (buf.length > 0) )
-		{
-			sIn = new String(buf);
-
-			iLoc = sIn.indexOf("package=");
-			if ( iLoc != -1 )
-			{
-				iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
-				if ( iLoc2 != -1 )
-					packageNameS = sIn.substring((iLoc + 9), iLoc2);
-			}
-		}
+		    StringBuffer sb = new StringBuffer(projectHomeS);
+		    
+            while ( true )
+            {
+                // Flutter..
+                try
+                {
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/android/app/src/main/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/android/app/src/main/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+    
+                try
+                {
+                    // Gradle..	
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/app/src/main/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/app/src/main/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+    
+                try
+                {
+                    // Gradle..
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/src/main/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/src/main/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+    
+                // In Home..
+                try
+                {
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+    
+                try
+                {
+                    // LibGdx..
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/android/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/android/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+    
+                try
+                {
+                    // My LibGdx..
+                    tSb = new StringBuffer(projectHomeS);
+                    tSb.append("/app/AndroidManifest.xml");
+                    fileT3 = new File(tSb.toString());
+                    if ( fileT3.exists() )
+                    {
+                        sb.append("/app/AndroidManifest.xml");
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+                
+                break;
+            }
+                    
+            //System.out.println("sb: '"+sb.toString()+"'");
+                
+            byte[] buf = null;
+    
+            buf = readFile(896, sb.toString());
+            if ( (buf != null) && (buf.length > 0) )
+            {
+                sIn = new String(buf);
+    
+                iLoc = sIn.indexOf("package=");
+                if ( iLoc != -1 )
+                {
+                    iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
+                    if ( iLoc2 != -1 )
+                        packageNameS = sIn.substring((iLoc + 9), iLoc2);
+                }
+            }
+        }
 /*		
 		if ( packageNameS == null )
 			System.out.println("packageNameS null");

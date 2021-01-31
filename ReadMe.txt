@@ -399,10 +399,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.0:
-    Many improvements to the Flutter and JDWP debuggers.
-    Other improvements.
-
 ADev-3.0.2:
     Major improvements to the JDWP debugger, it's now source file based
     instead of being Class/Method based.
@@ -411,7 +407,11 @@ ADev-3.0.3:
     Fixed issue that could cause Emulator to go offline.
     Some minor improvements.
     
-    
+ADev-3.0.4:
+    Fixed Progress bar issue in Flutter.  Now will automatically do
+    'flutter pub get', and some other improvements.
+
+
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.
 
