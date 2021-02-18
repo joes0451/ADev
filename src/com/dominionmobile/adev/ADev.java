@@ -7,7 +7,7 @@
 	/**
 	 *	  ADev is a lightweight Android development tool
 	 *
-	 *	  Copyright (c) 2013 - 2020 Joseph Siebenmann
+	 *	  Copyright (c) 2013 - 2021 Joseph Siebenmann
 	 *
 	 *    This program is free software: you can redistribute it and/or modify
 	 *    it under the terms of the GNU General  Public License as published by
@@ -235,7 +235,7 @@ public class ADev
 	
 	Icon build24Icon;
 	Icon debug24Icon;
-	SwingWorker swingWorker;
+	static SwingWorker swingWorker;
 	
 	static CountDownLatch completeLatch;
 	static CountDownLatch requestLatch;
@@ -504,6 +504,7 @@ public class ADev
 	static volatile long lClassIdSave;
 	static volatile long lPrevTime;
 	static volatile long lEvent_MethodId;
+	static volatile long lBreakpointClassId;
 	
 	static volatile String sThreadName;
 	static volatile String sClassSignature;
@@ -678,6 +679,7 @@ public class ADev
 	static ArrayList VariableInfoAr;
 	static ArrayList LibraryAr;
 	static ArrayList ScriptIdAr;
+	//static ArrayList SourceClassInfoAr;
 	
 	//static Hashtable EventInfoHt;
 	static volatile LinkedHashMap VariableInfoLHm;
@@ -686,6 +688,7 @@ public class ADev
 	static volatile LinkedHashMap LocalVariableLHm;
 	static volatile LinkedHashMap SelectedNodesLHm;
 	static volatile HashMap NodeHm;
+	static volatile HashMap SourceClassInfoHm;
 	
 	static volatile Vector localVariableVector;
 	static volatile Vector staticVariableVector;
@@ -861,7 +864,6 @@ public class ADev
 	private CreateBgThread createBgThread;
 	private LoadSourceBgThread loadSourceBgThread;
 	private UpdateVariableJTreeBgThread updateVariableJTreeBgThread;
-	private CheckPubBgThread checkPubBgThread;
 	private ShellBgThread shellBgThread;
 	
 	private static EventThread eventThread;
@@ -2319,9 +2321,9 @@ public class ADev
 							EventInfo eventInfo = InterpretEvent(eventPacket);
 							
 							lMethodId = eventInfo.lMethodId;
-							//System.out.println("lMethodId: "+lMethodId+"  "+Long.toHexString(lMethodId));
+							//System.out.println("lMethodId: "+lMethodId+"  (Hex): "+Long.toHexString(lMethodId));
 							lClassId = eventInfo.lClassId;
-							//System.out.println("lClassId: "+lClassId+"  "+Long.toHexString(lClassId));
+							//System.out.println("lClassId: "+lClassId+"  (Hex): "+Long.toHexString(lClassId));
 							lThreadId = eventInfo.lThreadId;
 							//System.out.println("lThreadId: "+lThreadId+"  "+Long.toHexString(lThreadId));
 							
@@ -2370,6 +2372,10 @@ public class ADev
 								bIsBreakpointStepEvent = true;
 								//System.out.println("EVENT_KIND_BREAKPOINT / EVENT_KIND_SINGLE_STEP");
 								
+								//System.out.println("eventInfo.lLocationIndex: "+eventInfo.lLocationIndex);
+								lBreakpointClassId = lClassId;
+								//System.out.println("lBreakpointClassId: "+lBreakpointClassId);
+								
 								// Show current line..
 								bShowCurrentLine = true;
 								
@@ -2392,8 +2398,8 @@ public class ADev
 								framesInfo = (FramesInfo)FramesAr.get(0);
 								lFrameId = (long)framesInfo.lFrameId;
 								lCurrentFrameId = lFrameId;
-								
-/*
+
+/*								
 								if ( ClassMethodAr == null )
 									System.out.println("ClassMethodAr null");
 								else
@@ -2624,19 +2630,6 @@ public class ADev
 									}
 								}
 
-/*								
-								// Update classes..
-                                findSourcePath();
-                                StringBuffer sB = new StringBuffer();
-                                sB.append(sSourceDirectory);
-                                
-                                String sModPackageName = sPackageName.replace('.', (char)0x2f);
-                                sB.append((char)0x2f);
-                                sB.append(sModPackageName);
-                                //System.out.println("sB: '"+sB.toString()+"'");
-
-                                getTreeClasses(sB.toString());
-/**/
 
 								long lClassReferenceTypeId = currentClassId;
 								lThisObjectId = 0;
@@ -3067,6 +3060,25 @@ public class ADev
 									lCurrentSelectedMethod = lMethodId;
 								}
 
+/*								
+								if ( ClassMethodAr == null )
+								    System.out.println("ClassMethodAr null");
+								else
+								{
+								    System.out.println("ClassMethodAr.size(): "+ClassMethodAr.size());
+                                    for ( int g = 0; g < ClassMethodAr.size(); g++ )
+                                    {
+                                        classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(g);
+                                        System.out.println("----------------------------  "+g);
+                                        System.out.println("(lClassId): "+classMethodInfo.lClassId);
+                                        System.out.println("(lMethodId): "+classMethodInfo.lMethodId);
+                                        System.out.println("(sMethodName): '"+classMethodInfo.sMethodName+"'");
+                                        //System.out.println("(sSourcePath): '"+classMethodInfo.sSourcePath+"'");
+                                    }
+                                    System.out.println();
+								}
+/**/								
+
 								// Check if entry with 'lChangedMethodId' already exists..
 								if ( ClassMethodAr != null )
 								{
@@ -3220,11 +3232,6 @@ public class ADev
 			{
 				//System.out.println("Exists");
 
-				// Load source path on Status bar..
-				//statusPathSb = new StringBuffer();
-				//statusPathSb.append(sPackageName);
-				//statusPathSb.append("/");
-
                 if ( bFlutterSelected )
                 {
                     iLoc2 = sFullSourcePath.indexOf(sLib);
@@ -3248,24 +3255,14 @@ public class ADev
                 }
 				
 				
-				//int iLoc2 = sFullSourcePath.lastIndexOf((int)0x5c);    // '\'
-				//if ( iLoc2 != -1 )
-				    //statusPathSb.append(sFullSourcePath.substring(iLoc2 + 1));
-				
-				//statusPathSb.append(sFullSourcePath);
-				
 				//System.out.println("sStatusPath: '"+sStatusPath+"'");
 				statusPath.setText(sStatusPath);
-				//statusPath.setText(Utils.processPath(sStatusPath));		// Flip '\' -> '/'
-				//System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
-				//statusPath.setText(statusPathSb.toString());
 				
 				bSourceExists = true;
 				sourceBuf = Utils.readFile(2048, sFullSourcePath);	// iInitialSize..
 				
 			}
 
-			//bLoadFinished = true;
 			completeLatch.countDown();
 		}
 	}	//}}}
@@ -4905,58 +4902,6 @@ public class ADev
 						}
 /**/
 
-/*
-						// Look for "app.started"..
-						iLoc3 = sT.indexOf(EVENT_STRING);
-						if ( iLoc3 != -1 )
-						{
-							iLoc4 = sT.indexOf((int)0x22, iLoc3 + 9);
-							if ( iLoc4 != -1 )
-							{
-								if ( sT.substring(iLoc3 + 9, iLoc4).equals("app.started") )
-								{
-									bDebugRan = true;
-									DebugInit();
-								}
-							}
-						}
-/**/
-
-/*
-                        //System.out.println("bHitStart: "+bHitStart);
-						if ( bHitStart == false )
-						//if ( true )
-						{
-							//System.out.println("sT.length(): "+sT.length());
-							//System.out.println("sT: '"+sT+"'");
-							// Kill any leading path output..
-							
-							if ( iOS == LINUX_MAC )
-							{
-								iLoc = sT.indexOf("export");
-								if ( iLoc != -1 )
-								{
-									bHitStart = true;
-									sT = sT.substring(iLoc);
-								}
-								//else
-									//continue;
-							}
-							else
-							{
-								iLoc = sT.indexOf("SET");
-								if ( iLoc != -1 )
-								{
-								    System.out.println("\nFound SET");
-									bHitStart = true;
-									sT = sT.substring(iLoc);
-								}
-								//else
-									//continue;
-							}
-						}
-/**/
-
 						sT2 = "";
 						
 						iLoc = sT.indexOf("[");
@@ -5301,7 +5246,7 @@ public class ADev
 			StringBuffer outSb = new StringBuffer();
 			String sReq = "";
 
-/*			
+/*
 			if ( daemonProcess == null )
 				System.out.println("daemonProcess null");
 			else
@@ -5410,77 +5355,6 @@ public class ADev
 		}
 	}	//}}}
 
-	//{{{	CheckPubBgThread
-	class CheckPubBgThread extends Thread
-	{
-		public void run()
-		{
-
-			StringBuffer sB = new StringBuffer();
-			sB.append(projectHomeS);
-			sB.append("/pubspec.lock");
-			//System.out.println("sB: '"+sB.toString()+"'");
-			
-			File file = new File(sB.toString());	
-			if ( file.exists() == false )
-			{
-				int iChoice = JOptionPane.showConfirmDialog(
-					frame,
-					(String)"Run: flutter pub get?",
-					"Question",
-					(int)JOptionPane.YES_NO_OPTION);
-
-				if ( iChoice == JOptionPane.YES_OPTION )
-				{
-					sB = new StringBuffer();
-					
-					if ( iOS == LINUX_MAC )
-					{
-						sB.append("export PATH=${PATH}:");
-						sB.append(sFlutterSdkPath);
-						
-						sB.append(";cd ");
-						sB.append(projectHomeS);
-						
-						sB.append(";flutter pub get");
-					}
-					else
-					{
-						sB.append("SET PATH=");
-						sB.append(sFlutterSdkPath);
-						sB.append(";%PATH%");
-						
-						sB.append("&&CD ");
-						sB.append(projectHomeS);
-						
-						sB.append("&&flutter pub get");
-						sB.append("\n");
-					}
-					
-					bInternalFinished = false;		
-					internalCommandS = sB.toString();
-					commandBgThread = new CommandBgThread();
-					commandBgThread.start();
-			
-					// Wait for Thread to finish..
-					while ( true )
-					{
-						try
-						{
-							Thread.sleep(100);
-						}
-						catch (InterruptedException ie)
-						{
-						}
-		
-						if ( bInternalFinished )
-							break;
-					}
-				}
-			}
-		}
-	}	//}}}
-
 	//{{{	AdbBgThread
 	class AdbBgThread extends Thread
 	{
@@ -5497,7 +5371,8 @@ public class ADev
 				sb.append(androidSdkPathS);
 				sb.append("/platform-tools");
 				
-				if ( bWirelessConnected )
+				//if ( bWirelessConnected )
+				if ( bWirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -5535,7 +5410,8 @@ public class ADev
 				sb.append(";%PATH%");
 
 				//System.out.println("bWirelessConnected: "+bWirelessConnected);
-				if ( bWirelessConnected )
+				//if ( bWirelessConnected )
+				if ( bWirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -5774,7 +5650,8 @@ public class ADev
 				sb.append(androidSdkPathS);
 				sb.append("/platform-tools");
 				
-				if ( bWirelessConnected )
+				//if ( bWirelessConnected )
+				if ( bWirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -5802,7 +5679,8 @@ public class ADev
 				sb.append(";%PATH%");
 
 				//System.out.println("bWirelessConnected: "+bWirelessConnected);
-				if ( bWirelessConnected )
+				//if ( bWirelessConnected )
+				if ( bWirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -5859,6 +5737,8 @@ public class ADev
 				//System.out.println("commandResultS not null");
 				System.out.println("commandResultS: '"+commandResultS+"'");
 /**/
+
+
 /*
 			if ( packageNameS == null )
 				System.out.println("\npackageNameS null");
@@ -5867,8 +5747,8 @@ public class ADev
 /**/
 
 			//System.out.println("bFlutterSelected: "+bFlutterSelected);
-			if ( bFlutterSelected == false )
-			{
+			//if ( bFlutterSelected == false )
+			//{
 				// Grab package name..
 				if ( (commandResultS != null) && (commandResultS.length() > 0) )
 				{
@@ -5926,7 +5806,7 @@ public class ADev
 						System.out.println("\nsPackageName: '"+sPackageName+"'");
 /**/				
 				}
-			}
+			//}
 
 			bShellThreadFinished = true;
 		}
@@ -7080,14 +6960,6 @@ public class ADev
 									//System.out.println("sEvalKind: '"+sEvalKind+"'");
 									if ( sEvalKind.equals("List") )
 									{
-/*							
-									    System.out.println("(put())sKey: '"+sKey+"'");
-									    System.out.println("nodeFVInfo.sName: '"+nodeFVInfo.sName+"'");
-									    nodeFVInfo.sKind = "List";
-									    //ExpandedNodeLHm.put((String)sKey, (NodeFVInfo)nodeFVInfo);
-									    //ExpandedNodeLHm.replace((String)sKey, (NodeFVInfo)nodeFVInfo);
-									    ExpandedNodeLHm.put((String)sKey, (NodeFVInfo)ExpandedNodeLHm.get(sKey));
-/**/									    
 									    bIsList = true;
                                         iLoc9 = g_sMessage.indexOf(LENGTH_STRING, iLoc3);		// Help locate '}'..
                                         if ( iLoc9 != -1 )
@@ -7236,15 +7108,6 @@ public class ADev
 							//System.out.println("newNodeFVInfo.sValueAsString: '"+newNodeFVInfo.sValueAsString+"'");
 							
 							newNodeFVInfo.sClassName = sTypeName;
-/*							
-							DefaultMutableTreeNode parentNode = null;
-							TreePath parentPath = variableJTree.getSelectionPath();    // parentPath was null
-                            if ( parentPath != null )
-                            {
-                                parentNode = (DefaultMutableTreeNode)
-                                    (parentPath.getLastPathComponent());
-                            }
-/**/
 							childNode = new DefaultMutableTreeNode(newNodeFVInfo);
 						}
 						else
@@ -8359,18 +8222,6 @@ public class ADev
 					StringBuffer defSb = new StringBuffer();
 
 					iLoc = outSb.indexOf("apply plugin");
-/*					
-					if ( bFlutterSelected )
-						iLoc = outSb.indexOf("apply plugin");
-					else
-					{
-						if ( bUsingAppProject )
-							iLoc = outSb.indexOf("apply plugin");
-						else
-							iLoc = outSb.indexOf("buildscript");
-						
-					}
-/**/	
 
 					if ( iLoc != -1 )
 					{
@@ -9539,6 +9390,7 @@ public class ADev
 		
 		VariableInfoLHm = new LinkedHashMap();
 		SelectedNodesLHm = new LinkedHashMap();
+		SourceClassInfoHm = new HashMap();
 		eventQueue = new LinkedList();
 		sVariablesScriptId = "";
 		iPauseBreakpointTokenPos = 0;
@@ -14261,6 +14113,10 @@ public class ADev
 		String sRoot = "";
 		String sRootPath = "";
 		System.out.println();
+		//SourceClassInfo sourceClassInfo;
+		//SourceClassInfoAr = new ArrayList();
+		if ( SourceClassInfoHm == null )
+		    SourceClassInfoHm = new HashMap();
 		
 		// Note:
 		// Use original 'packageNameS' because sometimes
@@ -14325,6 +14181,7 @@ public class ADev
 		String sFileNm = "";
 		String sSourceNm = "";
 		String sT = "";
+		String sEnd = "";
 		String sPackagePath = "";
 		StringBuffer sB;
 		StringBuffer tSb;
@@ -14361,13 +14218,22 @@ public class ADev
 		
 		parentNode = root;
 
-/*
+/*		
 		if ( AllClassesAr == null )
 			System.out.println("AllClassesAr null");
 		else
+		{
 			System.out.println("AllClassesAr.size(): "+AllClassesAr.size());
+            for ( int iJ = 0; iJ < AllClassesAr.size(); iJ++ )
+            {
+                System.out.println("==================================");
+				classInfo = (ClassInfo)AllClassesAr.get(iJ);
+				System.out.println("["+iJ+"]classInfo.sSignature: '"+classInfo.sSignature+"'");
+                System.out.println("classInfo.lTypeId: "+classInfo.lTypeId);
+            }
+		}
 /**/				
-		
+
 		if ( (AllClassesAr != null) && (AllClassesAr.size() > 0) )
 		{
 		    // Key: com/kevalpatel2106/sample/RulerDemoActivity
@@ -14384,10 +14250,13 @@ public class ADev
 				
 				// Get signature..
 				sSignature = classInfo.sSignature;
+				//System.out.println("sSignature: '"+sSignature+"'");
 				iLoc3 = sSignature.indexOf("$");
 				iLoc4 = sSignature.indexOf(";");
+				
+				// Like:  com/dp/logcatapp/fragments/logcatlive/LogcatLiveFragment
 				if ( iLoc3 != -1 )
-				    sPath = sSignature.substring(1, iLoc3);
+				    sPath = sSignature.substring(1, iLoc3);    
 				else
 				    sPath = sSignature.substring(1, iLoc4);
 				
@@ -14397,6 +14266,9 @@ public class ADev
 				iLoc5 = sPath.lastIndexOf("/");
 				if ( iLoc5 != -1 )
 				{
+				    sEnd = sPath.substring(iLoc5 + 1);
+				    //System.out.println("sEnd: '"+sEnd+"'");
+				    
 				    sT = sPath.substring(iLoc5 + 1);
 				    if ( sT.equals("R") )
 				        continue;
@@ -14408,6 +14280,10 @@ public class ADev
 
 				// Get Methods..
 				lTypeId = classInfo.lTypeId;
+				//System.out.println("lTypeId: "+lTypeId);
+
+                SourceClassInfoHm.put((Long)lTypeId, (String)sEnd);
+				
 				JDWPCommands.command_MethodsWithGeneric(lTypeId);
 				if ( (AllMethodsAr != null) && (AllMethodsAr.size() > 0) )
 				{
@@ -14443,58 +14319,12 @@ public class ADev
 				                tHm.put((Integer)iLineNumber, (LineInfo)lineInfo);
 				            }
 				        }
-/*				        
-				        //System.out.println("methodInfo.sName: '"+methodInfo.sName+"'");
-				        //System.out.println("AllMethodsAr.size(): "+AllMethodsAr.size());
-				        if ( methodInfo.sName.equals("<init>") && 
-				            AllMethodsAr.size() == 1 )
-				        {
-				            // Only <init>, remove..
-				            AllClassesAr.remove(g);
-				            bDoContinue = true;
-				            break;
-				        }
-/**/				      
 				    }    // End for..
 				    
                     // Update..				    
 				    NodeHm.put((String)sPath, (HashMap)tHm);
 				    
 				}
-/*				
-				if ( bDoContinue )
-				    continue;
-/**/
-
-/*
-				treeClass = new TreeClass();
-				
-				sSig = classInfo.sSignature;
-				//System.out.println("(classInfo)sSig: '"+sSig+"'");
-				//System.out.println("(classInfo)byte_refTypeTag: "+classInfo.byte_refTypeTag);
-				//System.out.println("(classInfo)lTypeId: "+classInfo.lTypeId);
-				
-				iLoc = sSig.lastIndexOf('/');
-				if ( iLoc != -1 )
-				{
-					sFixedString = sSig.substring((iLoc + 1), (sSig.length() - 1));
-					//System.out.println("sFixedString: '"+sFixedString+"'");
-
-					// Check for 'R$drawable'..
-					if ( sFixedString.equals("R$drawable") )
-						continue;	// Skip..
-					
-					treeClass.sSignature = sFixedString;
-					treeClass.sFullSignature = sSig;
-					treeClass.lTypeId = classInfo.lTypeId;    // referenceTypeID
-                    System.out.println("(Add, treeClass)sSignature: '"+treeClass.sSignature+"'");
-                    System.out.println("(Add, treeClass)sFullSignature: '"+treeClass.sFullSignature+"'");
-                    System.out.println("(Add, treeClass)lTypeId: "+treeClass.lTypeId);
-	
-					//System.out.println("ADD(sFixedString): '"+sFixedString+"'");
-					TreeClassesAr.add((TreeClass)treeClass);
-				}
-/**/				
 			}	// End for..
 			
             if ( NodeHm.size() > 0 )
@@ -14580,7 +14410,7 @@ public class ADev
                                     }
                                 }
                                 
-                                //System.out.println("(Node)sSubPath: '"+sSubPath+"'");
+                                //System.out.println("\n(Node)sSubPath: '"+sSubPath+"'");
                                 //System.out.println("(Node)(Name): '"+sFNm+"'");
                                 if ( (sFNm != null) && (sFNm.length() > 0) )
                                 {
@@ -14621,7 +14451,7 @@ public class ADev
                                 else
                                 {
                                     // Not in HashMap, add it..
-                                    //System.out.println("(Node)sSubPath: '"+sSubPath+"'");
+                                    //System.out.println("\n(Add)(Node)sSubPath: '"+sSubPath+"'");
                                     //System.out.println("(Node)(Name): '"+sDir+"'");
                                     if ( (sDir != null) && (sDir.length() > 0) )
                                     {
@@ -14650,18 +14480,6 @@ public class ADev
             }
 
 
-
-/*			
-			DefaultMutableTreeNode child;
-			//DefaultMutableTreeNode root = null;
-			root = null;
-			//DefaultTreeModel model = (DefaultTreeModel)jTree.getModel();
-			model = (DefaultTreeModel)jTree.getModel();
-			root = (DefaultMutableTreeNode)model.getRoot();
-/**/			
-			// Clear..		
-			//root.removeAllChildren();
-			//model.reload();
 			
 /*			
 			if ( TreeClassesAr == null )
@@ -14670,45 +14488,11 @@ public class ADev
 				System.out.println("TreeClassesAr.size(): "+TreeClassesAr.size());
 /**/
 
-/*
-			for ( iI = 0; iI < TreeClassesAr.size(); iI++ )
-			{
-				treeClass = new TreeClass();
-				treeClass = (TreeClass)TreeClassesAr.get(iI);
-
-				child = new DefaultMutableTreeNode(
-					//new NodeInfo(treeClass.lTypeId, treeClass.sSignature, true));
-					new NodeInfo(
-					    treeClass.lTypeId,       // lId
-					    "",                      // sFullPath
-					    treeClass.sSignature,        // sName
-					    treeClass.sFullSignature,    // sSignature
-					    true));                      // bIsClass
-
-                // Add emptyNode to create a branch node..
-                emptyNode = new DefaultMutableTreeNode();
-                child.add(emptyNode);
-
-				// Notify the model, which will add it and create an event..
-				((DefaultTreeModel)jTree.getModel()).
-					insertNodeInto(
-						child,		// newChild
-						root,		// parent
-						root.getChildCount());	// index
-			}
-/**/
-
-			//TreePath rootPath = new TreePath(root.getPath());
 			
             // Expand all..
             for ( int iZ = 0; iZ < jTree.getRowCount(); iZ++ )
                 jTree.expandRow(iZ);
-/*			
-			jTree.setExpandsSelectedPaths(true);
-			jTree.expandPath(rootPath);
-			jTree.scrollPathToVisible(rootPath);
-			jTree.setRootVisible(true);
-/**/			
+            
             jTree.setEditable(false);
             jTree.setExpandsSelectedPaths(true);
             jTree.setShowsRootHandles(false);
@@ -14717,6 +14501,7 @@ public class ADev
 		}
 		
 		//System.out.println("\nExiting getTreeClasses()");
+		
 	}	//}}}
     
 	//{{{	getSourceTree()
@@ -14731,16 +14516,6 @@ public class ADev
 		//StringBuffer sB = new StringBuffer();
 		StringBuffer sB = new StringBuffer(sSourcePath);
 		
-		//if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
-			//sB.append(projectHomeS);
-		
-		//sB.append("/lib");
-		
-		//String sLibDir = "C:/Android/Dev/ClockApp-master/lib";
-		
-		// projectHomeS: 'C:/Android/Dev/ClockApp-master'
-		//System.out.println("projectHomeS: '"+projectHomeS+"'");
-		// 'C:/Android/Dev/ClockApp-master/lib'
 		
 		String sDir = sB.toString();
 		//System.out.println("sDir: '"+sDir+"'");
@@ -14787,11 +14562,7 @@ public class ADev
 		
 		jTree.setEditable(false);
 		jTree.setExpandsSelectedPaths(true);
-		//jTree.expandPath(rootPath);
-		//jTree.scrollPathToVisible(rootPath);
-		//jTree.setRootVisible(false);
 		jTree.setShowsRootHandles(false);
-		//jTree.setShowsRootHandles(true);
 		jTree.setRootVisible(true);
 	}	//}}}
 	
@@ -14833,8 +14604,6 @@ public class ADev
 		
 		StringBuffer currentPathSb = new StringBuffer();
 		currentPathSb.append(projectHomeS);
-		//currentPathSb.append("/");
-		//currentPathSb.append(sLeadDir);
 
 		//System.out.println("currentPathSb: '"+currentPathSb.toString()+"'");
 /*		
@@ -15113,6 +14882,7 @@ While_Break:
 		String sSourceText = "";
 		String sConvertedKey = "";
 		String sFlipped = "";
+		String sValue = "";
 		String[] tSAr = null;
 		int iLoc2;
 		int iLoc5 = 0;
@@ -15167,17 +14937,13 @@ While_Break:
                     sB.append(sScriptsSearchName);
     
                     // Get scriptId..				
-                    //if ( (ScriptsAr != null) && (ScriptsAr.size() > 0) )
                     if ( (ScriptIdAr != null) && (ScriptIdAr.size() > 0) )
                     {
                         //for ( iScriptIndex = 0; iScriptIndex < ScriptsAr.size(); iScriptIndex++ )
                         for ( iScriptIndex = 0; iScriptIndex < ScriptIdAr.size(); iScriptIndex++ )
                         {
-                            //scripts = (Scripts)ScriptsAr.get(iScriptIndex);
-                            //sScriptId = scripts.sScriptId;
                             sScriptId = (String)ScriptIdAr.get(iScriptIndex);
                             //System.out.println("sScriptId: '"+sScriptId+"'");
-                            //iLoc2 = sScriptId.indexOf(sScriptsSearchName);
                             iLoc2 = sScriptId.indexOf(sB.toString());
                             if ( iLoc2 != -1 )
                             {
@@ -15314,7 +15080,7 @@ While_Break:
 
 		//System.out.println("bIsBreakpointStepEvent: "+bIsBreakpointStepEvent);
 		//System.out.println("bTabSelected: "+bTabSelected);
-		
+
 		if ( bIsBreakpointStepEvent || bTabSelected )
 		{
 			// Tab Panel Selected
@@ -15403,12 +15169,10 @@ While_Break:
 		{
 			//System.out.println("Source on different tab");
 			// Source is on different Tab..
-			//if ( iMethodIndex < iTabCount )
 			if ( iSourceIndex < iTabCount )
 			{
 				//System.out.println("Selecting tab with source on (iSourceIndex): "+iSourceIndex);
 				// Select Tab with Method..						
-				//tabbedPane.setSelectedIndex(iMethodIndex);
 				//System.out.println("Doing setSelectedIndex() on iSourceIndex: "+iSourceIndex);
 				tabbedPane.setSelectedIndex(iSourceIndex);
 				bTabSelected = false;    // Reset..
@@ -15460,7 +15224,6 @@ While_Break:
 		}
 
 		//System.out.println("(Updated)iGetIndex: "+iGetIndex);
-		//if ( iGetIndex >= TabTextAreaAr.size() )
 		if ( iGetIndex >= TabInfoAr.size() )
 		{
 			// Wrong size, adjust..
@@ -15469,6 +15232,7 @@ While_Break:
 		}
 		
 		//System.out.println("(Adjusted)iGetIndex: "+iGetIndex);
+		
 /*		
 		if ( TabInfoAr == null )
 			System.out.println("TabInfoAr null");
@@ -15480,11 +15244,6 @@ While_Break:
 		{
 		    
 		    //System.out.println("\n(Updating)iGetIndex: "+iGetIndex);
-			//jTextArea = (JTextArea)TabTextAreaAr.get(iGetIndex);	// (iTabCount - 1)
-			//tabTextAreaInfo = (TabTextAreaInfo)TabTextAreaAr.get(iGetIndex);
-			//jTextArea = tabTextAreaInfo.jTextArea;
-			
-			//System.out.println("\n*****(get())iGetIndex: "+iGetIndex);
 			tabInfo = (TabInfo)TabInfoAr.get(iGetIndex);
 			jTextArea = tabInfo.jTextArea;
 /*			
@@ -15849,11 +15608,15 @@ While_Break:
 		int iEndTokenPos = 0;
 		int iLine = 0;
 		int iTab;
+		int iLoc3 = 0;
 		int iLineAdjust = 0;
 		String[] sTokenPosTableAr = null;
 		//String sScriptId = "";
 		String sTScript;
 		String sKey = "";
+		String sValue = "";
+		String sKeyPath = "";
+		String sSource = "";
 		
 		int iScrollValue = 0;
 		int iScrollMax = 0;
@@ -15867,6 +15630,7 @@ While_Break:
 		//int iLineNumber = 0;
 		boolean bMatchedIndex;
 		boolean bMethodMatched = false;
+		boolean bFindTab;
 		Rectangle visRect;
 		Highlighter highlighter;
 		BreakpointInfo breakpointInfo;
@@ -15892,27 +15656,24 @@ While_Break:
 		
 		ClassMethodInfo classMethodInfo;
 		iMethodIndex = 0;
-		
-		if ( bFlutterSelected )
-		{
-			
-		}
+
+/*		
+		if ( ClassMethodAr == null )
+		    System.out.println("ClassMethodAr null");
 		else
 		{
-			if ( ClassMethodAr != null )
-			{
-				for ( ; iMethodIndex < ClassMethodAr.size(); iMethodIndex++ )
-				{
-					classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iMethodIndex);
-					if ( lMethodId == classMethodInfo.lMethodId )
-					{
-						bMethodMatched = true;
-						break;
-					}
-				}
-			}
+		    System.out.println("ClassMethodAr.size(): "+ClassMethodAr.size());
+            for ( int iJ = 0; iJ < ClassMethodAr.size(); iJ++ )
+            {
+                classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iJ);
+                System.out.println("---------------------");
+                System.out.println("classMethodInfo.lClassId: "+classMethodInfo.lClassId);
+                System.out.println("classMethodInfo.lMethodId: "+classMethodInfo.lMethodId);
+                System.out.println("classMethodInfo.sSourcePath: '"+classMethodInfo.sSourcePath+"'");
+            }
 		}
-		
+/**/		
+
 		// Get current Tab..
 		int iTabSel = 0;
 		if ( tabbedPane != null )
@@ -15923,50 +15684,154 @@ While_Break:
 		if ( iTabSel == -1 )
 			iTabSel = 0;
 		
-		//System.out.println("(tabbedPane)iTabSel: "+iTabSel);
+		//System.out.println("(Current tab)iTabSel: "+iTabSel);
+
+		if ( bFlutterSelected )
+		    ;
+		else
+		{
+            bFindTab = false;
+            //System.out.println("bIsBreakpointStepEvent: "+bIsBreakpointStepEvent);
+            if ( bIsBreakpointStepEvent )
+            {
+                //System.out.println("lBreakpointClassId: "+lBreakpointClassId);
+                sValue = "";
+                if ( SourceClassInfoHm != null )
+                {
+                    if ( SourceClassInfoHm.containsKey((Long)lBreakpointClassId) )
+                    {
+                        //System.out.println("Contains Class Key");
+                        sValue = (String)SourceClassInfoHm.get((Long)lBreakpointClassId);
+                        //System.out.println("sValue: '"+sValue+"'");     // Like:   'CanvasTestActivity'
+                    }
+                }
+    
+                if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+                {
+                    tabInfo = (TabInfo)TabInfoAr.get(iTabSel);
+                    sKeyPath = tabInfo.sKeyPath;
+                    //System.out.println("tabInfo.sKeyPath: '"+tabInfo.sKeyPath+"'");
+                    iLoc3 = sKeyPath.lastIndexOf("/");
+                    if ( iLoc3 != -1 )
+                    {
+                        sSource = sKeyPath.substring(iLoc3 + 1);    // Current tab..
+                        //System.out.println("sSource: '"+sSource+"'");
+                        if ( sValue.equals(sSource) )
+                            ;   // In correct tab..
+                        else
+                            bFindTab = true;
+                    }
+                }
+                
+                if ( bFindTab )
+                {
+                    if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
+                    {
+                        for ( int iX = 0; iX < TabInfoAr.size(); iX++ )
+                        {
+                            //System.out.println("--TOP--");
+                            tabInfo = (TabInfo)TabInfoAr.get(iX);  
+                            
+                            // Like:  'com/android/spritemethodtest/SimpleCanvasRenderer'
+                            sKeyPath = tabInfo.sKeyPath;
+                            //System.out.println("tabInfo.sKeyPath: '"+tabInfo.sKeyPath+"'");
+                            iLoc3 = sKeyPath.lastIndexOf("/");
+                            if ( iLoc3 != -1 )
+                            {
+                                sSource = sKeyPath.substring(iLoc3 + 1);
+                                //System.out.println("sSource: '"+sSource+"'");
+                                if ( sValue.equals(sSource) )
+                                {
+                                    // Found, set to this tab..
+                                    tabbedPane.setSelectedIndex(iX);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+		if ( bFlutterSelected )
+		{
+			
+		}
+		else
+		{
+			if ( ClassMethodAr != null )
+			{
+				for ( ; iMethodIndex < ClassMethodAr.size(); iMethodIndex++ )
+				{
+				    //System.out.println("iMethodIndex: "+iMethodIndex);
+					classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iMethodIndex);
+					if ( lMethodId == classMethodInfo.lMethodId )
+					{
+						bMethodMatched = true;
+						break;
+					}
+				}
+			}
+		}
 		
+		//System.out.println("bMethodMatched: "+bMethodMatched);
+		//System.out.println("lMethodId: "+lMethodId);
 		long lRefreshMethodId;
 		long lRefreshClassId;
 		
 		//System.out.println("\nbHaveSDKSource: "+bHaveSDKSource);
-/*
+/*		
 		if ( TabInfoAr == null )
 			System.out.println("TabInfoAr null");
 		else
 			System.out.println("TabInfoAr.size(): "+TabInfoAr.size());
 /**/
 
-/*
+
+/*  
+        // Note:
+        // We are not even using LineTableAr here anymore
+        // so don't bother with trying to update the LineTable info..
 		if ( bFlutterSelected )
 		{
 		    // Note:
-		    // The checking for changing tabs
+		    // The checking for changing tabs, for Flutter,
 		    // is now done in ProcessEventBgThread in PauseBreakpoint..
 		    ;
 		}
 		else
 		{
-			if ( bHaveSDKSource == false )
-			{
+			//if ( bHaveSDKSource == false )
+			//if ( true )
+			//{
 				tabbedPane.setSelectedIndex(iTabSel);
+				//System.out.println("iTabSel: "+iTabSel);
 				bTabSelected = false;    // Reset..
 				
 				// Get updated LineTableInfo..
 				if ( (ClassMethodAr != null) && (ClassMethodAr.size() > 0) )
 				{
-                    classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iTabSel);
-                    lRefreshMethodId = classMethodInfo.lMethodId;
-                    lRefreshClassId = classMethodInfo.lClassId;
-        
-                    // Update the Method..
-                    lCurrentSelectedMethod = lRefreshMethodId;
-                    
-                    JDWPCommands.command_LineTable(lRefreshClassId, lRefreshMethodId); 
+				    System.out.println("iTabSel: "+iTabSel);
+				    if ( iTabSel < ClassMethodAr.size() )
+				    {
+                        classMethodInfo = (ClassMethodInfo)ClassMethodAr.get(iTabSel);
+                        System.out.println("classMethodInfo.lMethodId: "+classMethodInfo.lMethodId);
+                        System.out.println("classMethodInfo.lClassId: "+classMethodInfo.lClassId);
+                        lRefreshMethodId = classMethodInfo.lMethodId;
+                        lRefreshClassId = classMethodInfo.lClassId;
+            
+                        // Update the Method..
+                        lCurrentSelectedMethod = lRefreshMethodId;
+                        
+                        JDWPCommands.command_LineTable(lRefreshClassId, lRefreshMethodId); 
+                    }
                 }
-			}
+			//}
 		}
 /**/
-		
+
 /*
 		if ( TabInfoAr == null )
 			System.out.println("TabInfoAr null");
@@ -15981,11 +15846,9 @@ While_Break:
 
 		// Update..
 		// Get 'scrollPane' and 'scrollbar'..
-		//if ( (TabTextAreaAr != null) && (TabTextAreaAr.size() > 0) )
 		if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 		{
-			//jTextArea = (JTextArea)TabTextAreaAr.get(iTabSel);
-			//tabTextAreaInfo = (TabTextAreaInfo)TabTextAreaAr.get(iTabSel);
+			//System.out.println("iTabSel: "+iTabSel);
 			tabInfo = (TabInfo)TabInfoAr.get(iTabSel);
 			sKey = tabInfo.sKeyPath;
 			//System.out.println("sKey: '"+sKey+"'");
@@ -16134,6 +15997,7 @@ While_Break:
 			visRect = jTextArea.getVisibleRect();
 			jTextArea.repaint(visRect);
 
+			//System.out.println("bFlutterSelected: "+bFlutterSelected);
 			if ( bFlutterSelected )
 			{
 				// Search for matching 'tokenPos' and
@@ -16141,6 +16005,7 @@ While_Break:
 				
 				if ( (TabInfoAr != null) && (TabInfoAr.size() > 0) )
 				{
+				    //System.out.println("iTabSel: "+iTabSel);
 					tabInfo = (TabInfo)TabInfoAr.get(iTabSel);
 					sTokenPosTableAr = tabInfo.sTokenPosTable;
 				}
@@ -16368,7 +16233,6 @@ While_Break:
                                 // consistantly work..
                                 try
                                 {
-                                    //Thread.sleep(75);
                                     Thread.sleep(125);
                                 }
                                 catch (InterruptedException ie)
@@ -16441,7 +16305,7 @@ While_Break:
 				int iHEnd;
 				int iAdjustedStartOff;
 				int iStartOff;
-				int iLoc3;
+				//int iLoc3;
 				int iLineNum;
 				long lMethodID;
 				long lBpLineIndex;
@@ -16451,7 +16315,12 @@ While_Break:
 				String sPath;
 				String sName;
 				//String sTScript;
-				
+/*				
+                if ( BreakpointAr == null )
+                    System.out.println("BreakpointAr null");
+                else
+                    System.out.println("BreakpointAr.size(): "+BreakpointAr.size());
+/**/				
 				//System.out.println("\n----------- Breakpoint highlight --------------");
 				if ( bFlutterSelected )
 				{
@@ -16470,13 +16339,11 @@ While_Break:
 						// Note:
 						// At this point sPath looks like:
 						// 'C:\Android\Dev\ClockApp-master\lib\clock\hand_minute.dart'
-						//iLoc3 = sPath.lastIndexOf((int)0x2f);	// '/'
 						iLoc3 = sPath.lastIndexOf((int)0x5c);	// '\'
 						if ( iLoc3 != -1 )
 						{
 							sName = sPath.substring(iLoc3 + 1);
 							//System.out.println("sName: '"+sName+"'");
-							//iLoc3 = sScriptId.indexOf(sName);
 							iLoc3 = sTScript.indexOf(sName);
 							if ( iLoc3 != -1 )
 							{
@@ -16565,13 +16432,8 @@ While_Break:
                                         iLineTableLineNumber = iLineNumber;
                                         
                                         // Get adjusted line number..
-                                        //iAdjLn = iLineTableLineNumber - iLineAdjust;
-                                        //iAdjLn = iLineTableLineNumber + 1;
-                                        iAdjLn = iLineTableLineNumber - 1;
-                                        //iAdjLn = iLineTableLineNumber;
+                                       iAdjLn = iLineTableLineNumber - 1;
                                         //System.out.println("iAdjLn: "+iAdjLn);
-                                        
-                                        //iAdjLn = 88 - 1;
                                         
                                         // Get adjusted..
                                         iAdjustedStartOff = jTextArea.getLineStartOffset((int)iAdjLn);
@@ -16595,47 +16457,6 @@ While_Break:
                             }
                             
 							
-/*							
-							//for ( int iL = 0; iL < iLLen; iL++ )
-							for ( int iL = 0; iL < tabInfo.lLineCodeIndexAr.length; iL++ )
-							{
-								//lineTableInfo = (LineTableInfo)LineTableAr.get(iL);
-								//lLnCodeIndex = lineTableInfo.lLineCodeIndex;
-								lLnCodeIndex = tabInfo.lLineCodeIndexAr[iL];
-								
-								if ( (lMethodID == lCurrentSelectedMethod) &&
-									(lLnCodeIndex == lBpLineIndex) )
-								{
-									// Matched..
-									bMatched = true;
-									//iLineTableLineNumber = lineTableInfo.iLineNumber;
-									iLineTableLineNumber = tabInfo.iLineNumberAr[iL];
-									
-									// Get adjusted line number..
-									//iAdjLn = iLineTableLineNumber - iSourceLineAdjust;
-									iAdjLn = iLineTableLineNumber - iLineAdjust;
-									
-									//System.out.println("iLineTableLineNumber: "+iLineTableLineNumber);
-									//System.out.println("iSourceLineAdjust: "+iSourceLineAdjust);
-									//System.out.println("iAdjLn: "+iAdjLn);
-									// Get adjusted..
-									iAdjustedStartOff = jTextArea.getLineStartOffset((int)iAdjLn);
-									//System.out.println("iAdjustedStartOff: "+iAdjustedStartOff);
-						
-									// Try to highlight line..
-									Rectangle bRect = jTextArea.modelToView(iAdjustedStartOff);
-									
-									iHStart = jTextArea.viewToModel(new Point(0, bRect.y));
-									iHEnd = jTextArea.viewToModel(new Point(jTextArea.getWidth(), bRect.y));
-									//System.out.println("iHStart: "+iHStart+"    iHEnd: "+iHEnd);
-									
-									highlighter.addHighlight(
-										iHStart,
-										iHEnd,
-										new DefaultHighlighter.DefaultHighlightPainter((Color)red));
-								}
-							}	// End for..
-/**/
 						}	// End for..
 					//}
 				}
@@ -16671,7 +16492,7 @@ While_Break:
 			System.out.println("Exception: "+ble.toString());
 		}
 
-		//System.out.println("Exiting updateSourceLines()");
+		//System.out.println("\nExiting updateSourceLines()");
 		
 	}	//}}}
 	
@@ -16700,7 +16521,13 @@ While_Break:
 		// Try to read from Persistent storage..
 		// Like: C:/Android/Dev/flutter_fivez~true~false~false~true
 		tokS = readStorage("store.tmp");
-		//System.out.println("tokS: '"+tokS+"'");
+		
+/*		
+		if ( tokS == null )
+		    System.out.println("tokS null");
+		else
+		    System.out.println("tokS: '"+tokS+"'");
+/**/
 
 		// Save the state of each..		
 		// [Home]~[Use Gradle]~[Use NDK]~[Use Kotlin]~[UseFlutter]		
@@ -16732,15 +16559,18 @@ While_Break:
 					if ( tS.equals("true") )
 					{
 						if ( uGradleMenuItem != null )						
-							uGradleMenuItem.setSelected(true);
+							//uGradleMenuItem.setSelected(true);
+						    uGradleMenuItem.setState(true);
 						
 						bGradleSelected = true;
 					}
 					else if ( tS.equals("false") )
 					{
-						if ( uGradleMenuItem != null )						
-							uGradleMenuItem.setSelected(false);
-						
+						if ( uGradleMenuItem != null )
+						{
+							//uGradleMenuItem.setSelected(false);
+						    uGradleMenuItem.setState(false);
+						}
 						bGradleSelected = false;
 					}
 				}
@@ -16751,14 +16581,16 @@ While_Break:
 					if ( tS.equals("true") )
 					{
 						if ( uNDKMenuItem != null )
-							uNDKMenuItem.setSelected(true);
+							//uNDKMenuItem.setSelected(true);
+						    uNDKMenuItem.setState(true);
 						
 						bNDKSelected = true;
 					}
 					else if ( tS.equals("false") )
 					{
 						if ( uNDKMenuItem != null )
-							uNDKMenuItem.setSelected(false);
+							//uNDKMenuItem.setSelected(false);
+						    uNDKMenuItem.setState(false);
 						
 						bNDKSelected = false;
 					}
@@ -16770,14 +16602,16 @@ While_Break:
 					if ( tS.equals("true") )
 					{
 						if ( uKotlinMenuItem != null )
-							uKotlinMenuItem.setSelected(true);
+							//uKotlinMenuItem.setSelected(true);
+						    uKotlinMenuItem.setState(true);
 						
 						bKotlinSelected = true;
 					}
 					else if ( tS.equals("false") )
 					{
 						if ( uKotlinMenuItem != null )
-							uKotlinMenuItem.setSelected(false);
+							//uKotlinMenuItem.setSelected(false);
+						    uKotlinMenuItem.setState(false);
 						
 						bKotlinSelected = false;
 					}
@@ -16790,14 +16624,16 @@ While_Break:
 					if ( tS.equals("true") )
 					{
 						if ( uFlutterMenuItem != null )
-							uFlutterMenuItem.setSelected(true);
+							//uFlutterMenuItem.setSelected(true);
+						    uFlutterMenuItem.setState(true);
 						
 						bFlutterSelected = true;
 					}
 					else if ( tS.equals("false") )
 					{
 						if ( uFlutterMenuItem != null )
-							uFlutterMenuItem.setSelected(false);
+							//uFlutterMenuItem.setSelected(false);
+						    uFlutterMenuItem.setState(false);
 						
 						bFlutterSelected = false;
 					}
@@ -17036,8 +16872,26 @@ While_Break:
 			sb.append("");
 		else
 			sb.append(projectHomeS);
-		
+/*		
+		if ( uGradleMenuItem == null )
+		    System.out.println("uGradleMenuItem null");
+		else
+		{
+		    //System.out.println("uGradleMenuItem null");
+		    System.out.println("uGradleMenuItem.getState(): "+uGradleMenuItem.getState());
+		}
+/**/		
 		sb.append("~");
+		if ( uGradleMenuItem != null )
+		{
+		    if ( uGradleMenuItem.getState() )
+		        sb.append("true");
+		    else
+		        sb.append("false");
+		}
+		else
+		    sb.append("false");
+/*		    
 		if ( uGradleMenuItem.getState() )
 		{
 			sb.append("true");
@@ -17046,8 +16900,20 @@ While_Break:
 		{
 			sb.append("false");
 		}
+/**/
 
 		sb.append("~");
+		if ( uNDKMenuItem != null )
+		{
+		    if ( uNDKMenuItem.getState() )
+		        sb.append("true");
+		    else
+		        sb.append("false");
+		}
+		else
+		    sb.append("false");
+
+/*		
 		if ( uNDKMenuItem.getState() )
 		{
 			sb.append("true");
@@ -17056,8 +16922,20 @@ While_Break:
 		{
 			sb.append("false");
 		}
+/**/
 
 		sb.append("~");
+		if ( uKotlinMenuItem != null )
+		{
+		    if ( uKotlinMenuItem.getState() )
+		        sb.append("true");
+		    else
+		        sb.append("false");
+		}
+		else
+		    sb.append("false");
+		
+/*		
 		if ( uKotlinMenuItem.getState() )
 		{
 			sb.append("true");
@@ -17066,8 +16944,20 @@ While_Break:
 		{
 			sb.append("false");
 		}
+/**/
 
 		sb.append("~");
+		if ( uFlutterMenuItem != null )
+		{
+		    if ( uFlutterMenuItem.getState() )
+		        sb.append("true");
+		    else
+		        sb.append("false");
+		}
+		else
+		    sb.append("false");
+		
+/*		
 		if ( uFlutterMenuItem.getState() )
 		{
 			sb.append("true");
@@ -17076,6 +16966,7 @@ While_Break:
 		{
 			sb.append("false");
 		}
+/**/
 
 		writeStorage(sb.toString(), "store.tmp");
 		
@@ -17390,10 +17281,11 @@ While_Break:
 				bTypeTag = Utils.getNextValueAsByte(index, event);	// TYPE_TAG_CLASS (1), TYPE_TAG_INTERFACE (2), TYPE_TAG_ARRAY (3)
 				//System.out.println("bTypeTag: "+bTypeTag);
 				lClassId = Utils.getNextValueAsReferenceTypeID(index, event);	// (as in Location reference)
-				//System.out.println("lClassId: "+lClassId+"   "+Long.toHexString(lClassId));
+				//System.out.println("lClassId: "+lClassId+"   (Hex)"+Long.toHexString(lClassId));
+				lBreakpointClassId = lClassId;
 				lMethodId = Utils.getNextValueAsMethodID(index, event);
 				lEvent_MethodId = lMethodId;
-				//System.out.println("lMethodId: "+lMethodId+"   "+Long.toHexString(lMethodId));
+				//System.out.println("lMethodId: "+lMethodId+"   (Hex)"+Long.toHexString(lMethodId));
 				lLocationIndex = Utils.getNextValueAsLong(index, event);
 				//System.out.println("lLocationIndex: "+lLocationIndex+"\n");
 
@@ -17703,7 +17595,7 @@ While_Break:
 		return (EventInfo)eventInfo;
 	}	//}}}
 	
-	//{{{	ActionListener  actListener
+	//{{{	ActionListener  Handle events
 	/**
      * Handle Events 
      */
@@ -17808,7 +17700,9 @@ While_Break:
 											statusLabel.setText(projectHomeS);
 											statusPath.setText(" ");	// Clear status..
 	
+											// Write store.tmp..
 											updateStorage();
+											
 											init();		// Reset..
 											
                                             // Get Package name..
@@ -19001,6 +18895,15 @@ While_Break:
 				init();
 				RefreshProperties();
 
+				// Refresh Hot Reload button..
+                if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
+                {
+                    if ( sRunBuildType.equals("debug") )
+                        reloadButton.setVisible(true);
+                    else if ( sRunBuildType.equals("release") )
+                        reloadButton.setVisible(false);
+                }
+
 				if ( (DevicesAr != null) && (DevicesAr.size() > 0) )
 				{
 					bRunSelected = true;
@@ -19056,13 +18959,6 @@ While_Break:
 					//System.out.println("iWirelessErrorCode: "+iWirelessErrorCode);
 					//System.out.println("bWirelessConnected: "+bWirelessConnected);
 
-/*					
-					// Check success..
-					if ( (iWirelessErrorCode == 0) || bWirelessConnected )
-					{
-						
-					}
-/**/					
 					
 				}
 			}
@@ -19078,7 +18974,8 @@ While_Break:
 					System.out.println("daemonProcess not null");
 /**/
 
-
+                RefreshProperties();
+                
 				if ( daemonProcess == null )
 				{
 					flutterDaemonBgThread = new FlutterDaemonBgThread();
@@ -19087,7 +18984,6 @@ While_Break:
 				
 				flutterDaemonStdInBgThread = new FlutterDaemonStdInBgThread();
 				flutterDaemonStdInBgThread.start();
-/**/
 
 			}
 			else if ( STOP.equals(actionCommandS) )
@@ -19739,37 +19635,6 @@ While_Break:
                             
                         }
 						
-						
-						
-/*					
-						// Line..
-						// Find match and get Index..
-						//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
-						if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
-						{
-							//iLen = LineTableAr.size();
-							//for ( int iG = 0; iG < iLen; iG++ )
-							for ( int iG = 0; iG < tabInfo.lLineCodeIndexAr.length; iG++ )
-							{
-								//lineTableInfo = (LineTableInfo)LineTableAr.get(iG);
-								//System.out.println("lineTableInfo.iLineNumber: "+lineTableInfo.iLineNumber);
-								//if ( iSelectedLine == lineTableInfo.iLineNumber )
-								if ( iSelectedLine == tabInfo.iLineNumberAr[iG] )
-								{
-									System.out.println("--MATCHED--");
-									//lLineCodeIndex = lineTableInfo.lLineCodeIndex;
-									lLineCodeIndex = tabInfo.lLineCodeIndexAr[iG];
-									System.out.println("lLineCodeIndex: "+lLineCodeIndex);
-									breakpointInfo.lLineCodeIndex = lLineCodeIndex;
-									//breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
-									breakpointInfo.iLineNumber = tabInfo.iLineNumberAr[iG];
-									System.out.println("(iLineNumber): "+tabInfo.iLineNumberAr[iG]);
-									//System.out.println("lineTableInfo.iLineNumber: "+lineTableInfo.iLineNumber);
-									break;
-								}
-							}
-						}
-/**/
 					}
 				}
 				else
@@ -19782,34 +19647,6 @@ While_Break:
 					{
 						// Method..
 						// Get first line Index..
-/*						
-                        // Sort..
-                        treeMap = new TreeMap(tHm);
-                        treeSet = treeMap.entrySet();
-                        treeIterator = treeSet.iterator();
-                        while ( treeIterator.hasNext() )
-                        {
-                            entry = (Entry)treeIterator.next();
-                            System.out.println("entry.getKey(): "+entry.getKey());
-                            System.out.println("entry.getValue(): "+entry.getValue());
-                        }
-/**/						
-
-
-/*						
-						//if ( (LineTableAr != null) && (LineTableAr.size() > 0) )
-						if ( (tabInfo.lLineCodeIndexAr != null) && (tabInfo.lLineCodeIndexAr.length > 0) )
-						{
-							// Get first Line Index..
-							//lineTableInfo = (LineTableInfo)LineTableAr.get(0);
-							//lLineCodeIndex = lineTableInfo.lLineCodeIndex;
-							lLineCodeIndex = tabInfo.lLineCodeIndexAr[0];
-						}
-	
-						breakpointInfo.lLineCodeIndex = lLineCodeIndex;
-						//breakpointInfo.iLineNumber = lineTableInfo.iLineNumber;
-						breakpointInfo.iLineNumber = tabInfo.iLineNumberAr[0];
-/**/						
 					}
 				}
 				
@@ -19873,30 +19710,6 @@ While_Break:
 				}
 				else
 				{
-/*				  
-					// Get Method name..
-					System.out.println("\n(Get Method name)lMethodId: "+lMethodId);
-					MethodInfo methodInfo;
-					
-					// AllMethodsAr will only have what was in the last 
-					// command_MethodsWithGeneric() with the Class Id
-					// so won't always match..
-					if ( (AllMethodsAr != null) && (AllMethodsAr.size() > 0) )
-					{
-						for ( int iG = 0; iG < AllMethodsAr.size(); iG++ )
-						{
-						    System.out.println("--TOP-- iG: "+iG);
-							methodInfo = (MethodInfo)AllMethodsAr.get(iG);
-							System.out.println("methodInfo.lMethodId: "+methodInfo.lMethodId);
-							if ( lMethodId == methodInfo.lMethodId )
-							{
-								breakpointInfo.sMethodName = methodInfo.sName;
-								System.out.println("(MATCHED)breakpointInfo.sMethodName: '"+breakpointInfo.sMethodName+"'");
-								break;
-							}
-						}
-					}
-/**/
 
 					JDWPCommands.command_Set_Breakpoint(
 						breakpointInfo.lClassId,
@@ -20300,6 +20113,21 @@ While_Break:
 				if ( fChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION )
 				{
 					// Selected..
+					//System.out.println("\nFile selected");
+					
+					// Reset all..
+					if ( uGradleMenuItem != null )
+					    uGradleMenuItem.setState(false);
+					
+					if ( uKotlinMenuItem != null )
+					    uKotlinMenuItem.setState(false);
+					
+					if ( uFlutterMenuItem != null )
+					    uFlutterMenuItem.setState(false);
+					
+					if ( uNDKMenuItem != null )
+					    uNDKMenuItem.setState(false);
+					
 					bHaveDir = true;
 					projectHomeS = fChooser.getSelectedFile().toString();
 					projectHomeS = Utils.processPath(projectHomeS);
@@ -20311,11 +20139,13 @@ While_Break:
 					fSb = new StringBuffer(projectHomeS);
 
 					// Check for /app directory..
+					// 'C:/Android/Dev/RPG/libGDX-master/build.gradle'
 					StringBuffer tSb = new StringBuffer(projectHomeS);
 					tSb.append("/app");
 					File tFile = new File(tSb.toString());
 					if ( tFile.exists() )
 					{
+					    // 'app' exists..
 						bUsingAppProject = true;
 						fSb.append("/app/build.gradle");
 					}
@@ -20330,35 +20160,54 @@ While_Break:
 					file = new File(fSb.toString());
 					if ( file.exists() )
 					{
+					    // Found build.gradle..
 						//System.out.println("--Exists--");
+/*						
+                        if ( uGradleMenuItem == null )
+                            System.out.println("uGradleMenuItem null");
+                        else
+                            System.out.println("uGradleMenuItem not null");
+/**/
+						
+						if ( uGradleMenuItem != null )
+						    uGradleMenuItem.setState(true);
+						    
 						buffer = readFile(2048, fSb.toString());
 						String tS = new String(buffer);
 						iLoc2 = tS.indexOf("kotlin");
 						if ( iLoc2 != -1 )
 						{
+						    //System.out.println("==Found kotlin==");
 							sType = "KOTLIN";
-							
+/*							
 							//uGradleMenuItem.setSelected(true);
-							uGradleMenuItem.setState(true);
+							//uGradleMenuItem.setState(true);
 							//uNDKMenuItem.setSelected(false);
 							uNDKMenuItem.setState(false);
 							//uKotlinMenuItem.setSelected(true);
-							uKotlinMenuItem.setState(true);
+/**/							
+							if ( uKotlinMenuItem != null )
+							    uKotlinMenuItem.setState(true);
+/*							
 							//uFlutterMenuItem.setSelected(false);
 							uFlutterMenuItem.setState(false);
+/**/							
 						}
 						else
 						{
 							sType = "GRADLE";
-							
+/*
 							//uGradleMenuItem.setSelected(true);
-							uGradleMenuItem.setState(true);
+							//uGradleMenuItem.setState(true);
+							//System.out.println("Set -> true");
+							
 							//uNDKMenuItem.setSelected(false);
 							uNDKMenuItem.setState(false);
 							//uKotlinMenuItem.setSelected(false);
 							uKotlinMenuItem.setState(false);
 							//uFlutterMenuItem.setSelected(false);
 							uFlutterMenuItem.setState(false);
+/**/							
 						}
 
 						// Modify app/build.gradle..	
@@ -20380,10 +20229,12 @@ While_Break:
 								break;
 						}
 						
+						//System.out.println("Past GradleConfigBgThread wait");
+						
 					}
 					else
 					{
-						// No build.gradle, check Flutter..
+						// No build.gradle in project directory, check Flutter..
 						fSb = new StringBuffer(projectHomeS);
 						fSb.append("/android/app/build.gradle");
 						file = new File(fSb.toString());
@@ -20391,15 +20242,17 @@ While_Break:
 						{
 							// Flutter..
 							sType = "FLUTTER";
-							
+/*							
 							//uGradleMenuItem.setSelected(true);
-							uGradleMenuItem.setState(true);
+							//uGradleMenuItem.setState(true);
 							//uNDKMenuItem.setSelected(false);
 							uNDKMenuItem.setState(false);
 							//uKotlinMenuItem.setSelected(false);
 							uKotlinMenuItem.setState(false);
 							//uFlutterMenuItem.setSelected(true);
-							uFlutterMenuItem.setState(true);
+/**/							
+							if ( uFlutterMenuItem != null )
+							    uFlutterMenuItem.setState(true);
 							
 							// Modify app/build.gradle..	
 							bGradleConfigFinished = false;
@@ -20423,15 +20276,17 @@ While_Break:
 						else
 						{
 							sType = "ANT";
-							
+/*							
 							//uGradleMenuItem.setSelected(false);
 							uGradleMenuItem.setState(false);
+							System.out.println("(B)Setting to false");
 							//uNDKMenuItem.setSelected(false);
 							uNDKMenuItem.setState(false);
 							//uKotlinMenuItem.setSelected(false);
 							uKotlinMenuItem.setState(false);
 							//uFlutterMenuItem.setSelected(false);
 							uFlutterMenuItem.setState(false);
+/**/							
 						}
 					}
 					
@@ -20503,13 +20358,22 @@ While_Break:
 					//System.out.println("(statusLabel.setText())projectHomeS: '"+projectHomeS+"'");
 					statusLabel.setText(projectHomeS);
 					statusPath.setText(" ");	// Clear status..
+/*					
+					System.out.println("==================");
+					System.out.println("uGradleMenuItem.getState(): "+uGradleMenuItem.getState());
+					System.out.println("uKotlinMenuItem.getState(): "+uKotlinMenuItem.getState());
+					System.out.println("uFlutterMenuItem.getState(): "+uFlutterMenuItem.getState());
+					System.out.println("uNDKMenuItem.getState(): "+uNDKMenuItem.getState());
+/**/					
 				}
 
-				updateStorage();
+				updateStorage();    // Write store.tmp..
 				init();		// Reset..
 				
                 // Get Package name..
                 getPackageName();
+                
+                //System.out.println("Exiting HOME");
 				
 			}
 			else if ( CREATE.equals(actionCommandS) )
@@ -22803,7 +22667,7 @@ While_Break:
 			}
 			else if ( SELECT_DEVICE.equals(actionCommandS) )
 			{
-				System.out.println("SELECT_DEVICE");
+				//System.out.println("SELECT_DEVICE");
 
 				// Show the Progress Bar..
 				DevicesAr = new ArrayList();				
@@ -23495,6 +23359,7 @@ While_Break:
 				// Remove ClassMethodInfo for this Tab..
 				if ( (ClassMethodAr != null) && (iIndex < ClassMethodAr.size()) )
 				{
+				    System.out.println("(Remove)iIndex: "+iIndex);
 					ClassMethodAr.remove(iIndex);
 				}
 
@@ -24897,6 +24762,14 @@ Break_Out:
 		{
 			//System.out.println("itemStateChanged()");
 
+/*
+            System.out.println("================== IN");
+            System.out.println("uGradleMenuItem.getState(): "+uGradleMenuItem.getState());
+            System.out.println("uKotlinMenuItem.getState(): "+uKotlinMenuItem.getState());
+            System.out.println("uFlutterMenuItem.getState(): "+uFlutterMenuItem.getState());
+            System.out.println("uNDKMenuItem.getState(): "+uNDKMenuItem.getState());
+/**/
+
 			int iState = e.getStateChange();
 			String textS = "";
 			
@@ -24924,15 +24797,18 @@ Break_Out:
 					
 					// Unselect 'Use Gradle'..
 					if ( uGradleMenuItem != null )
-						uGradleMenuItem.setSelected(false);
+						//uGradleMenuItem.setSelected(false);
+					    uGradleMenuItem.setState(false);
 
 					// Unselect 'Use Kotlin'..
 					if ( uKotlinMenuItem != null )
-						uKotlinMenuItem.setSelected(false);
+						//uKotlinMenuItem.setSelected(false);
+					    uKotlinMenuItem.setState(false);
 
 					// Unselect 'Use Flutter'..
 					if ( uFlutterMenuItem != null )
-						uFlutterMenuItem.setSelected(false);
+						//uFlutterMenuItem.setSelected(false);
+					    uFlutterMenuItem.setState(false);
 					
 					if ( updateMenuItem != null )
 						updateMenuItem.setVisible(false);
@@ -24965,6 +24841,7 @@ Break_Out:
 			{
 				if ( iState == ItemEvent.SELECTED )
 				{
+				    //System.out.println("Use Gradle selected");
 					bGradleSelected = true;
 					
 					if ( (bFlutterSelected == false) && (bKotlinSelected == false) )
@@ -24987,7 +24864,8 @@ Break_Out:
 					if ( bNDKSelected )
 					{
 						if ( uNDKMenuItem != null )
-							uNDKMenuItem.setSelected(false);
+							//uNDKMenuItem.setSelected(false);
+						    uNDKMenuItem.setState(false);
 
 						// Restore 'Debug' Button..
 						debugButton.setIcon(debug24Icon);
@@ -24998,6 +24876,7 @@ Break_Out:
 				}
 				else if ( iState == ItemEvent.DESELECTED )
 				{
+				    //System.out.println("Use Gradle unselected");
 					bGradleSelected = false;
 
 					if ( (bFlutterSelected == false) && (bKotlinSelected == false) )
@@ -25022,7 +24901,8 @@ Break_Out:
 					if ( bNDKSelected )
 					{
 						if ( uNDKMenuItem != null )
-							uNDKMenuItem.setSelected(false);
+							//uNDKMenuItem.setSelected(false);
+						    uNDKMenuItem.setState(false);
 
 						// Restore 'Debug' Button..
 						debugButton.setIcon(debug24Icon);
@@ -25036,11 +24916,13 @@ Break_Out:
 
 					// Unselect 					
 					if ( uKotlinMenuItem != null )
-						uKotlinMenuItem.setSelected(false);
+						//uKotlinMenuItem.setSelected(false);
+					    uKotlinMenuItem.setState(false);
 
 					// Select 'Use Gradle'..
 					if ( uGradleMenuItem != null )
-						uGradleMenuItem.setSelected(true);
+						//uGradleMenuItem.setSelected(true);
+					    uGradleMenuItem.setState(true);
 
 					// Show Flutter buttons..					
 					if ( runButton != null )
@@ -25065,7 +24947,11 @@ Break_Out:
 					
 					// Unselect 'Use Gradle'..
 					if ( uGradleMenuItem != null )
-						uGradleMenuItem.setSelected(false);
+					{
+						//uGradleMenuItem.setSelected(false);
+					    uGradleMenuItem.setState(false);
+					    //System.out.println("(C)Setting to false");
+					}
 					
 					// Hide Flutter buttons..
 					if ( runButton != null )
@@ -25098,7 +24984,8 @@ Break_Out:
 					if ( bNDKSelected )
 					{
 						if ( uNDKMenuItem != null )
-							uNDKMenuItem.setSelected(false);
+							//uNDKMenuItem.setSelected(false);
+						    uNDKMenuItem.setState(false);
 
 						// Restore 'Debug' Button..
 						debugButton.setIcon(debug24Icon);
@@ -25109,11 +24996,13 @@ Break_Out:
 					
 					// Unselect 'Use Flutter'..
 					if ( uFlutterMenuItem != null )
-						uFlutterMenuItem.setSelected(false);
+						//uFlutterMenuItem.setSelected(false);
+					    uFlutterMenuItem.setState(false);
 					
 					// Select 'Use Gradle'..
 					if ( uGradleMenuItem != null )
-						uGradleMenuItem.setSelected(true);
+						//uGradleMenuItem.setSelected(true);
+					    uGradleMenuItem.setState(true);
 				}
 				else if ( iState == ItemEvent.DESELECTED )
 				{
@@ -25121,11 +25010,22 @@ Break_Out:
 					
 					// Unselect 'Use Gradle'..
 					if ( uGradleMenuItem != null )
-						uGradleMenuItem.setSelected(false);
+					{
+						//uGradleMenuItem.setSelected(false);
+					    uGradleMenuItem.setState(false);
+					    //System.out.println("(D)Setting to false");
+					}
 				}
 			}
-
-			updateStorage();
+			
+/*			
+            System.out.println("\n================== OUT");
+            System.out.println("uGradleMenuItem.getState(): "+uGradleMenuItem.getState());
+            System.out.println("uKotlinMenuItem.getState(): "+uKotlinMenuItem.getState());
+            System.out.println("uFlutterMenuItem.getState(): "+uFlutterMenuItem.getState());
+            System.out.println("uNDKMenuItem.getState(): "+uNDKMenuItem.getState());
+/**/
+			updateStorage();    // Write store.tmp..
 			
 		}
 	};	//}}}
@@ -25223,8 +25123,8 @@ Break_Out:
                         // check to see if the app is running on the Emulator
                         // or device..
                         
-                        //if ( bFlutterSelected == false )
-                        //{
+                        if ( bFlutterSelected == false )
+                        {
                             // We need to check before we
                             // start ShowProgressTask()
                             // otherwise we'd have to restart,
@@ -25250,6 +25150,7 @@ Break_Out:
                                 }
                             }
     
+                            //System.out.println("bFoundPackageName: "+bFoundPackageName);
                             if ( bFoundPackageName )
                                 ;
                             else
@@ -25265,8 +25166,7 @@ Break_Out:
                                 buildMenuItem.setSelected(true);
                                 return;
                             }
-/**/                            
-                        //}
+                        }
 
 						cardLayout.show(cardPanel, (String)"DEBUG_CARD");
 						iCardShowing = DEBUG_CARD;
@@ -25955,6 +25855,15 @@ Break_Out:
 		String sSignature;
 		String sFullSignature;
 	}	//}}}
+
+/*
+	//{{{    SourceClassInfo
+	class SourceClassInfo
+	{
+	    String sName;
+	    long lTypeId;
+	}    //}}}
+/**/
 
 	//{{{	NodeInfo	
 	class NodeInfo

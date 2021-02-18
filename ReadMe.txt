@@ -1,6 +1,10 @@
 
 You can use the latest Android SDK for Gradle, Kotlin and Flutter projects.
 
+You can now use my SDK Manager, if you want, to manage the SDK:
+
+https://sourceforge.net/projects/sdk-manager/
+
 The latest SDK version: 
 
 https://developer.android.com/studio/#downloads
@@ -399,10 +403,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.2:
-    Major improvements to the JDWP debugger, it's now source file based
-    instead of being Class/Method based.
-    
 ADev-3.0.3:
     Fixed issue that could cause Emulator to go offline.
     Some minor improvements.
@@ -411,6 +411,12 @@ ADev-3.0.4:
     Fixed Progress bar issue in Flutter.  Now will automatically do
     'flutter pub get', and some other improvements.
 
+ADev-3.0.6:
+    Improved detecting project type for Home.
+    Improved debuggers related to breakpoints and switching tabs.
+    Fixed Exception.
+    
+    
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.
