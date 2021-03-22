@@ -223,9 +223,12 @@ Use Flutter:
 		It relies on using Gradle for the builds, so the 'Use Gradle'
 		checkbox is automatically selected.
 		
-		"Run", "Stop" and "Hot Reload" buttons are available.
+		"Run", "Attach", "Stop" and "Hot Reload" buttons are available.
 		"Hot Reload" is only enabled if you select "Run" and the
 		build type is set to "debug" in config.properties.
+		
+		--NOTE-- "Hot Reload" still needs more work
+		when used with the Flutter debugger.
 		
 		When using Run it's important to use Stop to kill the
 		background daemon Thread when you're finished.
@@ -373,7 +376,8 @@ Variable Window:
 		
 Flutter debugger:
 
-        Select Run, then after application launches select Window->Debug.
+        Select Run, or start the app on your device and use Attach,
+        then after application launches select Window->Debug.
         
 		You can expand Class and nested Class variables.
 		List is now fully supported.
@@ -403,10 +407,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.3:
-    Fixed issue that could cause Emulator to go offline.
-    Some minor improvements.
-    
 ADev-3.0.4:
     Fixed Progress bar issue in Flutter.  Now will automatically do
     'flutter pub get', and some other improvements.
@@ -415,7 +415,12 @@ ADev-3.0.6:
     Improved detecting project type for Home.
     Improved debuggers related to breakpoints and switching tabs.
     Fixed Exception.
-    
+
+ADev-3.0.8:
+    New Attach button for Flutter.
+    Improved automatic checkbox selection for project build types like 'Use Gradle' etc.
+    Improved debug console output for log(), stdout and stderr for Flutter.
+    Some potential Exceptions fixed.
     
 
 I use it for all of my own development, and try to fix what issues I see,
