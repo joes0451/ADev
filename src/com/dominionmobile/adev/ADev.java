@@ -590,7 +590,10 @@ public class ADev
 	static volatile String packageNameS;
 	static volatile String sDebugMessage;
 	static volatile String sEnableDebugOutput;
-	//static volatile String sCurrentScriptId;
+	static volatile String sGradleSuppressWarnings;
+	static volatile String sDontModifyBuildGradle;
+	static volatile String sUsePidLogcat;
+	static volatile String sPid;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -1149,7 +1152,16 @@ public class ADev
 			androidSdkPathS = androidSdkPathGradleS;
 		}
 
-		
+/*
+		// Try to detect OpenJdk being used..
+		if ( (javaPathS != null) && (javaPathS.length() > 0) )
+		{
+		    if ( javaPathS.contains("openjdk") )
+		        sUsingOpenJdk = "true";
+		    else
+		        sUsingOpenJdk = "false";
+		}
+/**/		
 		//System.out.println("(Selected)androidSdkPathS: '"+androidSdkPathS+"'");
 		// Defaults..		
 		bBreakOut = false;
@@ -3308,6 +3320,9 @@ public class ADev
 			BufferedInputStream error_bis = null;
 			BufferedInputStream out_bis = null;
 			
+			byte[] bZeroA = {(byte)0x0a};
+			String sZeroA = new String(bZeroA);
+			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			byte[] writeBuf;
 
@@ -3387,6 +3402,7 @@ public class ADev
 
 			//System.out.println("\n\n(IOBgThread)commandS: '"+commandS+"'");
 			//System.out.println("\nIOBgThread run()");
+			
 /*			
 			if ( commandS == null )
 				System.out.println("commandS null");
@@ -3510,8 +3526,6 @@ public class ADev
 				long lCTM2;
 				long lDif = 0;
 				
-
-				
 				while ( ! isInterrupted() )
 				{
 					//System.out.println("--TOP--");
@@ -3565,6 +3579,7 @@ public class ADev
 						iTotalBytes += iBytesRead;
 					}
 
+					
 /*					
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
@@ -3585,6 +3600,12 @@ public class ADev
 						//}
 						System.out.println("\n");
 					}
+/**/
+/*
+                    if ( lineSb == null )
+                        System.out.println("(Before)lineSb null");
+                    else
+                        System.out.println("(Before)lineSb.length(): "+lineSb.length());
 /**/
 
 					// Without this, console output
@@ -3607,6 +3628,222 @@ public class ADev
 						//System.out.println("=== NEW BLOCK ===");
 						bInWord = false;
 						iWordStart = 0;
+						boolean bFirst2;
+						int iLastZeroA = 0;
+						int iLoc2 = 0;
+						int iLoc3 = 0;
+						int iLoc4 = 0;
+						int iLoc5 = 0;
+						int iLoc6 = 0;
+						StringBuffer endSb;
+						StringBuffer sB;
+						StringBuffer sb;
+						String sPrevEnd = "";
+						String sT = "";
+						String sT2 = "";
+						
+						//System.out.println("bLogcatOn: "+bLogcatOn);
+						//System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
+						//System.out.println("lineSb.length(): "+lineSb.length());
+						//System.out.println("sPid: '"+sPid+"'");
+						
+                        if ( (bLogcatOn) && (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
+                        {
+                            if ( sUsePidLogcat.equals("true") )
+                            {
+                                // Use PID Logcat..
+                                //System.out.println("Using PID");
+                                if ( (sPid != null) && (sPid.length() > 0) )
+                                    ;
+                                else
+                                {
+                                    if ( (packageNameS != null) && (packageNameS.length() > 0) )
+                                    {
+                                        // Check Process..
+                                        sb = new StringBuffer();
+                                        
+                                        if ( iOS == LINUX_MAC )
+                                        {
+                                            sb.append("export PATH=${PATH}:");
+                                            sb.append(androidSdkPathS);
+                                            sb.append("/platform-tools");
+                                            sb.append(";adb ");
+                                        }
+                                        else
+                                        {
+                                            sb.append("SET PATH=");
+                                            sb.append(androidSdkPathS);
+                                            sb.append("/platform-tools");
+                                            sb.append(";%PATH%");
+                                            sb.append("&&adb ");
+                                        }
+                                        
+                                        sb.append("shell ps");
+                                            
+                                        if ( iOS == WINDOWS )
+                                            sb.append("\n");
+                                        
+                                        bInternalFinished = false;		
+                                        internalCommandS = sb.toString();
+                                        commandBgThread = new CommandBgThread();
+                                        commandBgThread.start();
+                                
+                                        // Wait for Thread to finish..
+                                        while ( true )
+                                        {
+                                            try
+                                            {
+                                                Thread.sleep(20);
+                                            }
+                                            catch (InterruptedException ie)
+                                            {
+                                            }
+                            
+                                            if ( bInternalFinished )
+                                                break;
+                                        }
+                                        
+                                        iLoc3 = commandResultS.indexOf(packageNameS);
+                                        if ( iLoc3 != -1 )
+                                        {
+                                            // Grab PID..
+                                            for ( ; commandResultS.charAt(iLoc3) != (char)0x0a; iLoc3-- );
+                            
+                                            iLoc3++;
+                                            for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                            for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                            iStart = iLoc3;
+                                            for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                            sPid = commandResultS.substring(iStart, iLoc3);
+                                        }
+                                        else
+                                        {
+                                            sPid = "";
+                                            lineSb = new StringBuffer();
+                                        }
+                                        
+                                        //System.out.println("sPid: '"+sPid+"'");
+                                    }
+                                }
+
+                                if ( (sPid != null) && (sPid.length() > 0) )
+                                {
+                                    sB = new StringBuffer();
+                                    
+                                    iLoc3 = 0;
+                                    bFirst2 = true;
+                                    
+                                    while ( true )
+                                    {
+                                        if ( iLoc3 < lineSb.length() )
+                                            ;
+                                        else
+                                        {
+                                            //System.out.println("Breaking");
+                                            break;
+                                        }
+                                        
+                                        iLoc2 = lineSb.indexOf(sZeroA, iLoc3);
+                                        if ( iLoc2 != -1 )
+                                        {
+                                            iLastZeroA = iLoc2;
+                                            
+                                            if ( bFirst2 )
+                                            {
+                                                bFirst2 = false;
+                                                endSb = new StringBuffer();
+                                                endSb.append(sPrevEnd);
+                                                
+                                                if ( (iLoc2 + 1) > 0 )
+                                                {
+                                                    endSb.append(lineSb.substring(0, iLoc2 + 1));
+                                                }
+                                                
+                                                //System.out.println("endSb: '"+endSb.toString()+"'");
+                                                iLoc4 = endSb.indexOf(")");
+                                                if ( iLoc4 != -1 )
+                                                {
+                                                    iLoc5 = endSb.indexOf("(");
+                                                    if ( iLoc5 != -1 )
+                                                    {
+                                                        // ' 1499): Scheduling ... ( ...
+                                                        if ( (iLoc4 > 0) && (iLoc5 < iLoc4) )
+                                                        {
+                                                            //System.out.println("endSb.length(): "+endSb.length());
+                                                            sT = endSb.substring(iLoc5 + 1, iLoc4);
+                                                        
+                                                            sT = sT.trim();
+                                                            if ( sPid.equals(sT) )
+                                                                sB.append(endSb.toString());
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                iLoc3 = iLoc2 + 1;  // Next..
+                                                continue;                                    
+                                            }
+                                            
+                                            iLoc4 = lineSb.indexOf(")", iLoc2);
+                                            if ( iLoc4 != -1 )
+                                            {
+                                                iLoc5 = lineSb.indexOf("(", iLoc2);
+                                                if ( iLoc5 != -1 )
+                                                {
+                                                        if ( (iLoc4 > 0) && (iLoc5 < iLoc4) )
+                                                            sT = lineSb.substring(iLoc5 + 1, iLoc4);
+                                                    
+                                                    sT = sT.trim();
+                                                    if ( sPid.equals(sT) )
+                                                    {
+                                                        iLoc6 = lineSb.indexOf(sZeroA, iLoc2 + 1);
+                                                        if ( ((iLoc6 + 1) > (iLoc2 + 1)) && ((iLoc6 + 1) < lineSb.length()) )
+                                                        {
+                                                            sT2 = lineSb.substring(iLoc2 + 1, iLoc6 + 1);
+                                                            //System.out.println("sT2: '"+sT2+"'");
+                                                            sB.append(sT2);
+                                                            
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                    break;
+                                            }
+                                            else
+                                                break;
+                                        }
+                                        else
+                                            break;
+                                        
+                                        iLoc3 = iLoc2 + 1;  // Next..
+                                        
+                                    }   // End while..
+                                    
+                                   //System.out.println("Dropped out");
+                                   //System.out.println("lineSb.length(): "+lineSb.length());
+                                   
+                                   if ( ((iLastZeroA + 1) >= 0) && ((iLastZeroA + 1) < lineSb.length()) )
+                                       sPrevEnd = lineSb.substring(iLastZeroA + 1);
+                                    //System.out.println("(End of block)sPrevEnd: '"+sPrevEnd+"'");
+                                    
+                                    //bFinishEnd = true;
+            
+                                    if ( sB.length() > 0 )
+                                        ;
+                                    else
+                                        sB.append("");
+                                    
+                                    lineSb = sB;
+                                }
+                            }
+                        }
+
+/*
+                        if ( lineSb == null )
+                            System.out.println("(After)lineSb null");
+                        else
+                            System.out.println("(After)lineSb.length(): "+lineSb.length());
+/**/
+
 						
 						//System.out.println("bBlockSplit: "+bBlockSplit);
 						if ( bBlockSplit )
@@ -3619,10 +3856,10 @@ public class ADev
 							iWordLength = 0;
 						}
 
-						
                         // In Flutter there
-                        // where some bad lead characters
+                        // were some bad lead characters
                         // so kill any of those..
+/*                        
                         while ( true )
                         {
                             if ( lineSb.charAt(0) > 0x7f )
@@ -3633,6 +3870,7 @@ public class ADev
                             else
                                 break;
                         }
+/**/                        
 						
 						iIdx = 0;
 						bDoBreak = false;
@@ -3644,17 +3882,21 @@ public class ADev
 						
 						for ( ; ; iIdx++ ) 
 						{
-							//System.out.println("--TOP--");
+							//System.out.println("--TOP--  iIdx: "+iIdx);
 							if ( bDoBreak )
 							{
 								//System.out.println("--Breaking--");
 								break;
 							}
 							
+							//System.out.println("iChunkLen: "+iChunkLen);
 							if ( iIdx >= iChunkLen )
 							{
 								// Hit end of block..
-								cChr = lineSb.charAt(lineSb.length() - 1);
+								cChr = ' ';
+								if ( ((lineSb.length() - 1) >= 0) && ((lineSb.length() - 1) < lineSb.length()) )
+								    cChr = lineSb.charAt(lineSb.length() - 1);
+								
 								if ( (cChr == (char)0x0a) || (cChr == (char)0x0d) )
 									;
 								else
@@ -3690,6 +3932,7 @@ public class ADev
 								}
 							}
 							
+							//System.out.println("bSplit: "+bSplit);
 							if ( bSplit )
 							{
 								// Split..
@@ -3737,16 +3980,12 @@ public class ADev
 									if ( iSplitBlockCount > iBreakLength )
 									{
 										//System.out.println("iSplitBlockCount > iBreakLength");
-										//System.out.println("iChrLoc: "+iChrLoc);
-										//System.out.println("iSIdx: "+iSIdx);
 										if ( iChrLoc > (iSIdx - (iBreakLength / 2) ) )
 										{
-											//System.out.println("insert(iChrLoc)");
 											lineSb.insert((iChrLoc + 1), ' ');
 										}
 										else
 										{
-											//System.out.println("insert(iSIdx)");
 											// No special characters found..
 											lineSb.insert((iSIdx + 1), ' ');
 										}
@@ -3762,9 +4001,10 @@ public class ADev
 								//System.out.println("Dropped out");
 							}
 						}	// End for..
+						
+						//System.out.println("Dropped out");
 					}
 /**/					
-					
 					// Note:
 					//
 					// Sometimes it can catch the end prompt early,
@@ -4636,21 +4876,28 @@ public class ADev
                     }
                 }
                 
-                bDebugReleaseFinished = false;
-                debugReleaseBgThread = new DebugReleaseBgThread();
-                debugReleaseBgThread.start();
-    
-                while ( true )
+                if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                        && (sDontModifyBuildGradle.equals("true"))  )
+                    ;
+                else
                 {
-                    if ( bDebugReleaseFinished )
-                        break;
-                    
-                    try
+                
+                    bDebugReleaseFinished = false;
+                    debugReleaseBgThread = new DebugReleaseBgThread();
+                    debugReleaseBgThread.start();
+        
+                    while ( true )
                     {
-                        Thread.sleep(250);
-                    }
-                    catch (InterruptedException ie)
-                    {
+                        if ( bDebugReleaseFinished )
+                            break;
+                        
+                        try
+                        {
+                            Thread.sleep(250);
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
                     }
                 }
     
@@ -5459,17 +5706,20 @@ public class ADev
 				{
 					sb.append(";adb kill-server");
 					sb.append(";adb start-server");
+				    
+					sb.append(";adb kill-server");
+					sb.append(";adb start-server");
 				}
 				
 				sb.append(";adb ");
-
+/*
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
 					sb.append(sDeviceName);
 					sb.append(" ");
 				}
-				
+/**/				
 				sb.append("shell ps");
 
 				sb.append(";adb ");
@@ -5496,6 +5746,9 @@ public class ADev
 					;
 				else
 				{
+				    sb.append("&&adb kill-server");
+					sb.append("&&adb start-server");
+
 					sb.append("&&adb kill-server");
 					sb.append("&&adb start-server");
 				}
@@ -5506,14 +5759,15 @@ public class ADev
 					System.out.println("sDeviceName null");
 				else
 					System.out.println("sDeviceName: '"+sDeviceName+"'");
-/**/					
+/**/
+/*
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
 					sb.append(sDeviceName);
 					sb.append(" ");
 				}
-				
+/**/				
 				sb.append("shell ps");
 
 				sb.append("&&adb ");
@@ -5553,7 +5807,8 @@ public class ADev
 				if ( bInternalFinished )
 					break;
 			}
-/*
+
+/*			
 			if ( commandResultS == null )
 				System.out.println("commandResultS null");
 			else
@@ -5740,14 +5995,14 @@ public class ADev
 				}
 				
 				sb.append(";adb ");
-
+/*
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
 					sb.append(sDeviceName);
 					sb.append(" ");
 				}
-				
+/**/				
 				sb.append("shell ps");
 				
 			}
@@ -5773,14 +6028,15 @@ public class ADev
 					System.out.println("sDeviceName null");
 				else
 					System.out.println("sDeviceName: '"+sDeviceName+"'");
-/**/					
+/**/
+/*
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
 					sb.append(sDeviceName);
 					sb.append(" ");
 				}
-				
+/**/				
 				sb.append("shell ps");
 				
 				sb.append("\n");
@@ -13907,7 +14163,7 @@ public class ADev
 			// Get Property Values..
 			antPathS = Utils.processPath(prop.getProperty("ant_path"));
 			javaPathS = Utils.processPath(prop.getProperty("java_path"));
-			sUsingOpenJdk = Utils.processPath(prop.getProperty("using_openjdk"));
+			//sUsingOpenJdk = Utils.processPath(prop.getProperty("using_openjdk"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
 			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
 			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
@@ -13920,10 +14176,14 @@ public class ADev
 			gradlePathS = Utils.processPath(prop.getProperty("gradle_path"));
 			ndkPathS = Utils.processPath(prop.getProperty("ndk_path"));
 			logcatFilterS = Utils.processPath(prop.getProperty("logcat_filter"));
+			sUsePidLogcat = Utils.processPath(prop.getProperty("use_pid_logcat"));
 			downloadPathS = Utils.processPath(prop.getProperty("download_path"));
 			sdCardPathS = Utils.processPath(prop.getProperty("sdcard_path"));
 			sDeviceIPAddress = Utils.processPath(prop.getProperty("device_ip_address"));
 			gradleOfflineS = Utils.processPath(prop.getProperty("gradle_offline"));
+			sDontModifyBuildGradle = Utils.processPath(prop.getProperty("dont_modify_build_gradle"));
+			
+			sGradleSuppressWarnings = Utils.processPath(prop.getProperty("gradle_suppress_warnings"));
 			sGPSLatitude = Utils.processPath(prop.getProperty("gps_latitude"));
 			sUseGradlew = Utils.processPath(prop.getProperty("use_gradlew"));
 			sUseAppBundle = Utils.processPath(prop.getProperty("use_app_bundle"));
@@ -13931,7 +14191,24 @@ public class ADev
 			sDebugArg = Utils.processPath(prop.getProperty("gradle_debug_option"));
 			sEnableSoftwareRendering = Utils.processPath(prop.getProperty("enable_software_rendering"));
 			sEnableDebugOutput = Utils.processPath(prop.getProperty("enable_debug_output"));
-			
+
+            if ( (javaPathS != null) && (javaPathS.length() > 0) && (! javaPathS.equals("null")) )
+            {
+                //System.out.println("javaPathS: '"+javaPathS+"'");
+                
+                // Try to detect OpenJdk being used..
+                if ( javaPathS.contains("openjdk") )
+                    sUsingOpenJdk = "true";
+                else
+                    sUsingOpenJdk = "false";
+                
+                //System.out.println("sUsingOpenJdk: '"+sUsingOpenJdk+"'");
+            }
+            else
+            {
+                sUsingOpenJdk = "false";
+            }
+            
 			if ( sUseGradlew.equals("true") )
 				sGradleType = "gradlew";
 			else
@@ -14053,33 +14330,37 @@ public class ADev
 
 		bDidAddTab = true;
 
+		if ( tabbedPane != null )
+		{
+            tabbedPane.addTab(
+                null,				// title, the title to be displayed in this tab
+                jComponent);		// component, the component to be displayed when this tab is clicked
+            
+            
+            // Calc tab index..
+            int iTabIndex = 0;
+            
+            iTabCount = tabbedPane.getTabCount();
+            //System.out.println("(getTabCount())iTabCount: "+iTabCount);
+            
+            iTabCount--;	// Adjust to zero based..
+            if ( iTabCount < 0 )
+                iTabCount = 0;
+            
+            //System.out.println("(setTabComponentAt())iTabCount: "+iTabCount);
+            //System.out.println("(zero based)iTabCount: "+iTabCount);
 
-		tabbedPane.addTab(
-			null,				// title, the title to be displayed in this tab
-			jComponent);		// component, the component to be displayed when this tab is clicked
-		
-		
-		// Calc tab index..
-		int iTabIndex = 0;
-		
-		iTabCount = tabbedPane.getTabCount();
-		//System.out.println("(getTabCount())iTabCount: "+iTabCount);
-		
-		iTabCount--;	// Adjust to zero based..
-		if ( iTabCount < 0 )
-			iTabCount = 0;
-		
-		//System.out.println("(setTabComponentAt())iTabCount: "+iTabCount);
-		//System.out.println("(zero based)iTabCount: "+iTabCount);
-		
-		tabbedPane.setTabComponentAt(
-			iTabCount,	// index	works
-			tabPanel);	// component
-
-
-		//System.out.println("(setSelectedIndex())iTabCount: "+iTabCount);
-		tabbedPane.setSelectedIndex(iTabCount);		// works
-		bTabSelected = false;    // Reset..
+            if ( tabPanel != null )
+            {
+                tabbedPane.setTabComponentAt(
+                    iTabCount,	// index	works
+                    tabPanel);	// component
+            }
+    
+            //System.out.println("(setSelectedIndex())iTabCount: "+iTabCount);
+            tabbedPane.setSelectedIndex(iTabCount);		// works
+            bTabSelected = false;    // Reset..
+        }
 		
 		//System.out.println("\nExiting addTab()");
 
@@ -15087,7 +15368,7 @@ While_Break:
 	{
 		//System.out.println("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 		//System.out.println("updateSource()");
-		
+
 /*		
 		if ( sSourceFile == null )
 			System.out.println("sSourceFile null");
@@ -16232,7 +16513,6 @@ While_Break:
 					}	// End for..
 				}
 
-				//System.out.println("At J");
 				//System.out.println("iLine: "+iLine);	
 				//System.out.println("iPreviousLine: "+iPreviousLine);
 				if ( (iLine != 0) && (iLine != iPreviousLine) )
@@ -17841,6 +18121,7 @@ While_Break:
 
 				init();
 				RefreshProperties();
+				getPackageName();
 				
                 //System.out.println("bGradleSelected: "+bGradleSelected);
                 //System.out.println("bKotlinSelected: "+bKotlinSelected);
@@ -17855,6 +18136,8 @@ While_Break:
                 {
                     androidSdkPathS = androidSdkPathGradleS;
                 }
+                
+                //System.out.println("androidSdkPathS: '"+androidSdkPathS+"'");
 				
 				//System.out.println("bGradleSelected: "+bGradleSelected);
 				if ( bGradleSelected )	
@@ -17881,45 +18164,57 @@ While_Break:
 					
 					//System.out.println("DeleteKeyPropertiesBgThread dropped out");
 
-					// Comment out signingConfigs storeFile
-					bInitBuildGradleFinished = false;
-					initializeBuildGradleBgThread = new InitializeBuildGradleBgThread();
-					initializeBuildGradleBgThread.start();
-					
-					while ( true )
-					{
-						if ( bInitBuildGradleFinished )
-							break;
-						
-						try
-						{
-							Thread.sleep(250);						
-						}
-						catch (InterruptedException ie)
-						{
-						}
-					}
+                    if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                            && (sDontModifyBuildGradle.equals("true"))  )
+                        ;
+                    else
+                    {
+                        // Comment out signingConfigs storeFile
+                        bInitBuildGradleFinished = false;
+                        initializeBuildGradleBgThread = new InitializeBuildGradleBgThread();
+                        initializeBuildGradleBgThread.start();
+                        
+                        while ( true )
+                        {
+                            if ( bInitBuildGradleFinished )
+                                break;
+                            
+                            try
+                            {
+                                Thread.sleep(250);						
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                        }
+                    }
 					
 					//System.out.println("InitializeBuildGradleBgThread dropped out");
-					
-					// Comment out projectsEvaluated debug
-					bCheckGradleProjectFinished = false;
-					checkGradleProjectBgThread = new CheckGradleProjectBgThread();
-					checkGradleProjectBgThread.start();
-					
-					while ( true )
-					{
-						if ( bCheckGradleProjectFinished )
-							break;
-						
-						try
-						{
-							Thread.sleep(250);						
-						}
-						catch (InterruptedException ie)
-						{
-						}
-					}
+
+                    if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                            && (sDontModifyBuildGradle.equals("true"))  )
+                        ;
+                    else
+                    {
+                        // Comment out projectsEvaluated debug
+                        bCheckGradleProjectFinished = false;
+                        checkGradleProjectBgThread = new CheckGradleProjectBgThread();
+                        checkGradleProjectBgThread.start();
+                        
+                        while ( true )
+                        {
+                            if ( bCheckGradleProjectFinished )
+                                break;
+                            
+                            try
+                            {
+                                Thread.sleep(250);						
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                        }
+                    }
 					
 					//System.out.println("CheckGradleProjectBgThread dropped out");
 				}
@@ -18089,7 +18384,6 @@ While_Break:
 				}
 				else
 				{
-				    //System.out.println("In else");
 					if ( bGradleSelected )
 					{
 						if ( bFlutterSelected )
@@ -18186,7 +18480,6 @@ While_Break:
 				{
 					bIsCleanDebug = true;
 
-					// Note:
 					// ShowProgressTask() runs IOBgThread()..
 					showProgressTask = new ShowProgressTask();
 					showProgressTask.execute();
@@ -18237,36 +18530,18 @@ While_Break:
 					bEnableStoreFile = false;
 					bEnableBuildTypesDebug = true;
 					bEnableBuildTypesRelease = false;
-					debugReleaseBgThread = new DebugReleaseBgThread();
-					debugReleaseBgThread.start();
-
-					while ( true )
-					{
-						if ( bDebugReleaseFinished )
-							break;
-						
-						try
-						{
-							Thread.sleep(250);
-						}
-						catch (InterruptedException ie)
-						{
-						}
-					}
-				}
-				
-				if ( bGradleSelected )
-				{
-                    // Check for debug option..
-                    if ( (sDebugArg != null) && (sDebugArg.length() > 0) )
+					
+                    if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                            && (sDontModifyBuildGradle.equals("true"))  )
+                        ;
+                    else
                     {
-                        bDebugOptionFinished = false;
-                        modifyGradleProjectBgThread = new ModifyGradleProjectBgThread();
-                        modifyGradleProjectBgThread.start();
-            
+                        debugReleaseBgThread = new DebugReleaseBgThread();
+                        debugReleaseBgThread.start();
+    
                         while ( true )
                         {
-                            if ( bDebugOptionFinished )
+                            if ( bDebugReleaseFinished )
                                 break;
                             
                             try
@@ -18275,6 +18550,37 @@ While_Break:
                             }
                             catch (InterruptedException ie)
                             {
+                            }
+                        }
+                    }
+				}
+				
+				if ( bGradleSelected )
+				{
+                    // Check for debug option..
+                    if ( (sDebugArg != null) && (sDebugArg.length() > 0) )
+                    {
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                                && (sDontModifyBuildGradle.equals("true"))  )
+                            ;
+                        else
+                        {
+                            bDebugOptionFinished = false;
+                            modifyGradleProjectBgThread = new ModifyGradleProjectBgThread();
+                            modifyGradleProjectBgThread.start();
+                
+                            while ( true )
+                            {
+                                if ( bDebugOptionFinished )
+                                    break;
+                                
+                                try
+                                {
+                                    Thread.sleep(250);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
                             }
                         }
                     }
@@ -18365,6 +18671,9 @@ While_Break:
 
 							if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 								commandSb.append("--offline ");
+							
+                            if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
+							    commandSb.append("--warning-mode=none ");
 	
 							if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
 							{
@@ -18492,6 +18801,9 @@ While_Break:
 
 							if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 								commandSb.append("--offline ");
+
+                            if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
+							    commandSb.append("--warning-mode=none ");
 							
 							if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
 							{
@@ -18619,21 +18931,28 @@ While_Break:
                     // Check for debug option..
                     if ( (sDebugArg != null) && (sDebugArg.length() > 0) )
                     {
-                        bDebugOptionFinished = false;
-                        modifyGradleProjectBgThread = new ModifyGradleProjectBgThread();
-                        modifyGradleProjectBgThread.start();
-            
-                        while ( true )
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                                && (sDontModifyBuildGradle.equals("true"))  )
+                            ;
+                        else
                         {
-                            if ( bDebugOptionFinished )
-                                break;
-                            
-                            try
+                        
+                            bDebugOptionFinished = false;
+                            modifyGradleProjectBgThread = new ModifyGradleProjectBgThread();
+                            modifyGradleProjectBgThread.start();
+                
+                            while ( true )
                             {
-                                Thread.sleep(250);
-                            }
-                            catch (InterruptedException ie)
-                            {
+                                if ( bDebugOptionFinished )
+                                    break;
+                                
+                                try
+                                {
+                                    Thread.sleep(250);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
                             }
                         }
                     }
@@ -18834,19 +19153,27 @@ While_Break:
 						// Gradle, Kotlin..
 						commandPhrase = ASSEMBLE_RELEASE;
 						
+						//System.out.println("sGradleType: '"+sGradleType+"'");
+						// Like: 'gradlew'
 						commandSb.append(sGradleType);
 						commandSb.append(" ");
 
 						if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 							commandSb.append("--offline ");
 
+                        if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
+                            commandSb.append("--warning-mode=none ");
+						
+                        //System.out.println("sGradleCommandOption: '"+sGradleCommandOption+"'");
 						if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
 						{
 							commandSb.append(sGradleCommandOption);
 							commandSb.append(" ");
 						}
 
-						commandSb.append(ASSEMBLE_RELEASE);
+						//commandSb.append(ASSEMBLE_RELEASE);
+						//commandSb.append("build --debug");
+						commandSb.append("build");
 					}
 				}
 				else
@@ -19280,13 +19607,104 @@ While_Break:
 			{
 				// Logcat..
 				//System.out.println("LOGCAT");
-				AbstractButton absButton = (AbstractButton)e.getSource();
-				boolean bSelected = absButton.getModel().isSelected();
+
+				StringBuffer sb;
+				int iLoc = 0;
+				int iStart = 0;
+				
+				RefreshProperties();
+				boolean bSelected = logcatToggleButton.isSelected();
 
 				//System.out.println("bSelected: "+bSelected);
 				if ( bSelected )
 				{
 					// Not currently selected..
+					if ( (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
+					{
+					    if ( sUsePidLogcat.equals("true") )
+					    {
+					        // Get PID..
+                            sb = new StringBuffer();
+                            
+                            if ( iOS == LINUX_MAC )
+                            {
+                                sb.append("export PATH=${PATH}:");
+                                sb.append(androidSdkPathS);
+                                sb.append("/platform-tools");
+                                sb.append(";adb ");
+                            }
+                            else
+                            {
+                                sb.append("SET PATH=");
+                                sb.append(androidSdkPathS);
+                                sb.append("/platform-tools");
+                                sb.append(";%PATH%");
+                                sb.append("&&adb ");
+                            }
+/*        
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                sb.append("-s ");
+                                sb.append(sDeviceName);
+                                sb.append(" ");
+                            }
+/**/                            
+                            sb.append("shell ps");
+                                
+                            if ( iOS == WINDOWS )
+                                sb.append("\n");
+                            
+                            //System.out.println("sb: '"+sb.toString()+"'");
+                            bInternalFinished = false;
+                            internalCommandS = sb.toString();
+                            commandBgThread = new CommandBgThread();
+                            commandBgThread.start();
+                
+                            // Wait for Thread to finish..
+                            while ( true )
+                            {
+                                try
+                                {
+                                    Thread.sleep(250);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                
+                                if ( bInternalFinished )
+                                    break;
+                            }
+
+                            //System.out.println("commandResultS: '"+commandResultS+"'");
+/*                            
+                            if ( packageNameS == null )
+                                System.out.println("packageNameS null");
+                            else
+                                System.out.println("packageNameS: '"+packageNameS+"'");
+/**/                    
+                            
+                            if ( (packageNameS != null) && (packageNameS.length() > 0) )
+                            {
+                                iLoc = commandResultS.indexOf(packageNameS);
+                                if ( iLoc != -1 )
+                                {
+                                    // Grab PID..
+                                    iStart = 0;
+                                    for ( ; commandResultS.charAt(iLoc) != (char)0x0a; iLoc-- );
+                    
+                                    iLoc++;
+                                    for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
+                                    for ( ; Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
+                                    iStart = iLoc;
+                                    for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
+                                    sPid = commandResultS.substring(iStart, iLoc);
+                                    //System.out.println("sPid: '"+sPid+"'");
+                                }
+                            }
+					    }
+					}
+					
+					
 					bLogcatOn = true;
 					commandSb = new StringBuffer();
 
@@ -19344,7 +19762,9 @@ While_Break:
 					
 					commandSb.append("logcat");
 					
-	
+					// !! TESTING !!
+					//commandSb.append(" -v brief");
+					
 					if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
 					{
 						while ( st.hasMoreTokens() )
@@ -19355,11 +19775,9 @@ While_Break:
 							commandSb.append(":F");
 						}
 					}
-
+/**/
 					if ( iOS == WINDOWS )
-					{
 						commandSb.append("\n");
-					}
 					
 					textPane.setText("");
 				
@@ -19553,7 +19971,6 @@ While_Break:
 					// Restore..
 					actionCommandS = UNINSTALL;
 				}
-
 /*
 				if ( packageNameS == null )				
 					System.out.println("packageNameS null");
@@ -19606,7 +20023,7 @@ While_Break:
 					
 				}
 
-/*				
+				
 				if ( bWirelessConnected == false )
 				{
 					// Signal to kill adb..
@@ -20326,7 +20743,6 @@ While_Break:
 					//System.out.println("VariableInfoLHm.size(): "+VariableInfoLHm.size());
 					
 					
-					//System.out.println("==At C==");
 					//updateSourceLines((long)0);
 				}
 				else
@@ -20450,24 +20866,31 @@ While_Break:
 							sType = "GRADLE";
 						}
 
-						// Modify app/build.gradle..	
-						bGradleConfigFinished = false;
-						gradleConfigBgThread = new GradleConfigBgThread();
-						gradleConfigBgThread.start();
 						
-						while ( true )
-						{
-							try
-							{
-								Thread.sleep(250);
-							}
-							catch (InterruptedException ie)
-							{
-							}
-							
-							if ( bGradleConfigFinished )
-								break;
-						}
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                                && (sDontModifyBuildGradle.equals("true"))  )
+                            ;
+                        else
+                        {
+                            // Modify app/build.gradle..	
+                            bGradleConfigFinished = false;
+                            gradleConfigBgThread = new GradleConfigBgThread();
+                            gradleConfigBgThread.start();
+                            
+                            while ( true )
+                            {
+                                try
+                                {
+                                    Thread.sleep(250);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                                
+                                if ( bGradleConfigFinished )
+                                    break;
+                            }
+                        }
 						
 						//System.out.println("Past GradleConfigBgThread wait");
 						
@@ -20937,9 +21360,7 @@ While_Break:
 					commandSb.append(createProjectHomeS);
 					
 					if ( iOS == WINDOWS )
-					{
 						commandSb.append("\n");
-					}
 					
 					//System.out.println("commandSb: '"+commandSb.toString()+"'");
 					commandS = commandSb.toString();
@@ -23295,7 +23716,7 @@ While_Break:
                 {
                 }
     
-                // In Home..
+                // In Home, Ant..
                 try
                 {
                     tSb = new StringBuffer(projectHomeS);
@@ -23510,13 +23931,16 @@ While_Break:
 		}
 	};	//}}}
 
-	//{{{	ActionListener tabActionListener   Close
+	//{{{	ActionListener tabActionListener   Close tab
 	private ActionListener tabActionListener = new ActionListener()
 	{
 		public void actionPerformed(ActionEvent e)
 		{
 			// Handle Close..
-			//System.out.println("actionPerformed()");
+			//System.out.println("\ntabActionListener actionPerformed()");
+			int iTabCnt = 0;
+			int iIndex = 0;
+			boolean bSkip = false;
 
 			bGotStateChanged = false;	// Reset..
 			
@@ -23538,13 +23962,20 @@ While_Break:
 
 			JTabbedPane jTabbedPane =
 				(JTabbedPane)jButton.getParent().getParent().getParent();
-/*
+
+/*				
 			if ( jTabbedPane == null )
 				System.out.println("jTabbedPane null");
 			else
 				System.out.println("jTabbedPane: "+jTabbedPane);
 /**/
 
+            if ( jTabbedPane != null )
+            {
+                iTabCnt = jTabbedPane.getTabCount();
+                //System.out.println("iTabCnt: "+iTabCnt);
+           }
+            
 			// javax.swing.plaf.basic.BasicTabbedPaneUI$TabContainer			
 			Component tabContainer = (Component)jButton.getParent();	// javax.swing.JPanel
 
@@ -23555,90 +23986,98 @@ While_Break:
 				System.out.println("tabContainer: "+tabContainer);
 /**/
 
-			int iIndex = jTabbedPane.indexOfTabComponent(tabContainer);
-			iRemoveIndex = iIndex;	// Index of Tab to be removed..
-			//System.out.println("(remove())iIndex: "+iIndex);
-			
-			if ( iIndex != -1 )
+            // If only one tab open, don't remove() it..
+            if ( iTabCnt > 1 )
+            {
+                iIndex = jTabbedPane.indexOfTabComponent(tabContainer);
+                //System.out.println("(indexOfTabComponent())iIndex: "+iIndex);
+                iRemoveIndex = iIndex;	// Index of Tab to be removed..
+                //System.out.println("(remove())iIndex: "+iIndex);
+                
+                if ( iIndex != -1 )
+                {
+                    // Check for default..
+                    Component component = jTabbedPane.getTabComponentAt(iIndex);
+    
+    
+                    // Note:
+                    // After doing the remove() the ChangeListener sometimes
+                    // will get the event late or not at all.
+                    // So soon after, we need to
+                    // clear the remove() switch so that it can get
+                    // the current event, like a select..
+                    
+                    //System.out.println("\nDoing remove("+iIndex+")");
+                    // Do remove()..
+                    jTabbedPane.remove(iIndex);
+                    
+                    //System.out.println("(After remove()) jTabbedPane.getTabCount(): "+jTabbedPane.getTabCount());				
+    
+                    // Remove ClassMethodInfo for this Tab..
+                    if ( (ClassMethodAr != null) && (iIndex < ClassMethodAr.size()) )
+                    {
+                        //System.out.println("(Remove)iIndex: "+iIndex);
+                        ClassMethodAr.remove(iIndex);
+                    }
+    
+                    //System.out.println("iTabLevel: "+iTabLevel);				
+                    if ( iTabLevel < 3 )
+                    {
+                        // Closed default..
+                        // Reset all TextAreas..
+                        TabInfoAr = new ArrayList();
+                        
+                        bDefaultTabShowing = false;
+                        
+                    }
+                    else
+                    {
+                        // Remove TextArea for this Tab..				
+                        if ( (TabInfoAr != null) && (iIndex < TabInfoAr.size()) )
+                        {
+                            TabInfoAr.remove(iIndex);
+                        }
+                    }
+                }
+            }
+            else
+                bSkip = true;
+
+			if ( bSkip == false )
 			{
-				// Check for default..
-				Component component = jTabbedPane.getTabComponentAt(iIndex);
-
-
-				// Note:
-				// After doing the remove() the ChangeListener sometimes
-				// will get the event late or not at all.
-				// So soon after, we need to
-				// clear the remove() switch so that it can get
-				// the current event, like a select..
-				
-				//System.out.println("\nDoing remove("+iIndex+")");
-				// Do remove()..
-				jTabbedPane.remove(iIndex);
-				//tabbedPane.remove(iIndex);
-				
-				//System.out.println("(After remove()) jTabbedPane.getTabCount(): "+jTabbedPane.getTabCount());				
-
-				// Remove ClassMethodInfo for this Tab..
-				if ( (ClassMethodAr != null) && (iIndex < ClassMethodAr.size()) )
-				{
-				    //System.out.println("(Remove)iIndex: "+iIndex);
-					ClassMethodAr.remove(iIndex);
-				}
-
-				//System.out.println("iTabLevel: "+iTabLevel);				
-				if ( iTabLevel < 3 )
-				{
-					// Closed default..
-					// Reset all TextAreas..
-					//TabTextAreaAr = new ArrayList();
-					TabInfoAr = new ArrayList();
-					
-					bDefaultTabShowing = false;
-					
-				}
-				else
-				{
-					// Remove TextArea for this Tab..				
-					//if ( (TabTextAreaAr != null) && (iIndex < TabTextAreaAr.size()) )
-					if ( (TabInfoAr != null) && (iIndex < TabInfoAr.size()) )
-					{
-						//TabTextAreaAr.remove(iIndex);
-						TabInfoAr.remove(iIndex);
-					}
-				}
-			}
+                //System.out.println("(After remove())getTabCount(): "+jTabbedPane.getTabCount());
+                int iCount = 0;			
+                while ( true )
+                {
+                    try
+                    {
+                        Thread.sleep(250);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( bGotStateChanged )
+                    {
+                        //System.out.println("Got StateChanged, iCount: "+iCount);
+                        break;
+                    }
+                    
+                    if ( iCount > 1 )
+                    {
+                        // Didn't get StateChanged..
+                        // Reset..
+                        //System.out.println("-- Didn't get StateChanged --");
+                        bHitClose = false;
+                        
+                        break;
+                    }
+                    
+                    iCount++;
+                }
+            }
 			
-
-			int iCount = 0;			
-			while ( true )
-			{
-				try
-				{
-					Thread.sleep(250);
-				}
-				catch (InterruptedException ie)
-				{
-				}
-				
-				if ( bGotStateChanged )
-				{
-					//System.out.println("Got StateChanged, iCount: "+iCount);
-					break;
-				}
-				
-				if ( iCount > 1 )
-				{
-					// Didn't get StateChanged..
-					// Reset..
-					//System.out.println("-- Didn't get StateChanged --");
-					bHitClose = false;
-					
-					break;
-				}
-				
-				iCount++;
-			}
+			//System.out.println("Exiting tabActionListener");
 		}
 	};	//}}}
 
@@ -25254,7 +25693,6 @@ Break_Out:
 							{
 								// Get Title..
 								String sTabTitle = tabbedPane.getTitleAt(0);
-
 								if ( (sTabTitle != null) && (sTabTitle.equals("")) )
 								{
 									// Detected empty Tab..

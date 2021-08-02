@@ -1,7 +1,7 @@
 
 You can use the latest Android SDK for Gradle, Kotlin and Flutter projects.
 
-You can now use my SDK Manager, if you want, to manage the SDK:
+You can use my SDK Manager, if you want, to manage the SDK:
 
 https://sourceforge.net/projects/sdk-manager/
 
@@ -111,6 +111,8 @@ Logcat: Logcat output can be enabled by pressing the "Logcat" toggle button, pre
 		disable output.  If you hit another command button while Logcat is running
 		it will automatically be disabled.
 		
+		You can choose to just view log output from the running Process Id,
+		there can be a slight delay before it starts.
 		You can edit the "logcat_filter" property in config.properties which will
 		help to block the output of the selected tags.
 		
@@ -226,9 +228,6 @@ Use Flutter:
 		"Run", "Attach", "Stop" and "Hot Reload" buttons are available.
 		"Hot Reload" is only enabled if you select "Run" and the
 		build type is set to "debug" in config.properties.
-		
-		--NOTE-- "Hot Reload" still needs more work
-		when used with the Flutter debugger.
 		
 		When using Run it's important to use Stop to kill the
 		background daemon Thread when you're finished.
@@ -407,10 +406,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.4:
-    Fixed Progress bar issue in Flutter.  Now will automatically do
-    'flutter pub get', and some other improvements.
-
 ADev-3.0.6:
     Improved detecting project type for Home.
     Improved debuggers related to breakpoints and switching tabs.
@@ -421,6 +416,10 @@ ADev-3.0.8:
     Improved automatic checkbox selection for project build types like 'Use Gradle' etc.
     Improved debug console output for log(), stdout and stderr for Flutter.
     Some potential Exceptions fixed.
+    
+ADev-3.0.9:
+    Logcat can now use the Process Id to only show log output from that Process.
+    Other improvements.
     
 
 I use it for all of my own development, and try to fix what issues I see,
