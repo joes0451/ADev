@@ -112,7 +112,7 @@ Logcat: Logcat output can be enabled by pressing the "Logcat" toggle button, pre
 		it will automatically be disabled.
 		
 		You can choose to just view log output from the running Process Id,
-		there can be a slight delay before it starts.
+		there can be a delay before it starts sending output.
 		You can edit the "logcat_filter" property in config.properties which will
 		help to block the output of the selected tags.
 		
@@ -406,11 +406,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.6:
-    Improved detecting project type for Home.
-    Improved debuggers related to breakpoints and switching tabs.
-    Fixed Exception.
-
 ADev-3.0.8:
     New Attach button for Flutter.
     Improved automatic checkbox selection for project build types like 'Use Gradle' etc.
@@ -420,6 +415,12 @@ ADev-3.0.8:
 ADev-3.0.9:
     Logcat can now use the Process Id to only show log output from that Process.
     Other improvements.
+    
+ADev-3.1.0:
+    Tried to improve the Process Id logcat.
+    Improved the Uninstall / Install button combination.
+    Improved "Select Device" for single device.
+    Some other minor improvements.
     
 
 I use it for all of my own development, and try to fix what issues I see,

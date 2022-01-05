@@ -7,7 +7,7 @@
 	/**
 	 *	  ADev is a lightweight Android development tool
 	 *
-	 *	  Copyright (c) 2013 - 2021 Joseph Siebenmann
+	 *	  Copyright (c) 2013 - 2022 Joseph Siebenmann
 	 *
 	 *    This program is free software: you can redistribute it and/or modify
 	 *    it under the terms of the GNU General  Public License as published by
@@ -438,6 +438,7 @@ public class ADev
 	static volatile boolean bFlutterPubGetFinished;
 	static volatile boolean bBlockDebug;
 	static volatile boolean bProjectSelected;
+	static volatile boolean bUninstallPressed;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -1044,6 +1045,7 @@ public class ADev
 		iDebugMode = 0;
 		bBlockDebug = false;
 		bProjectSelected = false;
+		bUninstallPressed = false;
 		
 		iCardShowing = BUILD_CARD;
 		iPreviousIndex = -1;
@@ -1507,11 +1509,18 @@ public class ADev
 				outSb.append(sTrail);
 				outSb.append("<resources>");
 				outSb.append(sTrail);
-				//outSb.append("    <string name=\"app_name\">Hello World</string>");  
+
 				outSb.append("    <string name=\"app_name\">");
 				outSb.append(sApplicationName);
 				outSb.append("</string>");
 				outSb.append(sTrail);
+				
+				outSb.append("    <string name=\"out_text\">");
+				outSb.append("Hello World, ");
+				outSb.append(sApplicationName);
+				outSb.append("</string>");
+				outSb.append(sTrail);
+				
 				outSb.append("</resources>");
 				outSb.append(sTrail);
 				
@@ -1543,8 +1552,7 @@ public class ADev
 				outSb.append(sTrail);
 				outSb.append("        android:layout_height=\"wrap_content\"");
 				outSb.append(sTrail);
-				outSb.append("        android:text=\"Hello World, ");
-				outSb.append(sActivityName);
+				outSb.append("        android:text=\"@string/out_text");
 				outSb.append("\" />");
 				outSb.append(sTrail);
 				outSb.append(sTrail);
@@ -3579,7 +3587,6 @@ public class ADev
 						iTotalBytes += iBytesRead;
 					}
 
-					
 /*					
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
@@ -3608,19 +3615,32 @@ public class ADev
                         System.out.println("(Before)lineSb.length(): "+lineSb.length());
 /**/
 
-					// Without this, console output
-					// can get really laggy and unresponsive..
-					if ( lineSb.length() < 4096 )
-						Thread.sleep(10);
-					else
-					{
-						if ( lDif > 0 )
-							Thread.sleep(40);
-							//Thread.sleep(45);
-						else
-							//Thread.sleep(30);
-							Thread.sleep(20);
-					}
+/*
+					if ( sUsePidLogcat == null )
+					    System.out.println("sUsePidLogcat null");
+					else    
+					    System.out.println("sUsePidLogcat: "+sUsePidLogcat);
+/**/
+
+                    if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
+                        ;
+                    else
+                    {
+                        // Without this, console output
+                        // can get really laggy and unresponsive..
+                        if ( lineSb.length() < 4096 )
+                            Thread.sleep(10);
+                        else
+                        {
+                            if ( lDif > 0 )
+                                Thread.sleep(40);
+                                //Thread.sleep(45);
+                            else
+                                //Thread.sleep(30);
+                                Thread.sleep(20);
+                        }
+                    }
+/**/
 
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
@@ -3654,7 +3674,7 @@ public class ADev
                                 // Use PID Logcat..
                                 //System.out.println("Using PID");
                                 if ( (sPid != null) && (sPid.length() > 0) )
-                                    ;
+                                    ;   // Have it..
                                 else
                                 {
                                     if ( (packageNameS != null) && (packageNameS.length() > 0) )
@@ -3725,7 +3745,15 @@ public class ADev
                                         //System.out.println("sPid: '"+sPid+"'");
                                     }
                                 }
-
+                                
+/*
+                                if ( sPid == null )
+                                    System.out.println("sPid null");
+                                else
+                                    System.out.println("sPid: '"+sPid+"'");
+/**/                                
+                                
+                                
                                 if ( (sPid != null) && (sPid.length() > 0) )
                                 {
                                     sB = new StringBuffer();
@@ -3760,6 +3788,7 @@ public class ADev
                                                 }
                                                 
                                                 //System.out.println("endSb: '"+endSb.toString()+"'");
+                                                // Like:  'I/InputDispatcher(  746): Delivering touch to (874): action: 0x4, toolType: 1[d][d][a]
                                                 iLoc4 = endSb.indexOf(")");
                                                 if ( iLoc4 != -1 )
                                                 {
@@ -3770,7 +3799,9 @@ public class ADev
                                                         if ( (iLoc4 > 0) && (iLoc5 < iLoc4) )
                                                         {
                                                             //System.out.println("endSb.length(): "+endSb.length());
+                                                            // Statement's PID..
                                                             sT = endSb.substring(iLoc5 + 1, iLoc4);
+                                                            //System.out.println("sT: '"+sT+"'");
                                                         
                                                             sT = sT.trim();
                                                             if ( sPid.equals(sT) )
@@ -3795,9 +3826,11 @@ public class ADev
                                                     sT = sT.trim();
                                                     if ( sPid.equals(sT) )
                                                     {
+                                                        //System.out.println("--PID Matched--");
                                                         iLoc6 = lineSb.indexOf(sZeroA, iLoc2 + 1);
                                                         if ( ((iLoc6 + 1) > (iLoc2 + 1)) && ((iLoc6 + 1) < lineSb.length()) )
                                                         {
+                                                            // Append to output..
                                                             sT2 = lineSb.substring(iLoc2 + 1, iLoc6 + 1);
                                                             //System.out.println("sT2: '"+sT2+"'");
                                                             sB.append(sT2);
@@ -19978,6 +20011,8 @@ While_Break:
 					System.out.println("packageNameS: '"+packageNameS+"'");
 /**/
 
+                bUninstallPressed = true;
+
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
 				
@@ -20023,7 +20058,7 @@ While_Break:
 					
 				}
 
-				
+/*				
 				if ( bWirelessConnected == false )
 				{
 					// Signal to kill adb..
@@ -20095,8 +20130,12 @@ While_Break:
 						commandSb.append(" ");
 					}
 					
-					//commandSb.append("install ");
-					commandSb.append("install -r ");
+					commandSb.append("install ");
+					if ( bUninstallPressed == false )
+					    commandSb.append("-r ");
+					
+					bUninstallPressed = false;    // Reset..
+					//commandSb.append("install -r ");
 					
 					// Construct path to .apk..
 					commandSb.append(projectHomeS);
@@ -20149,8 +20188,13 @@ While_Break:
 						commandSb.append(" ");
 					}
 					
-					//commandSb.append("install ");
-					commandSb.append("install -r ");
+					commandSb.append("install ");
+					if ( bUninstallPressed == false )
+					    commandSb.append("-r ");
+					
+					bUninstallPressed = false;    // Reset..
+					
+					//commandSb.append("install -r ");
 					commandSb.append(projectHomeS);
 					
 					boolean bGradleSelected = uGradleMenuItem.getState();
