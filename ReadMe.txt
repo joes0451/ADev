@@ -198,6 +198,16 @@ App Bundle:
 		Support for Gradle, Kotlin and Flutter.
 		Recommended to use Gradle version 5.5.1 or higher.
 
+		If you are letting Google Play handle your signing:
+		Fill in App Bundle Password realted items in config.properties
+		then use "Project->Generate Private Key" to generate a Keystore		
+		for use with App Bundles.
+		Then Gradle will build the App Bundle and sign it with the
+		Keystore information.
+		
+		You can learn more about app signing here:
+		https://developer.android.com/studio/build/building-cmdline#gradle_signing
+
 Use Flutter:
 		Install, Android Studio not required:
 		https://flutter.dev/docs/development/tools/sdk/releases
@@ -406,12 +416,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.8:
-    New Attach button for Flutter.
-    Improved automatic checkbox selection for project build types like 'Use Gradle' etc.
-    Improved debug console output for log(), stdout and stderr for Flutter.
-    Some potential Exceptions fixed.
-    
 ADev-3.0.9:
     Logcat can now use the Process Id to only show log output from that Process.
     Other improvements.
@@ -421,6 +425,11 @@ ADev-3.1.0:
     Improved the Uninstall / Install button combination.
     Improved "Select Device" for single device.
     Some other minor improvements.
+    
+ADev-3.1.2:
+    Fixed App Bundle support.
+    New Keystore generator for App Bundles.
+    Other improvements.
     
 
 I use it for all of my own development, and try to fix what issues I see,

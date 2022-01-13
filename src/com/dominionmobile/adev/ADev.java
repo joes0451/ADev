@@ -198,6 +198,7 @@ public class ADev
 	private static JFrame frame;
 	private static JFrame progressJFrame;
 	private JFrame createFrame;
+	private JFrame keytoolFrame;
 	private JFrame updateFrame;
 	private JFrame searchFrame;
 	private JFrame pullFrame;
@@ -218,6 +219,7 @@ public class ADev
 	private JProgressBar jProgressBar;
 	private static JList jList;
 	private static JList breakpointDialogJList;
+	private static JList countryCodesJList;
 	private JList pullDialogJList;
 	private static JScrollPane textScrollPane;
 	private static JScrollPane tabScrollPane;
@@ -321,6 +323,18 @@ public class ADev
 	private static JCheckBoxMenuItem uNDKMenuItem;
 	private static JCheckBoxMenuItem uFlutterMenuItem;
 	private JMenuItem updateMenuItem;
+	
+	private static JTextField aliasPasswordField;
+	private static JTextField keyStorePasswordField;
+	private static JTextField countryCodeField;
+	private static JTextField stateProvinceField;
+	private static JTextField cityLocalityField;
+	private static JTextField abOrganizationField;
+	private static JTextField organizationUnitField;
+	private static JTextField firstLastNameField;
+	private static JTextField aliasField;
+	private static JTextField keyStoreNameField;
+	
 	
 	private JRadioButtonMenuItem buildMenuItem;
 	private JRadioButtonMenuItem debugMenuItem;
@@ -439,6 +453,7 @@ public class ADev
 	static volatile boolean bBlockDebug;
 	static volatile boolean bProjectSelected;
 	static volatile boolean bUninstallPressed;
+	static volatile boolean bCommandFinished;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -524,6 +539,10 @@ public class ADev
 	static volatile String sKeyAliasPassword;
 	static volatile String sKeystorePath;
 	static volatile String sKeyAlias;
+	static volatile String sAppBundleKeystorePath;
+	static volatile String sAppBundleKeyAlias;
+	static volatile String sAppBundleKeystorePassword;
+	static volatile String sAppBundleKeyAliasPassword;
 	
 	static volatile String sSdkDir;
 	static volatile String sDeviceName;
@@ -595,6 +614,7 @@ public class ADev
 	static volatile String sDontModifyBuildGradle;
 	static volatile String sUsePidLogcat;
 	static volatile String sPid;
+	static volatile String sInternalCommand;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -743,7 +763,7 @@ public class ADev
 	private volatile boolean bFinished;
 	private volatile boolean bKillFinished;
 	private volatile boolean bReleaseFinished;
-	private volatile boolean bCommandFinished;
+	//private volatile boolean bCommandFinished;
 	private volatile int iTarget;
 	private volatile int iMinSdk;
 	private volatile int iBuildType;
@@ -803,6 +823,7 @@ public class ADev
 	static final String CANCEL = "Cancel";
 	static final String LOGCAT = "Logcat";
 	static final String CREATE = "Create";
+	static final String GENERATE_PRIVATE_KEY = "Generate Private Key";
 	static final String UPDATE = "Update";
 	static final String LAUNCH = "Launch Emulator";
 
@@ -810,6 +831,8 @@ public class ADev
 	static final String CREATE_CANCEL = "create_cancel";
 	static final String UPDATE_SUBMIT = "update_submit";
 	static final String UPDATE_CANCEL = "update_cancel";
+	static final String GENERATE_PRIVATE_KEY_SUBMIT = "generate_private_key_submit";
+	static final String GENERATE_PRIVATE_KEY_CANCEL = "generate_private_key_cancel";
 	static final String PROJECT_PATH_CHOOSER = "project_path_chooser";
 	static final String BREAKPOINT_SUBMIT = "breakpoint_submit";
 	static final String BREAKPOINT_CANCEL = "breakpoint_cancel";
@@ -3622,10 +3645,16 @@ public class ADev
 					    System.out.println("sUsePidLogcat: "+sUsePidLogcat);
 /**/
 
+
+/*
                     if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
                         ;
                     else
                     {
+/**/  
+
+                        //Thread.sleep(10);
+                        
                         // Without this, console output
                         // can get really laggy and unresponsive..
                         if ( lineSb.length() < 4096 )
@@ -3639,7 +3668,8 @@ public class ADev
                                 //Thread.sleep(30);
                                 Thread.sleep(20);
                         }
-                    }
+/**/                        
+                    //}
 /**/
 
 					if ( (lineSb != null) && (iBytesRead > 0) )
@@ -8217,6 +8247,12 @@ public class ADev
 		sKeystorePath = "";
 		sKeyAlias = "";
 		
+		sAppBundleKeystorePath = "";
+		sAppBundleKeyAlias = "";
+		sAppBundleKeystorePassword = "";
+		sAppBundleKeyAliasPassword = "";
+		
+		
 		keyAliasField = null;
 		keystorePathField = null;
 		keyAliasPasswordField = null;
@@ -8235,6 +8271,8 @@ public class ADev
 		// We need to call Utils.processPath() to
 		// remove any surrounding double quotes..
 		
+		RefreshProperties();
+/*		
 		try
 		{
 			Properties prop = new Properties();	
@@ -8243,12 +8281,17 @@ public class ADev
 			sKeyAlias = Utils.processPath(prop.getProperty("key_alias"));
 			sKeystorePassword = Utils.processPath(prop.getProperty("key_store_password"));
 			sKeyAliasPassword = Utils.processPath(prop.getProperty("key_alias_password"));
+			
+			sAppBundleKeystorePath = Utils.processPath(prop.getProperty("app_bundle_keystore_path"));
+			sAppBundleKeyAlias = Utils.processPath(prop.getProperty("app_bundle_key_alias"));
+			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
+			sAppBundleKeyAliasPassword = Utils.processPath(prop.getProperty("app_bundle_key_alias_password"));
 		}
 		catch (IOException ioe)
 		{
 			//System.out.println("Exception: "+ioe.toString());
 		}
-
+/**/
 		//System.out.println("bGradleSelected: "+bGradleSelected);
 		if ( bGradleSelected == false )
 		{
@@ -8281,41 +8324,50 @@ public class ADev
 			}
 		}
 		
-		if ( (sKeystorePassword != null) && (sKeystorePassword.length() > 0) &&
-				(!sKeystorePassword.equals("null")) )
-			;
+		if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+		{
+		    bShowDialog = false;
+		    
+		}
 		else
 		{
-			bShowKeystorePassword = true;
-			bShowDialog = true;
-		}
 		
-		if ( (sKeyAliasPassword != null) && (sKeyAliasPassword.length() > 0) &&
-				(!sKeyAliasPassword.equals("null")) )
-			;
-		else
-		{
-			bShowKeyAliasPassword = true;
-			bShowDialog = true;
-		}
-
-		if ( (sKeystorePath != null) && (sKeystorePath.length() > 0) &&
-				(!sKeystorePath.equals("null")) )
-			;
-		else
-		{
-			bShowKeystorePath = true;
-			bShowDialog = true;
-		}
-
-		if ( (sKeyAlias != null) && (sKeyAlias.length() > 0) &&
-				(!sKeyAlias.equals("null")) )
-			;
-		else
-		{
-			bShowKeyAlias = true;
-			bShowDialog = true;
-		}
+            if ( (sKeystorePassword != null) && (sKeystorePassword.length() > 0) &&
+                    (!sKeystorePassword.equals("null")) )
+                ;
+            else
+            {
+                bShowKeystorePassword = true;
+                bShowDialog = true;
+            }
+            
+            if ( (sKeyAliasPassword != null) && (sKeyAliasPassword.length() > 0) &&
+                    (!sKeyAliasPassword.equals("null")) )
+                ;
+            else
+            {
+                bShowKeyAliasPassword = true;
+                bShowDialog = true;
+            }
+    
+            if ( (sKeystorePath != null) && (sKeystorePath.length() > 0) &&
+                    (!sKeystorePath.equals("null")) )
+                ;
+            else
+            {
+                bShowKeystorePath = true;
+                bShowDialog = true;
+            }
+    
+            if ( (sKeyAlias != null) && (sKeyAlias.length() > 0) &&
+                    (!sKeyAlias.equals("null")) )
+                ;
+            else
+            {
+                bShowKeyAlias = true;
+                bShowDialog = true;
+            }
+        }
 
 		//System.out.println("bShowDialog: "+bShowDialog);			
 		if ( bShowDialog )
@@ -9231,16 +9283,35 @@ public class ADev
 				StringBuffer keysSb = new StringBuffer();
 
 				keysSb.append("storePassword=");
-				keysSb.append(sKeystorePassword);
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    keysSb.append(sAppBundleKeystorePassword);
+				else
+				    keysSb.append(sKeystorePassword);
+				
 				keysSb.append(sEnding);
+				
 				keysSb.append("keyPassword=");
-				keysSb.append(sKeyAliasPassword);
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    keysSb.append(sAppBundleKeyAliasPassword);
+				else
+				    keysSb.append(sKeyAliasPassword);
+				
 				keysSb.append(sEnding);
+				
 				keysSb.append("keyAlias=");
-				keysSb.append(sKeyAlias);
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    keysSb.append(sAppBundleKeyAlias);
+				else
+				    keysSb.append(sKeyAlias);
+				
 				keysSb.append(sEnding);
+				
 				keysSb.append("storeFile=");
-				keysSb.append(sKeystorePath);
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    keysSb.append(sAppBundleKeystorePath);
+				else
+				    keysSb.append(sKeystorePath);
+				
 				keysSb.append(sEnding);
 
 				//System.out.println("keyFileSb: '"+keyFileSb.toString()+"'");
@@ -11519,7 +11590,264 @@ public class ADev
 		updateFrame.setResizable(false);
 		
 	}	//}}}
-	
+
+	//{{{   keytoolDialog()
+    public void keytoolDialog()
+    {
+
+        // C:\>keytool -genkey -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000
+        //  -alias xxx-alias -dname "CN=Joseph Siebenmann, OU=Mobile, O=MyCompany,
+        //  L=Culpeper, ST=Virginia, C=US" -keypass xxxxxxxxxx -storepass xxxxxxxxxx
+
+		RefreshProperties();
+		
+		keytoolFrame = new JFrame();
+		keytoolFrame.setLayout(new BorderLayout());		
+		keytoolFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		keytoolFrame.setTitle("Key Store");
+		
+		int iGridY;
+		
+		JPanel panel = new JPanel(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.insets = new Insets(4, 4, 4, 4);	// External padding of the component
+
+		iGridY = 0;
+/*
+        JLabel organizationLbl = new JLabel("Key store Name: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(organizationLbl, gbc);
+
+        keyStoreNameField = new JTextField("release-keystore", 30);	
+        keyStoreNameField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(keyStoreNameField, gbc);
+        
+        iGridY++;
+        
+        JLabel organizationLbl = new JLabel("Alias: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(organizationLbl, gbc);
+
+        aliasField = new JTextField("com.example", 30);	
+        aliasField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(aliasField, gbc);
+        
+        iGridY++;
+/**/        
+        JLabel firstLastNameLbl = new JLabel("First and Last Name: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(firstLastNameLbl, gbc);
+
+        firstLastNameField = new JTextField("John Smith", 30);	
+        firstLastNameField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(firstLastNameField, gbc);
+        
+        iGridY++;
+
+        JLabel organizationUnitLbl = new JLabel("Organizational Unit: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(organizationUnitLbl, gbc);
+
+        organizationUnitField = new JTextField("Mobile", 30);	
+        organizationUnitField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(organizationUnitField, gbc);
+        
+        iGridY++;
+
+        JLabel abOrganizationLbl = new JLabel("Organization: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(abOrganizationLbl, gbc);
+
+        abOrganizationField = new JTextField("MyCompany", 30);	
+        abOrganizationField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(abOrganizationField, gbc);
+        
+        iGridY++;
+
+        JLabel cityLocalityLbl = new JLabel("City or Locality: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(cityLocalityLbl, gbc);
+
+        cityLocalityField = new JTextField("MyCity", 30);	
+        cityLocalityField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(cityLocalityField, gbc);
+        
+        iGridY++;
+
+        JLabel stateProvinceLbl = new JLabel("State or Province: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(stateProvinceLbl, gbc);
+
+        stateProvinceField = new JTextField("MyState", 30);	
+        stateProvinceField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(stateProvinceField, gbc);
+        
+        iGridY++;
+
+        JLabel countryCodeLbl = new JLabel("Country Code: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(countryCodeLbl, gbc);
+        
+        String[] countryCodes = {"Afghanistan (AF)", "Aland Islands (AX)", "Albania (AL)", "Algeria (DZ)", "American Samoa (AS)", "Andorra (AD)",
+            "Angola (AO)", "Anguilla (AI)", "Antarctica (AQ)", "Antigua and Barbuda (AG)", "Argentina (AR)", "Armenia (AM)","Aruba (AW)", "Australia (AU)",
+            "Austria (AT)", "Azerbaijan (AZ)", "Bahamas (BS)", "Bahrain (BH)", "Bangladesh (BD)", "Barbados (BB)", "Belarus (BY)", "Belgium (BE)",
+            "Belize (BZ)", "Benin (BJ)", "Bermuda (BM)", "Bhutan (BT)", "Bolivia (BO)", "Bonaire, Sint Eustatius and Saba (BQ)",
+            "Bosnia and Herzegovina (BA)", "Botswana (BW)", "Bouvet Island (BV)", "Brazil (BR)", "British Indian Ocean Territory (IO)",
+            "Brunei Darussalam (BN)", "Bulgaria (BG)", "Burkina Faso (BF)", "Burundi (BI)", "Cabo Verde (CV)", "Cambodia (KH)", "Cameroon (CM)",
+            "Canada (CA)", "Cayman Islands (KY)", "Central African Republic (CF)", "Chad (TD)", "Chile (CL)", "China (CN)",
+            "Christmas Island (CX)", "Cocos Islands (CC)", "Colombia (CO)", "Comoros (KM)", "Congo (CD)", "Congo (CG)",
+            "Cook Islands (CK)", "Costa Rica (CR)", "Cote d'Ivoire (CI)", "Croatia (HR)", "Cuba (CU)", "Curacao (CW)",
+            "Cyprus (CY)", "Czechia (CZ)", "Denmark (DK)", "Djibouti (DJ)", "Dominica (DM)", "Dominican Republic (DO)", "Ecuador (EC)", "Egypt (EG)",
+            "El Salvador (SV)", "Equatorial Guinea (GQ)", "Eritrea (ER)", "Estonia (EE)", "Eswatini (SZ)", "Ethiopia (ET)",
+            "Falkland Islands [Malvinas] (FK)", "Faroe Islands (FO)", "Fiji (FJ)", "Finland (FI)", "France (FR)", "French Guiana (GF)",
+            "French Polynesia (PF)", "French Southern Territories (TF)", "Gabon (GA)", "Gambia (GM)", "Georgia (GE)", "Germany (DE)",
+            "Ghana (GH)", "Gibraltar (GI)", "Greece (GR)", "Greenland (GL)", "Grenada (GD)", "Guadeloupe (GP)", "Guam (GU)", "Guatemala (GT)",
+            "Guernsey (GG)", "Guinea (GN)", "Guinea-Bissau (GW)", "Guyana (GY)", "Haiti (HT)", "Heard Island and McDonald Islands (HM)",
+            "Holy See (VA)", "Honduras (HN)", "Hong Kong (HK)", "Hungary (HU)", "Iceland (IS)", "India (IN)", "Indonesia (ID)",
+            "Iran (IR)", "Iraq (IQ)", "Ireland (IE)", "Isle of Man (IM)", "Israel (IL)", "Italy (IT)", "Jamaica (JM)",
+            "Japan (JP)", "Jersey (JE)", "Jordan (JO)", "Kazakhstan (KZ)", "Kenya (KE)", "Kiribati (KI)", "Korea North (KP)",
+            "Korea South (KR)", "Kuwait (KW)", "Kyrgyzstan (KG)", "Lao People's Democratic Republic (LA)", "Latvia (LV)",
+            "Lebanon (LB)", "Lesotho (LS)", "Liberia (LR)", "Libya (LY)", "Liechtenstein (LI)", "Lithuania (LT)", "Luxembourg (LU)", "Macao (MO)",
+            "Republic of North Macedonia (MK)", "Madagascar (MG)", "Malawi (MW)", "Malaysia (MY)", "Maldives (MV)", "Mali (ML)", "Malta (MT)",
+            "Marshall Islands (MH)", "Martinique (MQ)", "Mauritania (MR)", "Mauritius (MU)", "Mayotte (YT)", "Mexico (MX)",
+            "Micronesia (FM)", "Moldova (MD)", "Monaco (MC)", "Mongolia (MN)", "Montenegro (ME)",
+            "Montserrat (MS)", "Morocco (MA)", "Mozambique (MZ)", "Myanmar (MM)", "Namibia (NA)", "Nauru (NR)", "Nepal (NP)", "Netherlands (NL)",
+            "New Caledonia (NC)", "New Zealand (NZ)", "Nicaragua (NI)", "Niger (NE)", "Nigeria (NG)", "Niue (NU)", "Norfolk Island (NF)",
+            "Northern Mariana Islands (MP)", "Norway (NO)", "Oman (OM)", "Pakistan (PK)", "Palau (PW)", "Palestine (PS)", "Panama (PA)",
+            "Papua New Guinea (PG)", "Paraguay (PY)", "Peru (PE)", "Philippines (PH)", "Pitcairn (PN)", "Poland (PL)", "Portugal (PT)",
+            "Puerto Rico (PR)", "Qatar (QA)", "Republic of North Macedonia (MK)", "Romania (RO)", "Russian Federation (RU)", "Rwanda (RW)",
+            "Reunion (RE)", "Saint Barthelemy (BL)", "Saint Helena (SH)", "Saint Kitts and Nevis (KN)", "Saint Lucia (LC)",
+            "Saint Martin (MF)", "Saint Pierre and Miquelon (PM)", "Saint Vincent and the Grenadines (VC)", "Samoa (WS)", "San Marino (SM)",
+            "Sao Tome and Principe (ST)", "Saudi Arabia (SA)", "Senegal (SN)", "Serbia (RS)", "Seychelles (SC)", "Sierra Leone (SL)", "Singapore (SG)",
+            "Sint Maarten (SX)", "Slovakia (SK)", "Slovenia (SI)", "Solomon Islands (SB)", "Somalia (SO)", "South Africa (ZA)",
+            "South Georgia and the South Sandwich Islands (GS)", "South Sudan (SS)", "Spain (ES)", "Sri Lanka (LK)", "Sudan (SD)", "Suriname (SR)",
+            "Svalbard and Jan Mayen (SJ)", "Sweden (SE)", "Switzerland (CH)", "Syrian Arab Republic (SY)", "Taiwan (TW)",
+            "Tajikistan (TJ)", "Tanzania (TZ)", "Thailand (TH)", "Timor-Leste (TL)", "Togo (TG)", "Tokelau (TK)", "Tonga (TO)",
+            "Trinidad and Tobago (TT)", "Tunisia (TN)", "Turkey (TR)", "Turkmenistan (TM)", "Turks and Caicos Islands (TC)", "Tuvalu (TV)",
+            "Uganda (UG)", "Ukraine (UA)", "United Arab Emirates (AE)", "United Kingdom (GB)",
+            "United States Minor Outlying Islands (UM)", "United States of America (US)", "Uruguay (UY)", "Uzbekistan (UZ)", "Vanuatu (VU)",
+            "Venezuela (VE)", "Viet Nam (VN)", "Virgin Islands (VG)", "Virgin Islands (VI)",
+            "Wallis and Futuna (WF)", "Western Sahara (EH)", "Yemen (YE)", "Zambia (ZM)", "Zimbabwe (ZW)"};           
+ 
+            
+		DefaultListModel defaultListModel = new DefaultListModel();
+		for ( int g = 0; g < countryCodes.length; g++ )
+		{
+			defaultListModel.addElement((String)countryCodes[g]);
+		}
+		
+		countryCodesJList = new JList(defaultListModel);
+		countryCodesJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		countryCodesJList.setSelectedIndex(237);
+		countryCodesJList.setVisibleRowCount(5);
+		
+		JScrollPane jScrollPane = new JScrollPane(countryCodesJList);
+		Rectangle bounds = countryCodesJList.getCellBounds(237, 238);
+		jScrollPane.getViewport().scrollRectToVisible(bounds);
+
+		gbc = new GridBagConstraints();
+		//gbc.insets = new Insets(4, 4, 4, 4);	// bottom, left, right, top		
+		gbc.gridx = 1;
+		gbc.gridy = iGridY;
+		gbc.gridwidth = 3;
+		panel.add(jScrollPane, gbc);
+            
+            
+            
+        
+        iGridY++;
+/*        
+        JLabel organizationLbl = new JLabel("Key store Password: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(organizationLbl, gbc);
+
+        keyStorePasswordField = new JTextField("US", 30);	
+        keyStorePasswordField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(keyStorePasswordField, gbc);
+        
+        iGridY++;
+
+        JLabel organizationLbl = new JLabel("Alias Password: ");
+        gbc.gridx = 0;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 1;
+        panel.add(organizationLbl, gbc);
+
+        aliasPasswordField = new JTextField("US", 30);	
+        aliasPasswordField.addCaretListener(orgCaretListener);
+        gbc.gridx = 1;
+        gbc.gridy = iGridY;
+        gbc.gridwidth = 3;
+        panel.add(aliasPasswordField, gbc);
+        
+        iGridY++;
+/**/
+		panel.setBorder(new LineBorder(Color.GRAY));
+		
+		JButton submitButton = new JButton("Submit");
+		submitButton.setActionCommand("generate_private_key_submit");
+		submitButton.addActionListener(actListener);
+		
+		JButton cancelButton = new JButton("Cancel");
+		cancelButton.setActionCommand("generate_private_key_cancel");
+		cancelButton.addActionListener(actListener);
+		
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.add(submitButton);
+		buttonPanel.add(cancelButton);
+
+		keytoolFrame.getContentPane().add(panel, BorderLayout.CENTER);
+		keytoolFrame.getContentPane().add(buttonPanel, BorderLayout.PAGE_END);
+		
+		keytoolFrame.pack();
+		keytoolFrame.setVisible(true);
+		keytoolFrame.setResizable(false);
+        
+    }   //}}}
+    
 	//{{{	createDialog()
 	/**
      * Construct Dialog for Create 
@@ -12291,21 +12619,23 @@ public class ADev
 		//System.out.println("iSz: "+iSz);
 		tSa = new String[iSz];
 		
-		//if ( (bFlutterSelected) || (bEmpty) )
 		if ( bFlutterSelected )
 			tSa[0] = "";
-		
+
+        String sLast = "";		
 		for ( ; j < targetDescAr.size(); i++, j++ )
 		{
-			//System.out.println("i: "+i+"   j: "+j);
-			//System.out.println("A iZ: "+iZ);
 			if ( i < tSa.length )
+			{
 			    tSa[i] = (String)targetDescAr.get(j);
-			//System.out.println("tSa["+i+"]: '"+tSa[i]+"'");
+			    sLast = tSa[i];    // Get highest..
+			    //System.out.println("tSa["+i+"]: '"+tSa[i]+"'");
+			}
 		}
 		
 		SpinnerListModel targetSdkModel = new SpinnerListModel(tSa);
 		targetSdkSpinner = new JSpinner(targetSdkModel);
+		targetSdkSpinner.setValue((String)sLast);
 		gbc.gridx = 1;
 		gbc.gridy = iGridY;
 		gbc.gridwidth = 3;
@@ -12618,8 +12948,13 @@ public class ADev
 		
 		JMenuItem createMenuItem = new JMenuItem("Create");
 		createMenuItem.addActionListener(actListener);
-		updateMenuItem = new JMenuItem("Update");
-		updateMenuItem.addActionListener(actListener);
+		
+		JMenuItem privateKeyMenuItem = new JMenuItem("Generate Private Key");
+		privateKeyMenuItem.addActionListener(actListener);
+		
+		updateMenuItem = new JMenuItem("Update");    // ??
+		updateMenuItem.addActionListener(actListener);    // ??
+		
 		JMenuItem selectDeviceMenuItem = new JMenuItem("Select Device");
 		selectDeviceMenuItem.addActionListener(actListener);
 		JMenuItem pullMenuItem = new JMenuItem("Pull Files");
@@ -12655,6 +12990,7 @@ public class ADev
 		menu.add(homeMenuItem);
 		menu.add(subMenu);
 		menu.add(createMenuItem);
+		menu.add(privateKeyMenuItem);
 		menu.add(updateMenuItem);
 		menu.add(selectDeviceMenuItem);
 		menu.add(pullMenuItem);
@@ -14196,7 +14532,6 @@ public class ADev
 			// Get Property Values..
 			antPathS = Utils.processPath(prop.getProperty("ant_path"));
 			javaPathS = Utils.processPath(prop.getProperty("java_path"));
-			//sUsingOpenJdk = Utils.processPath(prop.getProperty("using_openjdk"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
 			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
 			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
@@ -14224,6 +14559,16 @@ public class ADev
 			sDebugArg = Utils.processPath(prop.getProperty("gradle_debug_option"));
 			sEnableSoftwareRendering = Utils.processPath(prop.getProperty("enable_software_rendering"));
 			sEnableDebugOutput = Utils.processPath(prop.getProperty("enable_debug_output"));
+			
+			sKeystorePath = Utils.processPath(prop.getProperty("keystore_path"));
+			sKeyAlias = Utils.processPath(prop.getProperty("key_alias"));
+			sKeystorePassword = Utils.processPath(prop.getProperty("key_store_password"));
+			sKeyAliasPassword = Utils.processPath(prop.getProperty("key_alias_password"));
+			
+			sAppBundleKeystorePath = Utils.processPath(prop.getProperty("app_bundle_keystore_path"));
+			sAppBundleKeyAlias = Utils.processPath(prop.getProperty("app_bundle_key_alias"));
+			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
+			sAppBundleKeyAliasPassword = Utils.processPath(prop.getProperty("app_bundle_key_alias_password"));
 
             if ( (javaPathS != null) && (javaPathS.length() > 0) && (! javaPathS.equals("null")) )
             {
@@ -14242,12 +14587,12 @@ public class ADev
                 sUsingOpenJdk = "false";
             }
             
-			if ( sUseGradlew.equals("true") )
+			if ( (sUseGradlew != null) && (sUseGradlew.equals("true")) )
 				sGradleType = "gradlew";
 			else
 				sGradleType = "gradle";
 			
-			if ( sUseAppBundle.equals("true") )
+			if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
 			{
 				ASSEMBLE_DEBUG = "bundleDebug";
 				ASSEMBLE_RELEASE = "bundleRelease";
@@ -14257,7 +14602,6 @@ public class ADev
 				ASSEMBLE_DEBUG = "assembleDebug";
 				ASSEMBLE_RELEASE = "assembleRelease";
 			}
-			
 			
 			int iLoc = javaPathS.lastIndexOf('/');
 			if ( iLoc != -1 )
@@ -19204,9 +19548,10 @@ While_Break:
 							commandSb.append(" ");
 						}
 
-						//commandSb.append(ASSEMBLE_RELEASE);
+						commandSb.append(ASSEMBLE_RELEASE);
 						//commandSb.append("build --debug");
-						commandSb.append("build");
+						
+						//commandSb.append("build");    // Was using
 					}
 				}
 				else
@@ -21124,6 +21469,11 @@ While_Break:
 				// Create Project..
 				createDialog();
 			}
+			else if ( GENERATE_PRIVATE_KEY.equals(actionCommandS) )
+			{
+				//System.out.println("GENERATE_PRIVATE_KEY");
+                keytoolDialog();				
+			}
 			else if ( UPDATE.equals(actionCommandS) )
 			{
 				//System.out.println("UPDATE");
@@ -21168,6 +21518,143 @@ While_Break:
 				}
 				
 				updateDialog();
+			}
+			else if ( GENERATE_PRIVATE_KEY_SUBMIT.equals(actionCommandS) )
+			{
+			    //System.out.println("GENERATE_PRIVATE_KEY_SUBMIT");
+			    StringBuffer sB = new StringBuffer();
+			    int iLoc = 0;
+			    int iLoc2 = 0;
+			    String sCountryCode = "";
+			    
+			    //sB.append("keytool -genkey -keystore ");
+			    sB.append("keytool -genkey -v -keystore ");
+			    sB.append("\"");
+			    sB.append(sAppBundleKeystorePath);
+			    sB.append("\"");
+			    sB.append("  -keyalg RSA -keysize 2048 -validity 10000 -alias ");
+			    sB.append(sAppBundleKeyAlias);
+
+                // Needed for Java 9 and newer..			    
+			    sB.append(" -storetype JKS");
+			    
+			    sB.append(" -dname \"CN=");
+			    String sFirstLastName = firstLastNameField.getText();
+			    sFirstLastName = sFirstLastName.trim();
+			    sB.append(sFirstLastName);
+			    
+			    sB.append(", OU=");
+			    String sOrganizationUnit = organizationUnitField.getText();
+			    sOrganizationUnit = sOrganizationUnit.trim();
+			    sB.append(sOrganizationUnit);
+			    
+			    sB.append(", O=");
+			    String sOrganization = abOrganizationField.getText();
+			    sOrganization = sOrganization.trim();
+			    sB.append(sOrganization);
+			    
+			    sB.append(", L=");
+			    String sCityLocality = cityLocalityField.getText();
+			    sCityLocality = sCityLocality.trim();
+			    sB.append(sCityLocality);
+			    
+			    sB.append(", ST=");
+			    String sStateProvince = stateProvinceField.getText();
+			    sStateProvince = sStateProvince.trim();
+			    sB.append(sStateProvince);
+			    
+			    sB.append(", C=");
+			    //int iSel = countryCodesJList.getSelectedIndex();
+			    //System.out.println("iSel: "+iSel);
+			    String sSelValue = (String)countryCodesJList.getSelectedValue();
+			    iLoc = sSelValue.indexOf("(");
+			    if ( iLoc != -1 )
+			    {
+                    iLoc2 = sSelValue.indexOf(")");
+                    if ( iLoc2 != -1 )
+                    {
+                        sCountryCode = sSelValue.substring(iLoc + 1, iLoc2);
+                    }
+			    }
+			    
+			    sB.append(sCountryCode);
+			    
+			    sB.append("\"");
+			    
+			    sB.append(" -keypass ");
+			    sB.append(sAppBundleKeyAliasPassword);
+			    sB.append(" -storepass ");
+			    sB.append(sAppBundleKeystorePassword);
+			    
+			    commandSb = new StringBuffer();
+			    
+			    if ( iOS == LINUX_MAC )
+			    {
+                    commandSb.append("export PATH=${PATH}:");
+                    commandSb.append("\"");
+                    commandSb.append(javaPathS);
+                    commandSb.append("/bin");
+                    commandSb.append("\"");
+                    
+                    commandSb.append(";export JAVA_HOME=");
+                    commandSb.append("\"");
+                    commandSb.append(javaPathS);
+                    commandSb.append("\"");
+
+                    commandSb.append(";");
+                    commandSb.append(sB.toString());
+			    }
+			    else
+			    {
+                    commandSb.append("SET PATH=");
+                    commandSb.append("\"");
+                    commandSb.append(javaPathS);
+                    commandSb.append("/bin");
+                    commandSb.append("\"");
+                    commandSb.append(";%PATH%");
+                    
+                    commandSb.append("&&SET JAVA_HOME=");
+                    commandSb.append("\"");
+                    commandSb.append(javaPathS);
+                    commandSb.append("\"");
+                    
+                    commandSb.append("&&");
+                    commandSb.append(sB.toString());
+			        commandSb.append("\n");
+			    }
+			    
+			    //System.out.println("commandSb: '"+commandSb.toString()+"'");
+			    commandS = commandSb.toString();
+			    
+                ioBgThread = new IOBgThread();
+                ioBgThread.start();
+			    
+/*			    
+                bCommandFinished = false;
+                internalCommandS = commandSb.toString();
+                commandBgThread = new CommandBgThread();
+                commandBgThread.start();
+    
+                // Wait for Thread to finish..
+                while ( true )
+                {
+                    try
+                    {
+                        Thread.sleep(250);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+    
+                    if ( bCommandFinished )
+                        break;
+                }
+/**/
+
+                // We should output to the console
+                // so you can see any errors..
+                keytoolFrame.dispose();
+			    
 			}
 			else if ( CREATE_SUBMIT.equals(actionCommandS) )
 			{
@@ -21685,11 +22172,6 @@ While_Break:
 					
 					sWorker.execute();
 				}
-				
-				
-				
-				
-				
 				
 				// Reset Project Home to this project..
 				projectHomeS = createProjectHomeS;
@@ -22332,7 +22814,7 @@ While_Break:
 					if ( bInternalFinished )
 						break;
 				}
-
+				
 /*
 				if ( commandResultS == null )
 					System.out.println("commandResultS null");
@@ -22358,6 +22840,9 @@ While_Break:
 				// * daemon started successfully
 				// '
 				
+				// Or
+				// 'adb.exe: no devices/emulators found
+				
 				int iLsArIndex;
 				int iLsCount = 0;
 				int iFLoc;
@@ -22371,6 +22856,12 @@ While_Break:
 				if ( (commandResultS != null) && (commandResultS.length() > 0) )
 				{
 					// Check for errors..
+					if ( commandResultS.contains("no devices") )
+					{
+						// Error..
+						bResultsOk = false;
+					}
+					
 					iFLoc = commandResultS.indexOf(sFilePath);
 					if ( iFLoc != -1 )
 					{
@@ -22606,6 +23097,10 @@ While_Break:
 			else if ( CREATE_CANCEL.equals(actionCommandS) )
 			{
 				createFrame.dispose();
+			}
+			else if ( GENERATE_PRIVATE_KEY_CANCEL.equals(actionCommandS) )
+			{
+				keytoolFrame.dispose();
 			}
 			else if ( UPDATE_CANCEL.equals(actionCommandS) )
 			{
@@ -23673,19 +24168,29 @@ While_Break:
 		public void caretUpdate(CaretEvent e)
 		{
 			//System.out.println("appCaretListener, caretUpdate()");
-			String sT = appNmField.getText();
-			if ( sT.equals("hello_world") )
+/*			
+			if ( appNmField == null )
+			    System.out.println("appNmField null");
+			else
+			    System.out.println("appNmField not null");
+/**/			    
+			    
+			if ( appNmField != null )
 			{
-				if ( bCaretDirty )
-					;	
-				else
-				{
-					// First time through..
-					bCaretDirty = true;
-					//System.out.println("In hello_world");
-					appNmField.setText("");
-				}
-			}
+                String sT = appNmField.getText();
+                if ( sT.equals("hello_world") )
+                {
+                    if ( bCaretDirty )
+                        ;	
+                    else
+                    {
+                        // First time through..
+                        bCaretDirty = true;
+                        //System.out.println("In hello_world");
+                        appNmField.setText("");
+                    }
+                }
+            }
 		}
 	};	//}}}
 
@@ -23844,18 +24349,21 @@ While_Break:
 		public void caretUpdate(CaretEvent e)
 		{
 			//System.out.println("orgCaretListener, caretUpdate()");
-			String sT = organizationField.getText();
-			if ( sT.equals("com.example") )
+			if ( organizationField != null )
 			{
-				if ( bOrgCaretDirty )
-					;	
-				else
-				{
-					// First time through..
-					bOrgCaretDirty = true;
-					organizationField.setText("");
-				}
-			}
+                String sT = organizationField.getText();
+                if ( sT.equals("com.example") )
+                {
+                    if ( bOrgCaretDirty )
+                        ;	
+                    else
+                    {
+                        // First time through..
+                        bOrgCaretDirty = true;
+                        organizationField.setText("");
+                    }
+                }
+            }
 		}
 	};	//}}}
 	
@@ -23876,8 +24384,16 @@ While_Break:
 				System.out.println("appNmField null");
 			else
 				System.out.println("appNmField not null");
-/**/			
+/**/
+
 			String sAppNm = appNmField.getText();
+/*			
+			if ( sAppNm == null )
+			    System.out.println("sAppNm null");
+			else
+			    System.out.println("sAppNm: '"+sAppNm+"'");
+/**/			    
+			
 			if ( (sAppNm != null) && (sAppNm.length() > 0) )
 			{
 				sAppNm = sAppNm.trim();
