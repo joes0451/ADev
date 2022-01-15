@@ -199,9 +199,11 @@ App Bundle:
 		Recommended to use Gradle version 5.5.1 or higher.
 
 		If you are letting Google Play handle your signing:
-		Fill in App Bundle Password realted items in config.properties
+		Fill in App Bundle Password realted items in config.properties,
 		then use "Project->Generate Private Key" to generate a Keystore		
 		for use with App Bundles.
+		If the Password items are not in config.properties you can
+		enter them in the password Dialog that will pop-up.
 		Then Gradle will build the App Bundle and sign it with the
 		Keystore information.
 		
@@ -416,10 +418,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.0.9:
-    Logcat can now use the Process Id to only show log output from that Process.
-    Other improvements.
-    
 ADev-3.1.0:
     Tried to improve the Process Id logcat.
     Improved the Uninstall / Install button combination.
@@ -431,6 +429,9 @@ ADev-3.1.2:
     New Keystore generator for App Bundles.
     Other improvements.
     
+ADev-3.1.3:
+    Improved checking Keystore Password info so it can put up Dialog if needed.
+
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.

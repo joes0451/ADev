@@ -454,6 +454,9 @@ public class ADev
 	static volatile boolean bProjectSelected;
 	static volatile boolean bUninstallPressed;
 	static volatile boolean bCommandFinished;
+	static volatile boolean bCheckPasswordsFinished;
+	static volatile boolean bOkayToDoKeytool;
+	static volatile boolean bDoRefresh;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -4605,6 +4608,7 @@ public class ADev
 				StringBuffer outSb = new StringBuffer(new String(buildBuf));
 				
 				// Set signingConfigs 'storeFile'..
+				//System.out.println("bEnableStoreFile: "+bEnableStoreFile);
 				if ( bEnableStoreFile )
 				{
 					// Enable..
@@ -4692,6 +4696,7 @@ public class ADev
 			}
 			
 			bDebugReleaseFinished = true;
+			//System.out.println("Exiting DebugReleaseBgThread");
 		}
 	}	//}}}
 
@@ -8204,6 +8209,7 @@ public class ADev
 	{
 		public void run()
 		{
+		    //System.out.println("\nReleaseCheckBgThread run()");
 			while ( true )
 			{
 				if ( bReleaseCheckFinished )
@@ -8217,6 +8223,8 @@ public class ADev
 				{
 				}
 			}
+			
+			//System.out.println("Dropped out of ReleaseCheckBgThread run()");
 /*			
 			if ( releaseButton == null )
 				System.out.println("releaseButton null");
@@ -8227,6 +8235,7 @@ public class ADev
 				(Object)releaseButton,	// source
 				1234,					// id
 				"Release");				// command
+
 /*			
 			if ( ae == null )
 				System.out.println("ae null");
@@ -8242,6 +8251,8 @@ public class ADev
 	public void CheckKeystorePasswords()
 	{
 		//System.out.println("\nCheckKeystorePasswords");
+		
+		// Finish signaled in SUBMIT..
 		sKeystorePassword = "";
 		sKeyAliasPassword = "";
 		sKeystorePath = "";
@@ -8292,6 +8303,14 @@ public class ADev
 			//System.out.println("Exception: "+ioe.toString());
 		}
 /**/
+
+/*
+        if ( sAppBundleKeyAliasPassword == null )
+            System.out.println("sAppBundleKeyAliasPassword null");
+        else
+            System.out.println("sAppBundleKeyAliasPassword: '"+sAppBundleKeyAliasPassword+"'");
+/**/        
+        
 		//System.out.println("bGradleSelected: "+bGradleSelected);
 		if ( bGradleSelected == false )
 		{
@@ -8323,15 +8342,58 @@ public class ADev
 				//System.out.println("Exception: "+ioe.toString());
 			}
 		}
-		
+/*
+        if ( sUseAppBundle == null )
+            System.out.println("sUseAppBundle null");
+        else
+            System.out.println("sUseAppBundle: '"+sUseAppBundle+"'");
+/**/        
+        
+        
 		if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
 		{
-		    bShowDialog = false;
+            if ( (sAppBundleKeystorePath != null) && (sAppBundleKeystorePath.length() > 0) &&
+                    (! sAppBundleKeystorePath.equals("null")) )
+                ;
+            else
+            {
+                bShowKeystorePath = true;
+                bShowDialog = true;
+            }
 		    
+            if ( (sAppBundleKeyAlias != null) && (sAppBundleKeyAlias.length() > 0) &&
+                    (! sAppBundleKeyAlias.equals("null")) )
+                ;
+            else
+            {
+                bShowKeyAlias = true;
+                bShowDialog = true;
+            }
+		    
+            if ( (sAppBundleKeystorePassword != null) && (sAppBundleKeystorePassword.length() > 0) &&
+                    (! sAppBundleKeystorePassword.equals("null")) )
+                ;
+            else
+            {
+                bShowKeystorePassword = true;
+                bShowDialog = true;
+            }
+
+            if ( (sAppBundleKeyAliasPassword != null) && (sAppBundleKeyAliasPassword.length() > 0) &&
+                    (! sAppBundleKeyAliasPassword.equals("null")) )
+                ;
+            else
+            {
+                bShowKeyAliasPassword = true;
+                bShowDialog = true;
+            }
 		}
 		else
 		{
-		
+		    // Signal that we don't want to
+		    // show the App Bundle signing..
+            bOkayToDoKeytool = false;
+		    
             if ( (sKeystorePassword != null) && (sKeystorePassword.length() > 0) &&
                     (!sKeystorePassword.equals("null")) )
                 ;
@@ -8500,8 +8562,11 @@ public class ADev
 		}
 		else
 		{
-			// Signal finished..	
-			bReleaseCheckFinished = true;
+			// Signal finished..
+			bOkayToDoKeytool = true;
+			
+			bReleaseCheckFinished = true;    // was off, uncommenting it fixed it doing the rest of the RELEASE..
+			bCheckPasswordsFinished = true;
 		}
 	}	//}}}
 	
@@ -9274,6 +9339,7 @@ public class ADev
 			{
 				keyFileSb.append("/key.properties");
 			}
+			
 			//System.out.println("keyFileSb: '"+keyFileSb.toString()+"'");
 			
 			File checkFile = new File(keyFileSb.toString());
@@ -11594,12 +11660,18 @@ public class ADev
 	//{{{   keytoolDialog()
     public void keytoolDialog()
     {
-
+        System.out.println("\nkeytoolDialog()");
+        
         // C:\>keytool -genkey -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000
         //  -alias xxx-alias -dname "CN=Joseph Siebenmann, OU=Mobile, O=MyCompany,
         //  L=Culpeper, ST=Virginia, C=US" -keypass xxxxxxxxxx -storepass xxxxxxxxxx
 
-		RefreshProperties();
+        if ( bDoRefresh )
+        {
+            // If coming from Password Dialog, it will
+            // clear the fields we just filled in..
+            RefreshProperties();
+        }
 		
 		keytoolFrame = new JFrame();
 		keytoolFrame.setLayout(new BorderLayout());		
@@ -14523,6 +14595,7 @@ public class ADev
 	private void RefreshProperties()
 	{
 		// Read Properties..
+		//System.out.println("\nRefreshProperties()");
 		Properties prop = new Properties();
 		
 		try
@@ -14618,6 +14691,13 @@ public class ADev
 			System.out.println("RefreshProperties() Exception");
 			ioe.printStackTrace();
 		}
+/*		
+		if ( sAppBundleKeystorePath == null )
+		    System.out.println("sAppBundleKeystorePath null");
+		else
+		    System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
+/**/		
+		        
 	}	//}}}
 	
 	//{{{	CheckListRenderer
@@ -19246,6 +19326,7 @@ While_Break:
 			}
 			else if ( PRE_RELEASE.equals(actionCommandS) )
 			{
+			    //System.out.println("PRE_RELEASE");
 				bOkayToDoRelease = false;
 				bReleaseCheckFinished = false;
 				releaseCheckBgThread = new ReleaseCheckBgThread();
@@ -19255,6 +19336,12 @@ While_Break:
 			}
 			else if ( RELEASE.equals(actionCommandS) )
 			{
+			    // Note:
+			    // When the Release Button is hit
+			    // it does PRE_RELEASE, above, first and not here..
+			    
+			    // ReleaseCheckBgThread run() generates Event to finally
+			    // do this RELEASE..
 				//System.out.println("RELEASE");
 				boolean bRegularBuild;
 				if ( bLogcatOn )
@@ -19281,6 +19368,7 @@ While_Break:
 				
 				iBuildType = RELEASE_BUILD;
 
+				//System.out.println("bGradleSelected: "+bGradleSelected);
 				if ( bGradleSelected )
 				{
 					// Select 'release' in buildTypes..
@@ -19576,7 +19664,8 @@ While_Break:
 					commandSb.append("\n");
 
 				//System.out.println("commandSb: '"+commandSb.toString()+"'");
-				
+
+                //System.out.println("(Swingworker)bGradleSelected: "+bGradleSelected);				
 				if ( bGradleSelected )
 				{
 					SwingWorker swingWorker = new SwingWorker()
@@ -21471,8 +21560,26 @@ While_Break:
 			}
 			else if ( GENERATE_PRIVATE_KEY.equals(actionCommandS) )
 			{
-				//System.out.println("GENERATE_PRIVATE_KEY");
-                keytoolDialog();				
+				System.out.println("GENERATE_PRIVATE_KEY");
+				
+				bDoRefresh = true;
+				
+				bOkayToDoKeytool = false;
+                bCheckPasswordsFinished = false;			    
+			    CheckKeystorePasswords();
+			    
+			    System.out.println("Back from CheckKeystorePasswords()");
+			    
+			    if ( sAppBundleKeystorePath == null )
+			        System.out.println("sAppBundleKeystorePath null");
+			    else
+			        System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
+
+			    System.out.println("bOkayToDoKeytool: "+bOkayToDoKeytool);
+                if ( bOkayToDoKeytool )
+                {
+                    keytoolDialog();	
+                }
 			}
 			else if ( UPDATE.equals(actionCommandS) )
 			{
@@ -21521,11 +21628,36 @@ While_Break:
 			}
 			else if ( GENERATE_PRIVATE_KEY_SUBMIT.equals(actionCommandS) )
 			{
-			    //System.out.println("GENERATE_PRIVATE_KEY_SUBMIT");
+			    System.out.println("GENERATE_PRIVATE_KEY_SUBMIT");
 			    StringBuffer sB = new StringBuffer();
 			    int iLoc = 0;
 			    int iLoc2 = 0;
 			    String sCountryCode = "";
+/*
+                bCheckPasswordsFinished = false;			    
+			    CheckKeystorePasswords();
+			    
+			    // Wait till check is completed..
+			    while ( true )
+			    {
+			        try
+			        {
+			            Thread.sleep(250);
+			        }
+			        catch (InterruptedException ie)
+			        {
+			        }
+			        
+			        if ( bCheckPasswordsFinished )
+			            break;
+			    }
+			    
+			    System.out.println("Back from CheckKeystorePasswords()");
+/**/			    
+			    if ( sAppBundleKeystorePath == null )
+			        System.out.println("sAppBundleKeystorePath null");
+			    else
+			        System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
 			    
 			    //sB.append("keytool -genkey -keystore ");
 			    sB.append("keytool -genkey -v -keystore ");
@@ -22433,31 +22565,73 @@ While_Break:
 			else if ( RELEASE_DIALOG_SUBMIT.equals(actionCommandS) )
 			{
 				//System.out.println("RELEASE_DIALOG_SUBMIT");
+/*				
+				if ( keyAliasField == null )
+				    System.out.println("keyAliasField null");
+				else
+				    System.out.println("keyAliasField not null");
+/**/
+                // Signal not to do a refresh, which would
+                // wipe out what we are filling in..				
+				bDoRefresh = false;
+				        
 				// Note:
 				// We need to call Utils.processPath()
 				// to remove any surrounding double quotes..
 				if ( keyAliasField != null )
 				{
-					sKeyAlias = Utils.processPath(keyAliasField.getText());
-					sKeyAlias = sKeyAlias.trim();
+				    if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    {
+				        sAppBundleKeyAlias = Utils.processPath(keyAliasField.getText());
+				        sAppBundleKeyAlias = sAppBundleKeyAlias.trim();
+				    }
+				    else
+				    {
+                        sKeyAlias = Utils.processPath(keyAliasField.getText());
+                        sKeyAlias = sKeyAlias.trim();
+                    }
 				}
 				
 				if ( keystorePathField != null )
 				{
-					sKeystorePath = Utils.processPath(keystorePathField.getText());
-					sKeystorePath = sKeystorePath.trim();
+				    if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    {
+				        sAppBundleKeystorePath = Utils.processPath(keystorePathField.getText());
+				        sAppBundleKeystorePath = sAppBundleKeystorePath.trim();
+				    }
+				    else
+				    {
+                        sKeystorePath = Utils.processPath(keystorePathField.getText());
+                        sKeystorePath = sKeystorePath.trim();
+                    }
 				}
 
 				if ( keyAliasPasswordField != null )
 				{
-					sKeyAliasPassword = Utils.processPath(keyAliasPasswordField.getText());
-					sKeyAliasPassword = sKeyAliasPassword.trim();
+				    if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    {
+				        sAppBundleKeyAliasPassword = Utils.processPath(keyAliasPasswordField.getText());
+				        sAppBundleKeyAliasPassword = sAppBundleKeyAliasPassword.trim();
+				    }
+				    else
+				    {
+                        sKeyAliasPassword = Utils.processPath(keyAliasPasswordField.getText());
+                        sKeyAliasPassword = sKeyAliasPassword.trim();
+                    }
 				}
 
 				if ( keystorePasswordField != null )
 				{
-					sKeystorePassword = Utils.processPath(keystorePasswordField.getText());
-					sKeystorePassword = sKeystorePassword.trim();
+				    if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    {
+				        sAppBundleKeystorePassword = Utils.processPath(keystorePasswordField.getText());
+				        sAppBundleKeystorePassword = sAppBundleKeystorePassword.trim();
+				    }
+				    else
+				    {
+                        sKeystorePassword = Utils.processPath(keystorePasswordField.getText());
+                        sKeystorePassword = sKeystorePassword.trim();
+                    }
 				}
 				
 				//System.out.println("sKeystorePath: '"+sKeystorePath+"'");
@@ -22467,8 +22641,21 @@ While_Break:
 				
 				// Signal finished..
 				bReleaseCheckFinished = true;
+				bCheckPasswordsFinished = true;
 				bOkayToDoRelease = true;
 				releaseFrame.dispose();
+				
+/*			    
+			    if ( sAppBundleKeystorePath == null )
+			        System.out.println("sAppBundleKeystorePath null");
+			    else
+			        System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
+/**/
+                if ( bOkayToDoKeytool )
+                {
+                    keytoolDialog();
+                }
+				
 			}
 			else if ( RELEASE_DIALOG_CANCEL.equals(actionCommandS) )
 			{
