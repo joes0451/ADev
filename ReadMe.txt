@@ -200,7 +200,7 @@ App Bundle:
 
 		If you are letting Google Play handle your signing:
 		Fill in App Bundle Password realted items in config.properties,
-		then use "Project->Generate Private Key" to generate a Keystore		
+		then use "Project->Generate Key Store" to generate a Keystore		
 		for use with App Bundles.
 		If the Password items are not in config.properties you can
 		enter them in the password Dialog that will pop-up.
@@ -418,12 +418,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.0:
-    Tried to improve the Process Id logcat.
-    Improved the Uninstall / Install button combination.
-    Improved "Select Device" for single device.
-    Some other minor improvements.
-    
 ADev-3.1.2:
     Fixed App Bundle support.
     New Keystore generator for App Bundles.
@@ -431,6 +425,11 @@ ADev-3.1.2:
     
 ADev-3.1.3:
     Improved checking Keystore Password info so it can put up Dialog if needed.
+
+ADev-3.1.4:
+    Improved updating the UI when projects are changed.
+    Improved Select Device.
+    Tried to improve PID logcat output.
 
 
 I use it for all of my own development, and try to fix what issues I see,

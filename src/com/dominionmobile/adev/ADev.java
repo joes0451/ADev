@@ -322,7 +322,7 @@ public class ADev
 	private static JCheckBoxMenuItem uKotlinMenuItem;
 	private static JCheckBoxMenuItem uNDKMenuItem;
 	private static JCheckBoxMenuItem uFlutterMenuItem;
-	private JMenuItem updateMenuItem;
+	private static JMenuItem updateMenuItem;
 	
 	private static JTextField aliasPasswordField;
 	private static JTextField keyStorePasswordField;
@@ -826,7 +826,7 @@ public class ADev
 	static final String CANCEL = "Cancel";
 	static final String LOGCAT = "Logcat";
 	static final String CREATE = "Create";
-	static final String GENERATE_PRIVATE_KEY = "Generate Private Key";
+	static final String GENERATE_KEY_STORE = "Generate Key Store";
 	static final String UPDATE = "Update";
 	static final String LAUNCH = "Launch Emulator";
 
@@ -834,8 +834,8 @@ public class ADev
 	static final String CREATE_CANCEL = "create_cancel";
 	static final String UPDATE_SUBMIT = "update_submit";
 	static final String UPDATE_CANCEL = "update_cancel";
-	static final String GENERATE_PRIVATE_KEY_SUBMIT = "generate_private_key_submit";
-	static final String GENERATE_PRIVATE_KEY_CANCEL = "generate_private_key_cancel";
+	static final String GENERATE_KEY_STORE_SUBMIT = "generate_key_store_submit";
+	static final String GENERATE_KEY_STORE_CANCEL = "generate_key_store_cancel";
 	static final String PROJECT_PATH_CHOOSER = "project_path_chooser";
 	static final String BREAKPOINT_SUBMIT = "breakpoint_submit";
 	static final String BREAKPOINT_CANCEL = "breakpoint_cancel";
@@ -1802,7 +1802,7 @@ public class ADev
 	{
 		public void run()
 		{
-			//System.out.println("\nGetSDKDataBgThread");
+			System.out.println("\nGetSDKDataBgThread");
 			
 			targetDescAr = new ArrayList();
 			String[] dirObjSa = null;
@@ -3649,9 +3649,9 @@ public class ADev
 /**/
 
 
-/*
                     if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
-                        ;
+                        //;
+                        Thread.sleep(5);
                     else
                     {
 /**/  
@@ -3672,7 +3672,7 @@ public class ADev
                                 Thread.sleep(20);
                         }
 /**/                        
-                    //}
+                    }
 /**/
 
 					if ( (lineSb != null) && (iBytesRead > 0) )
@@ -11462,6 +11462,7 @@ public class ADev
 	public void updateDialog()
 	{
 		//System.out.println("updateDialog()");
+		// Android update for Ant builds..
 		iProjectDialog = UPDATE_DIALOG;
 		
 		updateFrame = new JFrame();
@@ -12787,6 +12788,13 @@ public class ADev
 	public void createGui()
 	{
 		//System.out.println("createGui()");
+		
+        //System.out.println("bFlutterSelected: "+bFlutterSelected);
+        //System.out.println("bKotlinSelected: "+bKotlinSelected);
+        //System.out.println("bNDKSelected: "+bNDKSelected);
+        //System.out.println("bGradleSelected: "+bGradleSelected);
+
+		
 		Icon clean24Icon = new ImageIcon("images/clean24.png");
 		Icon stepinto24Icon = new ImageIcon("images/stepinto24.png");
 		Icon stepout24Icon = new ImageIcon("images/stepout24.png");
@@ -13021,11 +13029,11 @@ public class ADev
 		JMenuItem createMenuItem = new JMenuItem("Create");
 		createMenuItem.addActionListener(actListener);
 		
-		JMenuItem privateKeyMenuItem = new JMenuItem("Generate Private Key");
+		JMenuItem privateKeyMenuItem = new JMenuItem("Generate Key Store");
 		privateKeyMenuItem.addActionListener(actListener);
-		
-		updateMenuItem = new JMenuItem("Update");    // ??
-		updateMenuItem.addActionListener(actListener);    // ??
+
+		updateMenuItem = new JMenuItem("Update");    // Android update for Ant buiilds..
+		updateMenuItem.addActionListener(actListener);
 		
 		JMenuItem selectDeviceMenuItem = new JMenuItem("Select Device");
 		selectDeviceMenuItem.addActionListener(actListener);
@@ -13078,6 +13086,17 @@ public class ADev
 		menu.add(uNDKMenuItem);
 		menuBar.add(menu);
 
+		//System.out.println("**1bGradleSelected: "+bGradleSelected);
+        if ( (bGradleSelected) || (bNDKSelected) )
+        {
+            // Hide if not Ant build..
+            updateMenuItem.setVisible(false);
+        }
+        else
+        {
+            updateMenuItem.setVisible(true);
+        }
+		
 		/**
 		 *		Debug Menu
 		 */
@@ -13794,8 +13813,38 @@ public class ADev
 						// put up Select Dialog..
 						iSelectMode = SELECT_CONNECT;
 						bSelectFinished = false;
-						selectDeviceDialog();
+						//selectDeviceDialog();
 						
+                        if ( (DevicesAr	!= null) && (DevicesAr.size() > 0) )
+                        {
+                            if ( DevicesAr.size() > 1 )
+                            {
+                                // Open Dialog..
+                                selectDeviceDialog();
+                                
+                                // Wait for selection..
+                                while ( true )
+                                {
+                                    try
+                                    {
+                                        Thread.sleep(200);
+                                    }
+                                    catch (InterruptedException ie)
+                                    {
+                                    }
+                    
+                                    if ( bSelectFinished )
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                // Single device, show it..
+                                deviceLabel.setText((String)DevicesAr.get(0));
+                            }
+                        }
+						
+/*						
 						// Wait for selection..
 						while ( true )
 						{
@@ -13810,6 +13859,7 @@ public class ADev
 							if ( bSelectFinished )
 								break;
 						}
+/**/						
 					}
 /*					
 					if ( sDeviceName == null )
@@ -17500,6 +17550,11 @@ While_Break:
                         }
                     }
                 }	// End for..
+                
+                //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                //System.out.println("bKotlinSelected: "+bKotlinSelected);
+                //System.out.println("bNDKSelected: "+bNDKSelected);
+                //System.out.println("bGradleSelected: "+bGradleSelected);
     
                 // Get Package name..
                 //getPackageName();
@@ -18525,6 +18580,48 @@ While_Break:
 											
                                             // Get Package name..
                                             getPackageName();
+                                            
+                                            //System.out.println("**2bGradleSelected: "+bGradleSelected);
+                                            if ( (bGradleSelected) || (bNDKSelected) )
+                                            {
+                                                // Hide if not Ant build..
+                                                updateMenuItem.setVisible(false);
+                                            }
+                                            else
+                                            {
+                                                updateMenuItem.setVisible(true);
+                                            }
+                                            
+                                            // Update UI..
+                                            //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                                            if ( bFlutterSelected )
+                                            {
+                                                // Turn on Flutter UI..
+                                                if ( runButton != null )
+                                                    runButton.setVisible(true);
+                                                
+                                                if ( attachButton != null )
+                                                    attachButton.setVisible(true);
+                                                
+                                                if ( reloadButton != null )
+                                                    reloadButton.setVisible(true);
+                                            }
+                                            else
+                                            {
+                                                // Flutter UI should not be showing..
+                                                if ( (runButton != null) && (runButton.isVisible()) )
+                                                {
+                                                    // Turn off Flutter UI..
+                                                    runButton.setVisible(false);
+                                                    
+                                                    if ( attachButton != null )
+                                                        attachButton.setVisible(false);
+                                                    
+                                                    if ( reloadButton != null )
+                                                        reloadButton.setVisible(false);
+                                                }
+                                            }
+                                            
 											
 											break;
 										}
@@ -21242,7 +21339,7 @@ While_Break:
 			else if ( HOME.equals(actionCommandS) )
 			{
 				// Project Home..
-				//System.out.println("HOME");
+				System.out.println("HOME");
 				boolean bHaveDir = false;
 				String inS;
 				String sType = "";
@@ -21251,6 +21348,12 @@ While_Break:
 				
 				File chosenFile;
 				JFileChooser fChooser;
+				
+                System.out.println("bFlutterSelected: "+bFlutterSelected);
+                System.out.println("bKotlinSelected: "+bKotlinSelected);
+                System.out.println("bNDKSelected: "+bNDKSelected);
+                System.out.println("bGradleSelected: "+bGradleSelected);
+				
 				
 				if ( (sProjectPathLead != null) && (! sProjectPathLead.equals("")) )
 					fChooser = new JFileChooser(sProjectPathLead);
@@ -21493,6 +21596,47 @@ While_Break:
                 // Get Package name..
                 getPackageName();
                 
+                // Update UI..
+                //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                if ( bFlutterSelected )
+                {
+                    // Turn on Flutter UI..
+                    if ( runButton != null )
+                        runButton.setVisible(true);
+                    
+                    if ( attachButton != null )
+                        attachButton.setVisible(true);
+                    
+                    if ( reloadButton != null )
+                        reloadButton.setVisible(true);
+                }
+                else
+                {
+                    // Flutter UI should not be showing..
+                    if ( (runButton != null) && (runButton.isVisible()) )
+                    {
+                        // Turn off Flutter UI..
+                        runButton.setVisible(false);
+                        
+                        if ( attachButton != null )
+                            attachButton.setVisible(false);
+                        
+                        if ( reloadButton != null )
+                            reloadButton.setVisible(false);
+                    }
+                }
+                
+                //System.out.println("**3bGradleSelected: "+bGradleSelected);
+                if ( (bGradleSelected) || (bNDKSelected) )
+                {
+                    // Hide if not Ant build..
+                    updateMenuItem.setVisible(false);
+                }
+                else
+                {
+                    updateMenuItem.setVisible(true);
+                }
+                
                 //System.out.println("Exiting HOME");
 				
 			}
@@ -21558,9 +21702,9 @@ While_Break:
 				// Create Project..
 				createDialog();
 			}
-			else if ( GENERATE_PRIVATE_KEY.equals(actionCommandS) )
+			else if ( GENERATE_KEY_STORE.equals(actionCommandS) )
 			{
-				System.out.println("GENERATE_PRIVATE_KEY");
+				System.out.println("GENERATE_KEY_STORE");
 				
 				bDoRefresh = true;
 				
@@ -21626,9 +21770,9 @@ While_Break:
 				
 				updateDialog();
 			}
-			else if ( GENERATE_PRIVATE_KEY_SUBMIT.equals(actionCommandS) )
+			else if ( GENERATE_KEY_STORE_SUBMIT.equals(actionCommandS) )
 			{
-			    System.out.println("GENERATE_PRIVATE_KEY_SUBMIT");
+			    System.out.println("GENERATE_KEY_STORE_SUBMIT");
 			    StringBuffer sB = new StringBuffer();
 			    int iLoc = 0;
 			    int iLoc2 = 0;
@@ -23285,7 +23429,7 @@ While_Break:
 			{
 				createFrame.dispose();
 			}
-			else if ( GENERATE_PRIVATE_KEY_CANCEL.equals(actionCommandS) )
+			else if ( GENERATE_KEY_STORE_CANCEL.equals(actionCommandS) )
 			{
 				keytoolFrame.dispose();
 			}
@@ -24062,9 +24206,24 @@ While_Break:
 					System.out.println("(Before selectDeviceDialog())DevicesAr null");
 				else
 					System.out.println("(Before selectDeviceDialog())DevicesAr.size(): "+DevicesAr.size());
-/**/				
-				if ( (DevicesAr != null) && (DevicesAr.size() > 0) )
-					selectDeviceDialog();
+/**/
+
+				//if ( (DevicesAr != null) && (DevicesAr.size() > 0) )
+					//selectDeviceDialog();
+
+                if ( (DevicesAr	!= null) && (DevicesAr.size() > 0) )
+                {
+                    if ( DevicesAr.size() > 1 )
+                    {
+                        // Open Dialog..
+                        selectDeviceDialog();
+                    }
+                    else
+                    {
+                        // Single device, show it..
+                        deviceLabel.setText((String)DevicesAr.get(0));
+                    }
+                }
 				
 			}
 			else if ( SEND_LOCATION.equals(actionCommandS) )

@@ -9,10 +9,12 @@
 * Flutter debugger.
 * Runs on Windows, Linux and Mac.
 * Supports Gradle: clean, assembleDebug and assembleRelease (uninstall and install handled by adb)
-* Flutter has "Run" and "Hot Reload" buttons.
+* Keystore generator for App Bundles.
+* Flutter has "Run", "Attach" and "Hot Reload" buttons.
 * Use adb wireless debugging over Wi-Fi, no root required.
 * Fast development cycle to build load and debug your application on the Emulator or your Android device.
 * Logcat: Color highlighting for warning and error messages with filter options to block unwanted tags.
+* Option to show log output by Process Id.
 
 # Screenshots:
 
