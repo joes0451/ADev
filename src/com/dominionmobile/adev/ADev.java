@@ -101,6 +101,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -361,7 +362,8 @@ public class ADev
 	private JLabel statusPath;
 	CardLayout cardLayout;
 	JPanel cardPanel;
-	JMenu subMenu;
+	private static JMenu subMenu;
+	private static JMenu commandSubMenu;
 	
 	static DefaultMutableTreeNode currentNode;
 
@@ -618,6 +620,8 @@ public class ADev
 	static volatile String sUsePidLogcat;
 	static volatile String sPid;
 	static volatile String sInternalCommand;
+	static volatile String sAdditionalCommands;
+	static volatile String sPropertiesPackageName;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -715,6 +719,7 @@ public class ADev
 	static ArrayList VariableInfoAr;
 	static ArrayList LibraryAr;
 	static ArrayList ScriptIdAr;
+	static ArrayList<String> CommandAr = null;
 	//static ArrayList SourceClassInfoAr;
 	
 	//static Hashtable EventInfoHt;
@@ -829,6 +834,7 @@ public class ADev
 	static final String GENERATE_KEY_STORE = "Generate Key Store";
 	static final String UPDATE = "Update";
 	static final String LAUNCH = "Launch Emulator";
+	static final String REFRESH = "Refresh";
 
 	static final String CREATE_SUBMIT = "create_submit";
 	static final String CREATE_CANCEL = "create_cancel";
@@ -1232,8 +1238,8 @@ public class ADev
 				deviceLabel.setText((String)DevicesAr.get(0));
 			}
 		}
-		
-		
+
+
 		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 		{
 			StringBuffer sB = new StringBuffer(projectHomeS);
@@ -1243,10 +1249,11 @@ public class ADev
 				bUsingAppProject = true;
 			else
 				bUsingAppProject = false;
-			
 		}
 		
 		getPackageName();
+		
+		RefreshProperties();
 		
 /*		
         if ( bFlutterSelected )	
@@ -1266,6 +1273,183 @@ public class ADev
         }
 /**/
 
+	}	//}}}
+
+	//{{{	RefreshProperties()
+	private void RefreshProperties()
+	{
+		// Read Properties..
+		//System.out.println("\nRefreshProperties()");
+		String[] sGCmdAr = {"assemble", "build", "buildDependents", "buildNeeded", "classes", "clean",
+		    "jar", "testClasses"};
+		
+		Properties prop = new Properties();
+		
+		try
+		{
+			prop.load(new FileInputStream("config.properties"));
+			
+			// Get Property Values..
+			antPathS = Utils.processPath(prop.getProperty("ant_path"));
+			javaPathS = Utils.processPath(prop.getProperty("java_path"));
+			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
+			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
+			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
+			sAndroidLanguage = Utils.processPath(prop.getProperty("android_language"));
+			sIosLanguage = Utils.processPath(prop.getProperty("ios_language"));
+			sBuildTarget = Utils.processPath(prop.getProperty("build_target"));
+			sAndroidTargetPlatform = Utils.processPath(prop.getProperty("target_platform"));
+			sRunBuildType = Utils.processPath(prop.getProperty("run_build_type"));
+			sBuildApkOption = Utils.processPath(prop.getProperty("build_apk_option"));
+			gradlePathS = Utils.processPath(prop.getProperty("gradle_path"));
+			ndkPathS = Utils.processPath(prop.getProperty("ndk_path"));
+			logcatFilterS = Utils.processPath(prop.getProperty("logcat_filter"));
+			sUsePidLogcat = Utils.processPath(prop.getProperty("use_pid_logcat"));
+			downloadPathS = Utils.processPath(prop.getProperty("download_path"));
+			sdCardPathS = Utils.processPath(prop.getProperty("sdcard_path"));
+			sDeviceIPAddress = Utils.processPath(prop.getProperty("device_ip_address"));
+			gradleOfflineS = Utils.processPath(prop.getProperty("gradle_offline"));
+			sDontModifyBuildGradle = Utils.processPath(prop.getProperty("dont_modify_build_gradle"));
+			sAdditionalCommands = Utils.processPath(prop.getProperty("additional_commands"));
+			sPropertiesPackageName = Utils.processPath(prop.getProperty("package_name"));
+			
+			sGradleSuppressWarnings = Utils.processPath(prop.getProperty("gradle_suppress_warnings"));
+			sGPSLatitude = Utils.processPath(prop.getProperty("gps_latitude"));
+			sUseGradlew = Utils.processPath(prop.getProperty("use_gradlew"));
+			sUseAppBundle = Utils.processPath(prop.getProperty("use_app_bundle"));
+			sGradleCommandOption = Utils.processPath(prop.getProperty("gradle_command_option"));
+			sDebugArg = Utils.processPath(prop.getProperty("gradle_debug_option"));
+			sEnableSoftwareRendering = Utils.processPath(prop.getProperty("enable_software_rendering"));
+			sEnableDebugOutput = Utils.processPath(prop.getProperty("enable_debug_output"));
+			
+			sKeystorePath = Utils.processPath(prop.getProperty("keystore_path"));
+			sKeyAlias = Utils.processPath(prop.getProperty("key_alias"));
+			sKeystorePassword = Utils.processPath(prop.getProperty("key_store_password"));
+			sKeyAliasPassword = Utils.processPath(prop.getProperty("key_alias_password"));
+			
+			sAppBundleKeystorePath = Utils.processPath(prop.getProperty("app_bundle_keystore_path"));
+			sAppBundleKeyAlias = Utils.processPath(prop.getProperty("app_bundle_key_alias"));
+			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
+			sAppBundleKeyAliasPassword = Utils.processPath(prop.getProperty("app_bundle_key_alias_password"));
+
+            if ( (javaPathS != null) && (javaPathS.length() > 0) && (! javaPathS.equals("null")) )
+            {
+                //System.out.println("javaPathS: '"+javaPathS+"'");
+                
+                // Try to detect OpenJDK being used..
+                if ( javaPathS.contains("openjdk") )
+                    sUsingOpenJdk = "true";
+                else
+                    sUsingOpenJdk = "false";
+            }
+            else
+            {
+                sUsingOpenJdk = "false";
+            }
+/*
+            if ( sUseGradlew == null )
+                System.out.println("sUseGradlew null");
+            else
+                System.out.println("sUseGradlew: '"+sUseGradlew+"'");
+/**/            
+            
+			if ( (sUseGradlew != null) && (sUseGradlew.equals("true")) )
+			{
+				sGradleType = "gradlew";
+
+                // Construct gradlew commands..
+                CommandAr = new ArrayList<String>();
+                for ( int iJ = 0; iJ < sGCmdAr.length; iJ++ )
+                    CommandAr.add(sGCmdAr[iJ]);
+                   
+                if ( (sAdditionalCommands != null) && (! sAdditionalCommands.equals("null")) 
+                    && (sAdditionalCommands.length() > 0) )
+                {
+                    StringTokenizer st = new StringTokenizer(sAdditionalCommands, ",");
+                    int iCount = st.countTokens();
+                    String sTok;
+                    
+                    for ( int iG = 0; iG < iCount; iG++ )
+                    {
+                        sTok = st.nextToken();
+                        sTok = sTok.trim();
+                        CommandAr.add(sTok);
+                    }
+                }
+                
+/*                
+                if ( commandSubMenu == null )
+                    System.out.println("commandSubMenu null");
+                else
+                    System.out.println("commandSubMenu: '"+commandSubMenu+"'");
+/**/
+
+                if ( commandSubMenu != null )
+                {
+                    if ( (CommandAr != null) && (CommandAr.size() > 0) )
+                    {
+                        commandSubMenu.removeAll();
+                        JMenuItem tSubMenuItem;
+                        for ( int iZ = 0; iZ < CommandAr.size(); iZ++ )
+                        {
+                            tSubMenuItem = new JMenuItem(CommandAr.get(iZ));
+                            tSubMenuItem.addActionListener(actListener);
+                            commandSubMenu.add(tSubMenuItem);
+                        }
+                    }
+                }
+                
+			}
+			else
+				sGradleType = "gradle";
+			
+			if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+			{
+				ASSEMBLE_DEBUG = "bundleDebug";
+				ASSEMBLE_RELEASE = "bundleRelease";
+			}
+			else
+			{
+				ASSEMBLE_DEBUG = "assembleDebug";
+				ASSEMBLE_RELEASE = "assembleRelease";
+			}
+			
+			int iLoc = javaPathS.lastIndexOf('/');
+			if ( iLoc != -1 )
+			{
+				String sT = javaPathS.substring(iLoc);
+				if ( sT.equalsIgnoreCase("/bin") )
+				{
+					javaPathS = javaPathS.substring(0, iLoc);
+				}
+			}
+		}
+		catch (IOException ioe)
+		{
+			System.out.println("RefreshProperties() Exception");
+			ioe.printStackTrace();
+		}
+		
+        if ( (sUseGradlew != null) && (sUseGradlew.equals("true")) )
+        {
+            if ( commandSubMenu != null )
+                commandSubMenu.setVisible(true);
+        }
+        else
+        {
+            // Hide if not using Gradlew..
+            if ( commandSubMenu != null )
+                commandSubMenu.setVisible(false);
+        }
+		
+/*		
+		if ( sAppBundleKeystorePath == null )
+		    System.out.println("sAppBundleKeystorePath null");
+		else
+		    System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
+/**/		
+
+        //System.out.println("Exiting RefreshProperties()");
 	}	//}}}
 
 	//{{{	CreateGradleProjectBgThread
@@ -1776,7 +1960,7 @@ public class ADev
 				// Modify settings.gradle..
 				tSb = new StringBuffer(createProjectHomeS);
 				tSb.append("/settings.gradle");
-				
+
 				buildBuf = readFile(
 					512,				// iInitialSize
 					tSb.toString());	// fileName
@@ -1802,7 +1986,7 @@ public class ADev
 	{
 		public void run()
 		{
-			System.out.println("\nGetSDKDataBgThread");
+			//System.out.println("\nGetSDKDataBgThread");
 			
 			targetDescAr = new ArrayList();
 			String[] dirObjSa = null;
@@ -1887,7 +2071,7 @@ public class ADev
 					tSb.append("/");
 					tSb.append(dirObjSa[iJ]);
 					tSb.append("/source.properties");
-					
+
 					buf = readFile(1024, tSb.toString());
 					if ( (buf != null) && (buf.length > 0) )
 					{
@@ -2322,7 +2506,7 @@ public class ADev
 				if ( file.exists() )
 					break;
 			}
-			
+
 			manifestBuf = readFile(512, fNmSb.toString());
 			if ( (manifestBuf != null) && (manifestBuf.length > 0) )
 			{
@@ -3329,7 +3513,9 @@ public class ADev
 				statusPath.setText(sStatusPath);
 				
 				bSourceExists = true;
-				sourceBuf = Utils.readFile(2048, sFullSourcePath);	// iInitialSize..
+				
+				//sourceBuf = Utils.readFile(2048, sFullSourcePath);	// iInitialSize..
+				sourceBuf = readFile(2048, sFullSourcePath);
 				
 			}
 
@@ -4450,7 +4636,8 @@ public class ADev
 			
 			// Construct path..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
-			
+
+            //System.out.println("bFlutterSelected: "+bFlutterSelected);			
 			if ( bFlutterSelected )
 				fileNameSb.append("/android/app/build.gradle");
 			else
@@ -4598,11 +4785,17 @@ public class ADev
 				else
 					fileNameSb.append("/build.gradle");
 			}
-			
+
 			buildBuf = readFile(
 				512,					// iInitialSize
 				fileNameSb.toString());	// fileName
-			
+/*
+            if ( buildBuf == null )
+                System.out.println("buildBuf null");
+            else
+                System.out.println("buildBuf not null");
+/**/                
+                
 			if ( (buildBuf != null) && (buildBuf.length > 0) )
 			{
 				StringBuffer outSb = new StringBuffer(new String(buildBuf));
@@ -4698,6 +4891,8 @@ public class ADev
 			bDebugReleaseFinished = true;
 			//System.out.println("Exiting DebugReleaseBgThread");
 		}
+		
+		//System.out.println("Exiting DebugReleaseBgThread");
 	}	//}}}
 
 	//{{{	UpdateAppNameBgThread
@@ -4776,7 +4971,6 @@ public class ADev
 				else
 					System.out.println("sAppFilename: '"+sAppFilename+"'");
 /**/
-
 
 				buildBuf = readFile(
 					512,			// iInitialSize
@@ -8680,7 +8874,7 @@ public class ADev
 						break;
 					}
 				}
-	
+
 				buildBuf = readFile(
 					512,					// iInitialSize
 					fileNameSb.toString());	// fileName
@@ -9880,7 +10074,6 @@ public class ADev
 		variableFrame.setVisible(true);
 		
 	}	//}}}
-	
 	
 	//{{{	DebugInit()
 	public void DebugInit()
@@ -11661,7 +11854,7 @@ public class ADev
 	//{{{   keytoolDialog()
     public void keytoolDialog()
     {
-        System.out.println("\nkeytoolDialog()");
+        //System.out.println("\nkeytoolDialog()");
         
         // C:\>keytool -genkey -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000
         //  -alias xxx-alias -dname "CN=Joseph Siebenmann, OU=Mobile, O=MyCompany,
@@ -12784,6 +12977,7 @@ public class ADev
 		
 	}	//}}}
 
+	
 	//{{{	createGui()
 	public void createGui()
 	{
@@ -13025,9 +13219,27 @@ public class ADev
 				}
 			}
 		}
-		
+
 		JMenuItem createMenuItem = new JMenuItem("Create");
 		createMenuItem.addActionListener(actListener);
+		
+		commandSubMenu = new JMenu("Command");
+
+        if ( commandSubMenu != null )
+        {
+            if ( (CommandAr != null) && (CommandAr.size() > 0) )
+            {
+                commandSubMenu.removeAll();
+                JMenuItem tSubMenuItem;
+                for ( int iZ = 0; iZ < CommandAr.size(); iZ++ )
+                {
+                    tSubMenuItem = new JMenuItem(CommandAr.get(iZ));
+                    tSubMenuItem.addActionListener(actListener);
+                    commandSubMenu.add(tSubMenuItem);
+                }
+            }
+        }
+
 		
 		JMenuItem privateKeyMenuItem = new JMenuItem("Generate Key Store");
 		privateKeyMenuItem.addActionListener(actListener);
@@ -13054,6 +13266,9 @@ public class ADev
 		gpsMenuItem.addActionListener(actListener);
 		JMenuItem searchMenuItem = new JMenuItem("Search");
 		searchMenuItem.addActionListener(actListener);
+		JMenuItem refreshMenuItem = new JMenuItem("Refresh");
+		refreshMenuItem.addActionListener(actListener);
+		
 		JMenuItem selectAllMenuItem = new JMenuItem("Select All");
 		selectAllMenuItem.addActionListener(actListener);
 
@@ -13068,8 +13283,9 @@ public class ADev
 		uNDKMenuItem.addItemListener(itemListener);
 
 		menu.add(homeMenuItem);
-		menu.add(subMenu);
+		menu.add(subMenu);        // Recent Projects
 		menu.add(createMenuItem);
+		menu.add(commandSubMenu);
 		menu.add(privateKeyMenuItem);
 		menu.add(updateMenuItem);
 		menu.add(selectDeviceMenuItem);
@@ -13077,6 +13293,7 @@ public class ADev
 		menu.add(wirelessSubMenu);
 		menu.add(gpsMenuItem);
 		menu.add(searchMenuItem);
+		menu.add(refreshMenuItem);
 		menu.add(selectAllMenuItem);
 		menu.addSeparator();
 		menu.add(uSdkMenuItem);
@@ -13085,18 +13302,34 @@ public class ADev
 		menu.add(uKotlinMenuItem);
 		menu.add(uNDKMenuItem);
 		menuBar.add(menu);
-
+		
 		//System.out.println("**1bGradleSelected: "+bGradleSelected);
         if ( (bGradleSelected) || (bNDKSelected) )
         {
             // Hide if not Ant build..
-            updateMenuItem.setVisible(false);
+            if ( updateMenuItem != null )
+                updateMenuItem.setVisible(false);
         }
         else
         {
-            updateMenuItem.setVisible(true);
+            if ( updateMenuItem != null )
+                updateMenuItem.setVisible(true);
         }
-		
+
+        if ( (sUseGradlew != null) && (sUseGradlew.equals("true")) )
+        {
+            if ( commandSubMenu != null )
+                commandSubMenu.setVisible(true);
+        }
+        else
+        {
+            // Hide if not using Gradlew..
+            if ( commandSubMenu != null )
+                commandSubMenu.setVisible(false);
+        }
+            
+            
+            
 		/**
 		 *		Debug Menu
 		 */
@@ -13104,11 +13337,11 @@ public class ADev
 		JMenu debugMenu = new JMenu("Debug");
 		JMenuItem breakpointsMenuItem = new JMenuItem("Breakpoints");
 		breakpointsMenuItem.addActionListener(actListener);
-		JMenuItem refreshMenuItem = new JMenuItem("Refresh Classes");
+		JMenuItem refreshClassesMenuItem = new JMenuItem("Refresh Classes");
 		if ( bFlutterSelected ) 
-			refreshMenuItem.setEnabled(false);
+			refreshClassesMenuItem.setEnabled(false);
 		else
-			refreshMenuItem.addActionListener(actListener);
+			refreshClassesMenuItem.addActionListener(actListener);
 
 		//JMenuItem markMenuItem = new JMenuItem("Mark");
 		//markMenuItem.addActionListener(actListener);
@@ -13119,7 +13352,7 @@ public class ADev
 		disconnectMenuItem.addActionListener(actListener);
 		
 		debugMenu.add(breakpointsMenuItem);
-		debugMenu.add(refreshMenuItem);
+		debugMenu.add(refreshClassesMenuItem);
 		//debugMenu.add(markMenuItem);
 		debugMenu.add(stackMenuItem);
 		debugMenu.add(disconnectMenuItem);
@@ -13355,6 +13588,8 @@ public class ADev
 		
 		cardLayout.show(cardPanel, "BUILD_CARD");	// Default..
 		iCardShowing = BUILD_CARD;
+		
+		//System.out.println("Exiting createGui()");
 	}	//}}}
 
 	//{{{	initDebug()
@@ -14639,115 +14874,6 @@ public class ADev
 		ioBgThread = new IOBgThread();
 		ioBgThread.start();
 		
-	}	//}}}
-	
-	//{{{	RefreshProperties()
-	private void RefreshProperties()
-	{
-		// Read Properties..
-		//System.out.println("\nRefreshProperties()");
-		Properties prop = new Properties();
-		
-		try
-		{
-			prop.load(new FileInputStream("config.properties"));
-			
-			// Get Property Values..
-			antPathS = Utils.processPath(prop.getProperty("ant_path"));
-			javaPathS = Utils.processPath(prop.getProperty("java_path"));
-			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
-			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
-			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
-			sAndroidLanguage = Utils.processPath(prop.getProperty("android_language"));
-			sIosLanguage = Utils.processPath(prop.getProperty("ios_language"));
-			sBuildTarget = Utils.processPath(prop.getProperty("build_target"));
-			sAndroidTargetPlatform = Utils.processPath(prop.getProperty("target_platform"));
-			sRunBuildType = Utils.processPath(prop.getProperty("run_build_type"));
-			sBuildApkOption = Utils.processPath(prop.getProperty("build_apk_option"));
-			gradlePathS = Utils.processPath(prop.getProperty("gradle_path"));
-			ndkPathS = Utils.processPath(prop.getProperty("ndk_path"));
-			logcatFilterS = Utils.processPath(prop.getProperty("logcat_filter"));
-			sUsePidLogcat = Utils.processPath(prop.getProperty("use_pid_logcat"));
-			downloadPathS = Utils.processPath(prop.getProperty("download_path"));
-			sdCardPathS = Utils.processPath(prop.getProperty("sdcard_path"));
-			sDeviceIPAddress = Utils.processPath(prop.getProperty("device_ip_address"));
-			gradleOfflineS = Utils.processPath(prop.getProperty("gradle_offline"));
-			sDontModifyBuildGradle = Utils.processPath(prop.getProperty("dont_modify_build_gradle"));
-			
-			sGradleSuppressWarnings = Utils.processPath(prop.getProperty("gradle_suppress_warnings"));
-			sGPSLatitude = Utils.processPath(prop.getProperty("gps_latitude"));
-			sUseGradlew = Utils.processPath(prop.getProperty("use_gradlew"));
-			sUseAppBundle = Utils.processPath(prop.getProperty("use_app_bundle"));
-			sGradleCommandOption = Utils.processPath(prop.getProperty("gradle_command_option"));
-			sDebugArg = Utils.processPath(prop.getProperty("gradle_debug_option"));
-			sEnableSoftwareRendering = Utils.processPath(prop.getProperty("enable_software_rendering"));
-			sEnableDebugOutput = Utils.processPath(prop.getProperty("enable_debug_output"));
-			
-			sKeystorePath = Utils.processPath(prop.getProperty("keystore_path"));
-			sKeyAlias = Utils.processPath(prop.getProperty("key_alias"));
-			sKeystorePassword = Utils.processPath(prop.getProperty("key_store_password"));
-			sKeyAliasPassword = Utils.processPath(prop.getProperty("key_alias_password"));
-			
-			sAppBundleKeystorePath = Utils.processPath(prop.getProperty("app_bundle_keystore_path"));
-			sAppBundleKeyAlias = Utils.processPath(prop.getProperty("app_bundle_key_alias"));
-			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
-			sAppBundleKeyAliasPassword = Utils.processPath(prop.getProperty("app_bundle_key_alias_password"));
-
-            if ( (javaPathS != null) && (javaPathS.length() > 0) && (! javaPathS.equals("null")) )
-            {
-                //System.out.println("javaPathS: '"+javaPathS+"'");
-                
-                // Try to detect OpenJdk being used..
-                if ( javaPathS.contains("openjdk") )
-                    sUsingOpenJdk = "true";
-                else
-                    sUsingOpenJdk = "false";
-                
-                //System.out.println("sUsingOpenJdk: '"+sUsingOpenJdk+"'");
-            }
-            else
-            {
-                sUsingOpenJdk = "false";
-            }
-            
-			if ( (sUseGradlew != null) && (sUseGradlew.equals("true")) )
-				sGradleType = "gradlew";
-			else
-				sGradleType = "gradle";
-			
-			if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
-			{
-				ASSEMBLE_DEBUG = "bundleDebug";
-				ASSEMBLE_RELEASE = "bundleRelease";
-			}
-			else
-			{
-				ASSEMBLE_DEBUG = "assembleDebug";
-				ASSEMBLE_RELEASE = "assembleRelease";
-			}
-			
-			int iLoc = javaPathS.lastIndexOf('/');
-			if ( iLoc != -1 )
-			{
-				String sT = javaPathS.substring(iLoc);
-				if ( sT.equalsIgnoreCase("/bin") )
-				{
-					javaPathS = javaPathS.substring(0, iLoc);
-				}
-			}
-		}
-		catch (IOException ioe)
-		{
-			System.out.println("RefreshProperties() Exception");
-			ioe.printStackTrace();
-		}
-/*		
-		if ( sAppBundleKeystorePath == null )
-		    System.out.println("sAppBundleKeystorePath null");
-		else
-		    System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
-/**/		
-		        
 	}	//}}}
 	
 	//{{{	CheckListRenderer
@@ -17604,7 +17730,8 @@ While_Break:
 	private byte[] readFile(int iInitialSize, String fileName)
 	{
 		//System.out.println("readFile()");
-/*		
+
+/*
 		if ( fileName == null )
 		    System.out.println("fileName null");
 		else
@@ -17623,6 +17750,7 @@ While_Break:
 		{
 			File file = new File(fileName);
 			if ( file.exists() )
+			//if ( true )
 			{
 				fis = new FileInputStream(file);
 	
@@ -17640,6 +17768,16 @@ While_Break:
 				}
 			}
 		}
+		catch (SecurityException se)
+		{
+			System.out.println("SecurityException: "+se.toString());
+			se.printStackTrace();
+		}
+		catch (FileNotFoundException fnfe)
+		{
+			System.out.println("FileNotFoundException: "+fnfe.toString());
+			fnfe.printStackTrace();
+		}
 		catch (Exception e)
 		{
 			System.out.println("Exception: "+e.toString());
@@ -17656,7 +17794,8 @@ While_Break:
 			{
 			}
 		}
-		
+
+        //System.out.println("Exiting readFile()");		
 		return baos.toByteArray();
 		
 	}	//}}}
@@ -18484,165 +18623,34 @@ While_Break:
 			//System.out.println("actionCommandS: '"+actionCommandS+"'");
 			
 			StringBuffer commandSb = null;
-
-/*			
+			boolean bMatch;
+			boolean bMatchedProject;
+			String sCommand = "";
+/*
 			if ( projectHomeS == null )
 				System.out.println("projectHomeS null");
 			else
 				System.out.println("projectHomeS: '"+projectHomeS+"'");
 /**/
-				
-			
-			// Check Project Home..
-			if ( HOME.equals(actionCommandS) ||
-					UPDATE.equals(actionCommandS) ||
-					UPDATE_SUBMIT.equals(actionCommandS) ||
-					UPDATE_CANCEL.equals(actionCommandS) ||
-					CREATE.equals(actionCommandS) ||
-					CREATE_SUBMIT.equals(actionCommandS) ||
-					CREATE_CANCEL.equals(actionCommandS) ||
-					PROJECT_PATH_CHOOSER.equals(actionCommandS) ||
-					RELEASE_PW.equals(actionCommandS) )
-				;
-			else
-			{
-				if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
-				{
-					int iLoc = projectHomeS.lastIndexOf('/');
-					String sIn = projectHomeS.substring(iLoc + 1);
-					if ( sIn.equals(actionCommandS) )
-						;	// Same project..
-					else
-					{
-						// Select project from submenu..
-						//System.out.println("\nSelect Project");
-						bProjectSelected = true;
-						// 'C:/Android/Dev/GT_Three~GRADLE'...
-						String sOut = readStorage("recent.tmp");
-						if ( (sOut != null) && (sOut.length() > 0) )
-						{
-							//System.out.println("sOut: '"+sOut+"'");
-							StringTokenizer st = new StringTokenizer(sOut, "~");
-							int iCount = st.countTokens();
-							String sTok;
-							String sTitle;
-							for ( int iG = 0; iG < iCount; iG++ )
-							{
-								sTok = st.nextToken();
-								//System.out.println("sTok: '"+sTok+"'");
-								if ( (iG & 1) == 0 )
-								{
-									iLoc = sTok.lastIndexOf('/');
-									if ( iLoc != -1 )
-									{
-										sTitle = sTok.substring(iLoc + 1);
-										//System.out.println("sTitle: '"+sTitle+"'");
-										if ( sTitle.equals(actionCommandS) )
-										{
-											// Get project type..
-											sTitle = sTok;	// Save..
-											sTok = st.nextToken();
-											//System.out.println("(type)sTok: '"+sTok+"'");
-											if ( sTok.equals("ANT") )
-											{
-												uGradleMenuItem.setState(false);
-												//System.out.println("\n(b)Setting to false");
-												uKotlinMenuItem.setState(false);
-												uFlutterMenuItem.setState(false);
-			 								}
-											else if ( sTok.equals("KOTLIN") )
-											{
-												uGradleMenuItem.setState(true);
-												uKotlinMenuItem.setState(true);
-												uFlutterMenuItem.setState(false);
-											}
-											else if ( sTok.equals("GRADLE") )
-											{
-												uGradleMenuItem.setState(true);
-												uKotlinMenuItem.setState(false);
-												uFlutterMenuItem.setState(false);
-											}
-											else if ( sTok.equals("FLUTTER") )
-											{
-												uGradleMenuItem.setState(true);
-												uKotlinMenuItem.setState(false);
-												uFlutterMenuItem.setState(true);
-											}
-											
-											projectHomeS = sTitle;
-											statusLabel.setText(projectHomeS);
-											statusPath.setText(" ");	// Clear status..
-	
-											// Write store.tmp..
-											updateStorage();
-											
-											init();		// Reset..
-											
-                                            // Get Package name..
-                                            getPackageName();
-                                            
-                                            //System.out.println("**2bGradleSelected: "+bGradleSelected);
-                                            if ( (bGradleSelected) || (bNDKSelected) )
-                                            {
-                                                // Hide if not Ant build..
-                                                updateMenuItem.setVisible(false);
-                                            }
-                                            else
-                                            {
-                                                updateMenuItem.setVisible(true);
-                                            }
-                                            
-                                            // Update UI..
-                                            //System.out.println("bFlutterSelected: "+bFlutterSelected);
-                                            if ( bFlutterSelected )
-                                            {
-                                                // Turn on Flutter UI..
-                                                if ( runButton != null )
-                                                    runButton.setVisible(true);
-                                                
-                                                if ( attachButton != null )
-                                                    attachButton.setVisible(true);
-                                                
-                                                if ( reloadButton != null )
-                                                    reloadButton.setVisible(true);
-                                            }
-                                            else
-                                            {
-                                                // Flutter UI should not be showing..
-                                                if ( (runButton != null) && (runButton.isVisible()) )
-                                                {
-                                                    // Turn off Flutter UI..
-                                                    runButton.setVisible(false);
-                                                    
-                                                    if ( attachButton != null )
-                                                        attachButton.setVisible(false);
-                                                    
-                                                    if ( reloadButton != null )
-                                                        reloadButton.setVisible(false);
-                                                }
-                                            }
-                                            
-											
-											break;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				else
-				{
-					// Put up Dialog..
-					JOptionPane.showMessageDialog(
-						frame,
-						"Please set Project Home.",
-						"Project Home",
-						JOptionPane.WARNING_MESSAGE);
-					
-					return;
-				}
-			}
+
+            if ( (projectHomeS != null) && (! projectHomeS.equals("null")) && (projectHomeS.length() > 0) )
+                ;
+            else
+            {
+                if ( HOME.equals(actionCommandS) )
+                    ;   // Let them navigate to project..
+                else
+                {
+                    // Put up Dialog..
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Please set Project Home.",
+                        "Project Home",
+                        JOptionPane.WARNING_MESSAGE);
+                    
+                    return;
+                }
+            }
 
 			if ( CLEAN.equals(actionCommandS) )
 			{
@@ -18717,6 +18725,12 @@ While_Break:
 					}
 					
 					//System.out.println("DeleteKeyPropertiesBgThread dropped out");
+/*					
+					if ( sDontModifyBuildGradle == null )
+					    System.out.println("sDontModifyBuildGradle null");
+					else
+					    System.out.println("sDontModifyBuildGradle: '"+sDontModifyBuildGradle+"'");
+/**/
 
                     if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
                             && (sDontModifyBuildGradle.equals("true"))  )
@@ -21339,7 +21353,7 @@ While_Break:
 			else if ( HOME.equals(actionCommandS) )
 			{
 				// Project Home..
-				System.out.println("HOME");
+				//System.out.println("HOME");
 				boolean bHaveDir = false;
 				String inS;
 				String sType = "";
@@ -21349,10 +21363,10 @@ While_Break:
 				File chosenFile;
 				JFileChooser fChooser;
 				
-                System.out.println("bFlutterSelected: "+bFlutterSelected);
-                System.out.println("bKotlinSelected: "+bKotlinSelected);
-                System.out.println("bNDKSelected: "+bNDKSelected);
-                System.out.println("bGradleSelected: "+bGradleSelected);
+                //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                //System.out.println("bKotlinSelected: "+bKotlinSelected);
+                //System.out.println("bNDKSelected: "+bNDKSelected);
+                //System.out.println("bGradleSelected: "+bGradleSelected);
 				
 				
 				if ( (sProjectPathLead != null) && (! sProjectPathLead.equals("")) )
@@ -21431,7 +21445,7 @@ While_Break:
 						
 						if ( uGradleMenuItem != null )
 						    uGradleMenuItem.setState(true);
-						    
+
 						buffer = readFile(2048, fSb.toString());
 						String tS = new String(buffer);
 						iLoc2 = tS.indexOf("kotlin");
@@ -21529,7 +21543,8 @@ While_Break:
 						int iCount = st.countTokens();
 						String sTok;
 						String sTitle;
-						boolean bMatch = false;
+						//boolean bMatch = false;
+						bMatch = false;
 						for ( int iG = 0; iG < iCount; iG++ )
 						{
 							sTok = st.nextToken();
@@ -23421,6 +23436,10 @@ While_Break:
 					}
 				}
 			}
+			else if ( REFRESH.equals(actionCommandS) )
+			{
+				RefreshProperties();
+			}
 			else if ( CLOSE_DIALOG.equals(actionCommandS) )
 			{
 				informationFrame.dispose();
@@ -24357,6 +24376,293 @@ While_Break:
 				{
 				}
 			}
+			else
+			{
+			    //System.out.println("\nIn end else");
+			    
+				if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+				{
+					int iLoc = projectHomeS.lastIndexOf('/');
+					String sIn = projectHomeS.substring(iLoc + 1);
+					
+					//System.out.println("sIn: '"+sIn+"'");
+					if ( sIn.equals(actionCommandS) )
+					    //System.out.println("Same project");
+						;	// Same project..
+					else
+					{
+						// Select project from submenu..
+						//System.out.println("\nSelect Project");
+						bProjectSelected = true;
+						// 'C:/Android/Dev/GT_Three~GRADLE'...
+						String sOut = readStorage("recent.tmp");
+						if ( (sOut != null) && (sOut.length() > 0) )
+						{
+							//System.out.println("sOut: '"+sOut+"'");
+							StringTokenizer st = new StringTokenizer(sOut, "~");
+							int iCount = st.countTokens();
+							String sTok;
+							String sTitle;
+							bMatch = false;
+							
+							for ( int iG = 0; iG < iCount; iG++ )
+							{
+							    //System.out.println("--TOP-- iG: "+iG);
+								sTok = st.nextToken();
+								//System.out.println("sTok: '"+sTok+"'");
+								if ( (iG & 1) == 0 )
+								{
+									iLoc = sTok.lastIndexOf('/');
+									if ( iLoc != -1 )
+									{
+										sTitle = sTok.substring(iLoc + 1);
+										//System.out.println("sTitle: '"+sTitle+"'");
+										if ( sTitle.equals(actionCommandS) )
+										{
+										    // Change project..
+										    bMatch = true;
+										    bMatchedProject = true;
+
+                                            // This is to try to help with it not getting errors
+                                            // of it not commenting out:  storeFile file(keystoreProperties['storeFile'])
+                                            // in build.gradle..										    
+                                            if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+                                            {
+                                                StringBuffer sB = new StringBuffer(projectHomeS);
+                                                sB.append("/app");
+                                                File tFile = new File(sB.toString());
+                                                if ( tFile.exists() )
+                                                    bUsingAppProject = true;
+                                                else
+                                                    bUsingAppProject = false;
+                                            }
+										    
+											// Get project type..
+											sTitle = sTok;	// Save..
+											sTok = st.nextToken();
+											//System.out.println("(type)sTok: '"+sTok+"'");
+											if ( sTok.equals("ANT") )
+											{
+												uGradleMenuItem.setState(false);
+												//System.out.println("\n(b)Setting to false");
+												uKotlinMenuItem.setState(false);
+												uFlutterMenuItem.setState(false);
+			 								}
+											else if ( sTok.equals("KOTLIN") )
+											{
+												uGradleMenuItem.setState(true);
+												uKotlinMenuItem.setState(true);
+												uFlutterMenuItem.setState(false);
+											}
+											else if ( sTok.equals("GRADLE") )
+											{
+												uGradleMenuItem.setState(true);
+												uKotlinMenuItem.setState(false);
+												uFlutterMenuItem.setState(false);
+											}
+											else if ( sTok.equals("FLUTTER") )
+											{
+												uGradleMenuItem.setState(true);
+												uKotlinMenuItem.setState(false);
+												uFlutterMenuItem.setState(true);
+											}
+											
+											projectHomeS = sTitle;
+											statusLabel.setText(projectHomeS);
+											statusPath.setText(" ");	// Clear status..
+	
+											// Write store.tmp..
+											updateStorage();
+											
+											init();		// Reset..
+											
+                                            // Get Package name..
+                                            getPackageName();
+                                            
+                                            //System.out.println("**2bGradleSelected: "+bGradleSelected);
+                                            if ( (bGradleSelected) || (bNDKSelected) )
+                                            {
+                                                // Hide if not Ant build..
+                                                updateMenuItem.setVisible(false);
+                                            }
+                                            else
+                                            {
+                                                updateMenuItem.setVisible(true);
+                                            }
+                                            
+                                            // Update UI..
+                                            //System.out.println("bFlutterSelected: "+bFlutterSelected);
+                                            if ( bFlutterSelected )
+                                            {
+                                                // Turn on Flutter UI..
+                                                if ( runButton != null )
+                                                    runButton.setVisible(true);
+                                                
+                                                if ( attachButton != null )
+                                                    attachButton.setVisible(true);
+                                                
+                                                if ( reloadButton != null )
+                                                    reloadButton.setVisible(true);
+                                            }
+                                            else
+                                            {
+                                                // Flutter UI should not be showing..
+                                                if ( (runButton != null) && (runButton.isVisible()) )
+                                                {
+                                                    // Turn off Flutter UI..
+                                                    runButton.setVisible(false);
+                                                    
+                                                    if ( attachButton != null )
+                                                        attachButton.setVisible(false);
+                                                    
+                                                    if ( reloadButton != null )
+                                                        reloadButton.setVisible(false);
+                                                }
+                                            }
+											
+											break;
+										}
+									}
+								}
+							}    // End for..
+
+							if ( bMatch == false )
+							{
+							    // Try to match with Gradlew commands..
+							    if ( (CommandAr != null) && (CommandAr.size() > 0) )
+							    {
+							        for ( int iX = 0; iX < CommandAr.size(); iX++ )
+							        {
+							            sCommand = (String)CommandAr.get(iX);
+							            if ( actionCommandS.equals(sCommand) )
+							            {
+							                bMatch = true;
+							                break;
+							            }
+							        }
+							        
+							        if ( bMatch )
+							        {
+							            // Gradlew command..
+                                        commandSb = new StringBuffer();
+                                        
+                                        if ( iOS == LINUX_MAC )
+                                        {
+                                            // Gradle, Kotlin..
+                                            commandSb.append("export ANDROID_HOME=");
+                                            commandSb.append(androidSdkPathS);
+                                            
+                                            commandSb.append(";export PATH=${PATH}:");
+                                            commandSb.append(javaPathS);
+                        
+                                            commandSb.append(";export JAVA_HOME=");
+                                            commandSb.append(javaPathS);
+                                            
+                                            commandSb.append(";cd ");
+                                            commandSb.append(projectHomeS);
+                                            
+                                            commandSb.append(";");
+                                        }
+                                        else
+                                        {
+                                            // Gradle, Kotlin..
+                                            commandSb.append("SET ANDROID_HOME=");
+                                            commandSb.append(androidSdkPathS);
+                                            
+                                            commandSb.append("&&SET JAVA_HOME=");
+                                            commandSb.append(javaPathS);
+                        
+                                            commandSb.append("&&CD ");
+                                            commandSb.append(projectHomeS);
+                                            
+                                            commandSb.append("&&");
+                                        }
+                                        
+                                        commandSb.append("gradlew ");
+                                        commandSb.append(sCommand);
+                                        
+                                        if ( iOS == WINDOWS )
+                                            commandSb.append("\n");
+
+                                        SwingWorker swingWorker = new SwingWorker()
+                                        {
+                                            @Override
+                                            public Void doInBackground()
+                                            {
+                                                //System.out.println("SwingWorker doInBackground()");
+                                                progressJFrame = new JFrame();
+                                                jProgressBar = new JProgressBar();
+                                                jProgressBar.setIndeterminate(true);
+                                                jProgressBar.setPreferredSize(new Dimension(200, 30));
+                                                
+                                                progressJFrame.setUndecorated(true);
+                                                progressJFrame.add(jProgressBar);
+                                                progressJFrame.pack();
+                                                progressJFrame.setVisible(true);
+                                                progressJFrame.setLocationRelativeTo(mainJFrame);
+                                                progressJFrame.setAlwaysOnTop(true);
+                                                
+                                                // Create /android/key.properties..
+                                                bReleaseFinished = false;
+                                                releaseBgThread = new ReleaseBgThread();
+                                                releaseBgThread.start();
+                                                
+                                                // Wait for ReleaseBgThread to end..
+                                                while ( true )
+                                                {
+                                                    try
+                                                    {
+                                                        Thread.sleep(20);
+                                                    }
+                                                    catch (InterruptedException ie)
+                                                    {
+                                                    }
+                                                    
+                                                    if ( bReleaseFinished )
+                                                        break;
+                                                }
+
+                                                //commandS = commandSb.toString();
+                                                
+                                                bFinished = false;
+                                                ioBgThread = new IOBgThread();
+                                                ioBgThread.start();
+                    
+                                                // Wait for Thread to finish..
+                                                while ( true )
+                                                {
+                                                    try
+                                                    {
+                                                        Thread.sleep(150);
+                                                    }
+                                                    catch (InterruptedException ie)
+                                                    {
+                                                    }
+                                                    
+                                                    if ( bFinished )
+                                                        break;
+                                                }
+                                                
+                                                return null;
+                                            }
+                                            
+                                            @Override
+                                            public void done()
+                                            {
+                                                progressJFrame.dispose();
+                                            }
+                                        };
+                                        
+                                        commandS = commandSb.toString();
+                                        swingWorker.execute();
+                                        
+							        }
+							    }
+							}
+						}
+					}
+				}
+			}
 		}
 	};	//}}}
 
@@ -24551,135 +24857,165 @@ While_Break:
 			System.out.println("projectHomeS: '"+projectHomeS+"'");
 /**/				
 				
-		int iLoc;
-		int iLoc2;
-		String sIn = "";
-		StringBuffer tSb;		
-		File fileT3;
+		// Check if we have it..
+		if ( (sPropertiesPackageName != null) && (! sPropertiesPackageName.equals("null")) &&
+		    (sPropertiesPackageName.length() > 0) )
+	    {
+	        packageNameS = sPropertiesPackageName;
+	    }
+	    else
+	    {
+            int iLoc;
+            int iLoc2;
+            String sIn = "";
+            StringBuffer tSb;		
+            File fileT3;
 
-		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
-		{
-		    StringBuffer sb = new StringBuffer(projectHomeS);
-		    
-            while ( true )
+            packageNameS = "";
+            
+            if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
             {
-                // Flutter..
-                try
-                {
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/android/app/src/main/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/android/app/src/main/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
-    
-                try
-                {
-                    // Gradle..	
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/app/src/main/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/app/src/main/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
-    
-                try
-                {
-                    // Gradle..
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/src/main/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/src/main/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
-    
-                // In Home, Ant..
-                try
-                {
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
-    
-                try
-                {
-                    // LibGdx..
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/android/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/android/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
-    
-                try
-                {
-                    // My LibGdx..
-                    tSb = new StringBuffer(projectHomeS);
-                    tSb.append("/app/AndroidManifest.xml");
-                    fileT3 = new File(tSb.toString());
-                    if ( fileT3.exists() )
-                    {
-                        sb.append("/app/AndroidManifest.xml");
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                }
+                StringBuffer sb = new StringBuffer(projectHomeS);
                 
-                break;
-            }
+                while ( true )
+                {
+                    // Flutter..
+                    try
+                    {
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/android/app/src/main/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/android/app/src/main/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
+        
+                    try
+                    {
+                        // Gradle..	
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/app/src/main/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/app/src/main/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
+        
+                    try
+                    {
+                        // Gradle..
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/src/main/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/src/main/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
+        
+                    // In Home, Ant..
+                    try
+                    {
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
+        
+                    try
+                    {
+                        // LibGdx..
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/android/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/android/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
+        
+                    try
+                    {
+                        // My LibGdx..
+                        tSb = new StringBuffer(projectHomeS);
+                        tSb.append("/app/AndroidManifest.xml");
+                        fileT3 = new File(tSb.toString());
+                        if ( fileT3.exists() )
+                        {
+                            sb.append("/app/AndroidManifest.xml");
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                    }
                     
-            //System.out.println("sb: '"+sb.toString()+"'");
+                    break;
+                }
+                        
+               //System.out.println("sb: '"+sb.toString()+"'");
+                    
+                byte[] buf = null;
+    
+                // Note:
+                // If it can't find AndroidManifest.xml
+                // the path in 'sb' will be invalid..
                 
-            byte[] buf = null;
-    
-            buf = readFile(896, sb.toString());
-            if ( (buf != null) && (buf.length > 0) )
-            {
-                sIn = new String(buf);
-    
-                iLoc = sIn.indexOf("package=");
-                if ( iLoc != -1 )
+                // Check that it's a valid file..
+                File file = new File(sb.toString());
+                if ( file.isFile() )
                 {
-                    iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
-                    if ( iLoc2 != -1 )
-                        packageNameS = sIn.substring((iLoc + 9), iLoc2);
+                    buf = readFile(896, sb.toString());
+                    if ( (buf != null) && (buf.length > 0) )
+                    {
+                        sIn = new String(buf);
+            
+                        iLoc = sIn.indexOf("package=");
+                        if ( iLoc != -1 )
+                        {
+                            iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
+                            if ( iLoc2 != -1 )
+                                packageNameS = sIn.substring((iLoc + 9), iLoc2);
+                        }
+                    }
+                }
+                else
+                {
+                    // Put up Dialog..
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Cannot find package name, set in config.properties",
+                        "Package name",
+                        JOptionPane.WARNING_MESSAGE);
                 }
             }
         }
+        
 /*		
 		if ( packageNameS == null )
 			System.out.println("packageNameS null");

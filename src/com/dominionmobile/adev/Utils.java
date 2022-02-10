@@ -230,7 +230,8 @@ class Utils
 		
 		return sRelative;
 	}	//}}}
-	
+
+/*	
 	//{{{	readFile()
 	static byte[] readFile(int iInitialSize, String fileName)
 	{
@@ -291,7 +292,8 @@ class Utils
 		return fileBuf;
 		
 	}	//}}}
-	
+/**/
+
     //{{{	writeAtByteArray()
     protected static void writeAtByteArray(long lVal, byte[] ar, int iTo, int iSize)
     {

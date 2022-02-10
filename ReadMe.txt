@@ -12,6 +12,7 @@ https://developer.android.com/studio/#downloads
 Note:
     It looks like every new SDK version requires the --sdk_root command option
     be on every command line using the sdkmanager.
+    Include it at the end of all commands below.
 	If you used a directory 'android-sdk' you would run 'sdkmanager' like:
 	
 	sdkmanager --list --sdk_root=c:\android-sdk 
@@ -26,21 +27,32 @@ version of the Android SDK tools package.
 
 - CD into your tools/bin directory and run:     sdkmanager --list [--include_obsolete]
 	to show all available packages.
-
-- Choose the latest version of build-tools, like "build-tools;30.0.0-rc3"
-	and run:    sdkmanager "platform-tools" "build-tools;30.0.0-rc3"
 	
-- You should also install at least one target,
-	the minimum is one of the 'platforms;..' like:   sdkmanager "platforms;android-29"
-	but if you want to run that Emulator, select the additional ones you need, like:
+!! To ensure that the SDK has the best chance of being properly set up
+please follow these steps in order:
 	
-system-images;android-26;default;x86
-system-images;android-26;google_apis;x86
-system-images;android-26;google_apis;x86_64
+- Select the highest 'build-tools;..' level that you'd like to use, like 'build-tools;31.0.0'
+    and run:    sdkmanager "build-tools;31.0.0"
 
+** Note **
+    If you get: 'Warning: Dependant package with key emulator not found!'
+    while trying to install a Package, and you don't have the 'tools' directory yet,
+    run:     sdkmanager --list --include_obsolete
+    
+    then run:    sdkmanager "tools"
+    
+- Select the highest 'platforms;..' level that you'd like to use, like 'platforms;android-30', 
+    and run:    sdkmanager "platforms;android-30"
+    
+- Run:  sdkmanager --list
+
+    Check if the 'platform-tools' package was installed, from above,
+    if it's there jump to below to finish accepting the licenses,
+    otherwise run:   sdkmanager "platform-tools" 
+    
 - When finished downloading all the packages you want, run:    sdkmanager --licenses 
 	and agree with all the licenses.
-
+    
 	
 Ant builds:
 
@@ -76,7 +88,7 @@ How to use ADev:
 	status bar.
 	
 	Note:
-	For Gradle based projects, it will modify app/build.gradle
+	For Gradle based projects, it will normally modify app/build.gradle
 	to allow for signing.
 
 - To be able to build a sample Android Ant project, or one that
@@ -134,7 +146,9 @@ Search: Search Dialog for searching through long Logcat or other output
 		
 		You can select part of a line where you want to start the
 		search and use 'Reset Next'.
-
+		
+Refresh:
+        Refreshes the settings in config.properties.
 		
 Select All:
 		Allows you to select all the logcat or other console window text.
@@ -193,6 +207,13 @@ Release builds:
 		and Key Alias passwords to config.properties, or define them in ant.properties using
 		'key.store', 'key.alias', 'key.store.password' and 'key.alias.password',
 		or let it prompt you for them with the Keystore Password Dialog.
+		
+Gradlew:
+        With 'use_gradlew' enabled in config.properties, you'll have a Commands
+        menu with standard gradlew tasks, and you can add tasks in config.properties.
+        Combined with the 'dont_modify_build_gradle' option, you can run gradlew commands
+        in projects without modifying them, useful when trying to build projects you
+        download from GitHub.        
 
 App Bundle:
 		Support for Gradle, Kotlin and Flutter.
@@ -206,6 +227,10 @@ App Bundle:
 		enter them in the password Dialog that will pop-up.
 		Then Gradle will build the App Bundle and sign it with the
 		Keystore information.
+		
+		If you are changing an existing project to use app bundle
+		make sure that you delete any 'key.properties'
+		file in the project directory.
 		
 		You can learn more about app signing here:
 		https://developer.android.com/studio/build/building-cmdline#gradle_signing
@@ -418,11 +443,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.2:
-    Fixed App Bundle support.
-    New Keystore generator for App Bundles.
-    Other improvements.
-    
 ADev-3.1.3:
     Improved checking Keystore Password info so it can put up Dialog if needed.
 
@@ -430,6 +450,12 @@ ADev-3.1.4:
     Improved updating the UI when projects are changed.
     Improved Select Device.
     Tried to improve PID logcat output.
+
+ADev-3.1.6:
+    Better support for gradlew, now has standard gradlew tasks you
+    can run from a new menu "Commands", and you can add tasks in config.properties.
+    New Refresh menu item to refresh config.properties.
+    Other improvements.
 
 
 I use it for all of my own development, and try to fix what issues I see,
