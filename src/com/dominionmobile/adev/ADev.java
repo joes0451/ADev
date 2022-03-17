@@ -20696,19 +20696,6 @@ While_Break:
 /**/				
 				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
 				{
-/*				    
-     // 'SET PATH="C:/OpenJdk/openjdk-1.8.0.265-3.b01";%PATH%&&
-java -jar C:/bundletool-master/bundletool-all-1.8.2.jar build-apks --bundle="C:/
-Android/Dev/G_GameNew/app/build/outputs/bundle/release/app.aab" --output="C:/And
-roid/Dev/G_GameNew/output.apks" --connected-device --overwrite --verbose --ks=C:
-/Android/Dev/keystore/ab_release-key.jks --ks-pass=pass:cH4vJDx8E5 --ks-key-alias=ab_alias --key-pass=pass:cH4vJDx8E5
-     [java] '
-     
-     // 'SET PATH="C:/OpenJdk/openjdk-1.8.0.265-3.b01";%PATH%&&
-java -jar C:/bundletool-master/bundletool-all-1.8.2.jar install-apks --apks="C:/
-Android/Dev/G_GameNew/output.apks"
-     [java] '				    
-/**/				    
 				    
                     // App Bundle install..				    
                     if ( iOS == LINUX_MAC )
