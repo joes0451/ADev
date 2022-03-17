@@ -459,6 +459,8 @@ public class ADev
 	static volatile boolean bCheckPasswordsFinished;
 	static volatile boolean bOkayToDoKeytool;
 	static volatile boolean bDoRefresh;
+	static volatile boolean bIsReleaseBuild;
+	static volatile boolean bIsDebugBuild;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -622,6 +624,7 @@ public class ADev
 	static volatile String sInternalCommand;
 	static volatile String sAdditionalCommands;
 	static volatile String sPropertiesPackageName;
+	static volatile String sBundleToolJarPath;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -1078,6 +1081,9 @@ public class ADev
 		bBlockDebug = false;
 		bProjectSelected = false;
 		bUninstallPressed = false;
+		bIsReleaseBuild = false;
+		bIsDebugBuild = false;
+		
 		
 		iCardShowing = BUILD_CARD;
 		iPreviousIndex = -1;
@@ -1293,6 +1299,8 @@ public class ADev
 			antPathS = Utils.processPath(prop.getProperty("ant_path"));
 			javaPathS = Utils.processPath(prop.getProperty("java_path"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
+			sBundleToolJarPath = Utils.processPath(prop.getProperty("bundletool_jar_path"));
+			
 			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
 			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
 			sAndroidLanguage = Utils.processPath(prop.getProperty("android_language"));
@@ -3622,7 +3630,7 @@ public class ADev
 
 			//System.out.println("\n\n(IOBgThread)commandS: '"+commandS+"'");
 			//System.out.println("\nIOBgThread run()");
-			
+
 /*			
 			if ( commandS == null )
 				System.out.println("commandS null");
@@ -3686,6 +3694,8 @@ public class ADev
 						System.out.println("actionCommandS: '"+actionCommandS+"'");
 /**/
 
+                    outputEndS = "";
+                    
 					// Construct output end test..
 					if ( actionCommandS.equals(CLEAN) )
 					{
@@ -3836,14 +3846,11 @@ public class ADev
 
 
                     if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
-                        //;
+                    //if ( ((sUsePidLogcat != null) && (sUsePidLogcat.equals("true"))) ||
+                            //((sUseAppBundle != null) && (sUseAppBundle.equals("true"))) )
                         Thread.sleep(5);
                     else
                     {
-/**/  
-
-                        //Thread.sleep(10);
-                        
                         // Without this, console output
                         // can get really laggy and unresponsive..
                         if ( lineSb.length() < 4096 )
@@ -3857,9 +3864,7 @@ public class ADev
                                 //Thread.sleep(30);
                                 Thread.sleep(20);
                         }
-/**/                        
                     }
-/**/
 
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
@@ -4281,8 +4286,7 @@ public class ADev
 								{
 									lineS = lineSb.substring(0, lineSb.length());
 
-									
-/*
+/*									
 									System.out.println("+++++++++++++++");
 									System.out.println("lineS: '"+lineS+"'");
 									System.out.println("+++++++++++++++");
@@ -4292,6 +4296,17 @@ public class ADev
 									System.out.println("lineS.endsWith(outputEndS): "+(lineS.endsWith(outputEndS)));
 /**/
 
+                                    // Catch end of App Bundle Install..
+                                    if ( actionCommandS.equals(INSTALL) &&
+                                        ((sUseAppBundle != null) && (sUseAppBundle.equals("true"))) )
+                                    {
+                                        if ( lineS.endsWith(outputEndS) )
+                                        {
+											//System.out.println("End matched, breaking out..");
+											bBreakOut = true;	// Signal to break out..
+                                        }
+                                    }
+                                            
 									if ( actionCommandS.equals(CLEAN) ||  
 										actionCommandS.equals(DEBUG) ||
 										actionCommandS.equals(BUILD) ||
@@ -18681,6 +18696,10 @@ While_Break:
 					actionCommandS = CLEAN;
 				}
 
+                // Refresh..				
+				bIsReleaseBuild = false;
+				bIsDebugBuild = false;
+
 				init();
 				RefreshProperties();
 				getPackageName();
@@ -19086,6 +19105,10 @@ While_Break:
 					// Restore..
 					actionCommandS = saveS;
 				}
+				
+				bIsDebugBuild = true;
+				bIsReleaseBuild = false;
+				
 
 				//bKillAdb = true;	// Set to kill adb..
 				
@@ -19474,6 +19497,9 @@ While_Break:
 					// Restore..
 					//actionCommandS = RELEASE;
 				}
+				
+				bIsReleaseBuild = true;
+				bIsDebugBuild = false;
 				
 				init();
 				
@@ -20639,7 +20665,7 @@ While_Break:
 					// Restore..
 					actionCommandS = INSTALL;
 				}
-
+				
 /*
 				if ( projectHomeS == null )
 					System.out.println("projectHomeS null");
@@ -20653,144 +20679,395 @@ While_Break:
 					init();
 
 				commandSb = new StringBuffer();
-				
-				getApk();
+
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
+				    ;
+				else
+				    getApk();
 				
 				// Do the Install..
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
-				
-				if ( iOS == LINUX_MAC )
+/*				
+				if ( sUseAppBundle == null )
+				    System.out.println("sUseAppBundle null");
+				else
+				    System.out.println("sUseAppBundle: '"+sUseAppBundle+"'");
+/**/				
+				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
 				{
-					commandSb.append("export PATH=${PATH}:");
-					commandSb.append(androidSdkPathS);
-					commandSb.append("/platform-tools");
-					
-					commandSb.append(";adb ");
+/*				    
+     // 'SET PATH="C:/OpenJdk/openjdk-1.8.0.265-3.b01";%PATH%&&
+java -jar C:/bundletool-master/bundletool-all-1.8.2.jar build-apks --bundle="C:/
+Android/Dev/G_GameNew/app/build/outputs/bundle/release/app.aab" --output="C:/And
+roid/Dev/G_GameNew/output.apks" --connected-device --overwrite --verbose --ks=C:
+/Android/Dev/keystore/ab_release-key.jks --ks-pass=pass:cH4vJDx8E5 --ks-key-alias=ab_alias --key-pass=pass:cH4vJDx8E5
+     [java] '
+     
+     // 'SET PATH="C:/OpenJdk/openjdk-1.8.0.265-3.b01";%PATH%&&
+java -jar C:/bundletool-master/bundletool-all-1.8.2.jar install-apks --apks="C:/
+Android/Dev/G_GameNew/output.apks"
+     [java] '				    
+/**/				    
+				    
+                    // App Bundle install..				    
+                    if ( iOS == LINUX_MAC )
+                    {
+                        commandSb.append("export PATH=${PATH}:");
+                        commandSb.append('"');
+                        commandSb.append(javaPathS);
+                        commandSb.append('"');
+    
+                        commandSb.append(";java -jar ");
+                        commandSb.append('"');
+                        commandSb.append(sBundleToolJarPath);
+                        commandSb.append('"');
+                        commandSb.append(" ");
+                    }
+                    else
+                    {
+                        commandSb.append("SET PATH=");
+                        commandSb.append('"');
+                        commandSb.append(javaPathS);
+                        commandSb.append('"');
+                        commandSb.append(";%PATH%");
+                        
+                        commandSb.append("&&java -jar ");
+                        commandSb.append('"');
+                        commandSb.append(sBundleToolJarPath);
+                        commandSb.append('"');
+                        commandSb.append(" ");
+                    }
 
-					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-					{
-						commandSb.append("-s ");
-						commandSb.append(sDeviceName);
-						commandSb.append(" ");
-					}
-					
-					commandSb.append("install ");
-					if ( bUninstallPressed == false )
-					    commandSb.append("-r ");
-					
-					bUninstallPressed = false;    // Reset..
-					//commandSb.append("install -r ");
-					
-					// Construct path to .apk..
-					commandSb.append(projectHomeS);
-					
-					boolean bGradleSelected = uGradleMenuItem.getState();
-					if ( bGradleSelected )
-					{
-						if ( bFlutterSelected )
-						{
-							commandSb.append("/build/app/outputs/apk");
-								
-							if ( iBuildType == RELEASE_BUILD )
-								commandSb.append("/release/");
-							else if ( iBuildType == DEBUG_BUILD )
-								commandSb.append("/debug/");
-						}
-						else
-						{
-							if ( bUsingAppProject )
-								commandSb.append("/app/build/outputs/apk/");
-							else
-								commandSb.append("/build/outputs/apk/");
-							
-							if ( iBuildType == RELEASE_BUILD )
-								commandSb.append("release/");
-							else if ( iBuildType == DEBUG_BUILD )
-								commandSb.append("debug/");
-						}
-					}
-					else
-						commandSb.append("/bin/");
-					
-					commandSb.append(apkNameS);
+                    // Construct path to .aab..
+                    StringBuffer sB = new StringBuffer();
+                    sB.append(projectHomeS);
+                    sB.append("/");
+                    if ( bFlutterSelected )
+                    {
+                        sB.append("build/app/outputs/bundle/");
+                        if ( bIsReleaseBuild )
+                        {
+                            sB.append("release");
+                            sB.append("/app-release.aab");
+                        }
+                        else
+                        {
+                            sB.append("debug");
+                            sB.append("/app-debug.aab");
+                        }
+                    }
+                    else
+                    {
+                        sB.append("app/build/outputs/bundle/");
+                        if ( bIsReleaseBuild )
+                            sB.append("release");
+                        else
+                            sB.append("debug");
+                        
+                        sB.append("/app.aab");
+                    }
+                    
+                    //System.out.println("(aab path)sB: '"+sB.toString()+"'");
+                    
+                    // Check if it exists..
+                    File tFile = new File(sB.toString());
+                    if ( tFile.exists() )
+                    //if ( false )
+                        ;
+                    else
+                    {
+                        JFileChooser fChooser;
+                        
+                        if ( (projectHomeS != null) && (! projectHomeS.equals("")) )
+                        {
+                            StringBuffer tSb = new StringBuffer();
+                            tSb.append(projectHomeS);
+                            tSb.append("/");
+                            fChooser = new JFileChooser((String)tSb.toString());
+                        }
+                        else
+                        {
+                            fChooser = new JFileChooser();
+                            fChooser.setCurrentDirectory(new java.io.File("."));
+                        }
+                            
+                        fChooser.setDialogTitle(".aab Path");
+                        fChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+                        fChooser.setAcceptAllFileFilterUsed(false);
+                        
+                        if ( fChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION )
+                        {
+                            //System.out.println("In APPROVE_OPTION");
+                            String tS = fChooser.getSelectedFile().toString();
+                            tS = Utils.processPath(tS);
+                            //System.out.println("tS: '"+tS+"'");
+                            
+                            sB = new StringBuffer(tS);
+                        }
+                    }
+
+                    //System.out.println("(aab path)sB: '"+sB.toString()+"'");
+                    
+                    commandSb.append("build-apks --bundle=");
+                    // Path to app.aab..
+                    commandSb.append('"');
+                    //commandSb.append("C:/Android/Dev/G_GameNew/app/build/outputs/bundle/release/app.aab");
+                    commandSb.append(sB.toString());
+                    commandSb.append('"');
+                    
+                    // Path to output.apks..
+                    commandSb.append(" --output=");
+                    commandSb.append('"');
+                    commandSb.append(projectHomeS);
+                    commandSb.append("/output.apks");
+                    commandSb.append('"');
+				    
+				    commandSb.append(" --connected-device --overwrite --verbose --ks=");
+				    commandSb.append('"');
+				    commandSb.append(sAppBundleKeystorePath);
+				    commandSb.append('"');
+				    
+				    commandSb.append(" --ks-pass=pass:");
+				    commandSb.append(sAppBundleKeyAliasPassword);
+				    commandSb.append(" --ks-key-alias=");
+				    commandSb.append(sAppBundleKeyAlias);    
+				    commandSb.append(" --key-pass=pass:");
+				    commandSb.append(sAppBundleKeystorePassword);
+				    
+				    if ( iOS == WINDOWS )
+				        commandSb.append("\n");
+				    
+				    //System.out.println("commandSb: '"+commandSb.toString()+"'");
+				        
+                    commandS = commandSb.toString();
+                    //System.out.println("commandS: '"+commandS+"'");
+
+                    bIOBgThreadFinished = false;                    
+                    ioBgThread = new IOBgThread();
+                    ioBgThread.start();
+                    
+                    while ( true )
+                    {
+                        try
+                        {
+                            Thread.sleep(350);
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+                        
+                        if ( bIOBgThreadFinished )
+                            break;
+                    }
+                    
+                    //System.out.println("Dropped out");
+/*                    
+                    try
+                    {
+                        Thread.sleep(2000);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+/**/                    
+                    commandSb = new StringBuffer();
+                    
+                    if ( iOS == LINUX_MAC )
+                    {
+                        commandSb.append("export PATH=${PATH}:");
+                        commandSb.append('"');
+                        commandSb.append(javaPathS);
+                        commandSb.append('"');
+    
+                        commandSb.append(";java -jar ");
+                        commandSb.append('"');
+                        commandSb.append(sBundleToolJarPath);
+                        commandSb.append('"');
+                        commandSb.append(" ");
+                    }
+                    else
+                    {
+                        commandSb.append("SET PATH=");
+                        commandSb.append('"');
+                        commandSb.append(javaPathS);
+                        commandSb.append('"');
+                        commandSb.append(";%PATH%");
+                        
+                        commandSb.append("&&java -jar ");
+                        commandSb.append('"');
+                        commandSb.append(sBundleToolJarPath);
+                        commandSb.append('"');
+                        commandSb.append(" ");
+                    }
+                    
+				    commandSb.append("install-apks --apks=");
+				    
+				    // Path to output.apks..
+				    commandSb.append('"');
+                    commandSb.append(projectHomeS);
+                    commandSb.append("/output.apks");
+				    commandSb.append('"'); 
+				        
+				    if ( iOS == WINDOWS )
+				        commandSb.append("\n");
+				    
+				    //System.out.println("commandSb: '"+commandSb.toString()+"'");
+                    commandS = commandSb.toString();
+                    
+                    bIOBgThreadFinished = false;                    
+                    ioBgThread = new IOBgThread();
+                    ioBgThread.start();
+                    
+                    while ( true )
+                    {
+                        try
+                        {
+                            Thread.sleep(350);
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+                        
+                        if ( bIOBgThreadFinished )
+                            break;
+                    }
 				}
 				else
 				{
-					commandPhrase = "adb install";
-					
-					commandSb.append("SET PATH=");
-					commandSb.append(androidSdkPathS);
-					commandSb.append("/platform-tools");
-					commandSb.append(";%PATH%");
-					
-					commandSb.append("&&adb ");
-
-					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-					{
-						commandSb.append("-s ");
-						commandSb.append(sDeviceName);
-						commandSb.append(" ");
-					}
-					
-					commandSb.append("install ");
-					if ( bUninstallPressed == false )
-					    commandSb.append("-r ");
-					
-					bUninstallPressed = false;    // Reset..
-					
-					//commandSb.append("install -r ");
-					commandSb.append(projectHomeS);
-					
-					boolean bGradleSelected = uGradleMenuItem.getState();
-					if ( bGradleSelected )
-					{
-						if ( bFlutterSelected )
-						{
-							commandSb.append("/build/app/outputs/apk");
-								
-							if ( iBuildType == RELEASE_BUILD )
-								commandSb.append("/release/");
-							else if ( iBuildType == DEBUG_BUILD )
-								commandSb.append("/debug/");
-						}
-						else
-						{
-							if ( bUsingAppProject )
-								commandSb.append("/app/build/outputs/apk/");
-							else
-								commandSb.append("/build/outputs/apk/");
-							
-							if ( iBuildType == RELEASE_BUILD )
-								commandSb.append("release/");
-							else if ( iBuildType == DEBUG_BUILD )
-								commandSb.append("debug/");
-						}
-					}
-					else
-						commandSb.append("/bin/");
-
+				    // Normal Install..
+                    if ( iOS == LINUX_MAC )
+                    {
+                        commandSb.append("export PATH=${PATH}:");
+                        commandSb.append(androidSdkPathS);
+                        commandSb.append("/platform-tools");
+                        
+                        commandSb.append(";adb ");
+    
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("install ");
+                        if ( bUninstallPressed == false )
+                            commandSb.append("-r ");
+                        
+                        bUninstallPressed = false;    // Reset..
+                        //commandSb.append("install -r ");
+                        
+                        // Construct path to .apk..
+                        commandSb.append(projectHomeS);
+                        
+                        boolean bGradleSelected = uGradleMenuItem.getState();
+                        if ( bGradleSelected )
+                        {
+                            if ( bFlutterSelected )
+                            {
+                                commandSb.append("/build/app/outputs/apk");
+                                    
+                                if ( iBuildType == RELEASE_BUILD )
+                                    commandSb.append("/release/");
+                                else if ( iBuildType == DEBUG_BUILD )
+                                    commandSb.append("/debug/");
+                            }
+                            else
+                            {
+                                if ( bUsingAppProject )
+                                    commandSb.append("/app/build/outputs/apk/");
+                                else
+                                    commandSb.append("/build/outputs/apk/");
+                                
+                                if ( iBuildType == RELEASE_BUILD )
+                                    commandSb.append("release/");
+                                else if ( iBuildType == DEBUG_BUILD )
+                                    commandSb.append("debug/");
+                            }
+                        }
+                        else
+                            commandSb.append("/bin/");
+                        
+                        commandSb.append(apkNameS);
+                    }
+                    else
+                    {
+                        commandPhrase = "adb install";
+                        
+                        commandSb.append("SET PATH=");
+                        commandSb.append(androidSdkPathS);
+                        commandSb.append("/platform-tools");
+                        commandSb.append(";%PATH%");
+                        
+                        commandSb.append("&&adb ");
+    
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("install ");
+                        if ( bUninstallPressed == false )
+                            commandSb.append("-r ");
+                        
+                        bUninstallPressed = false;    // Reset..
+                        
+                        //commandSb.append("install -r ");
+                        commandSb.append(projectHomeS);
+                        
+                        boolean bGradleSelected = uGradleMenuItem.getState();
+                        if ( bGradleSelected )
+                        {
+                            if ( bFlutterSelected )
+                            {
+                                commandSb.append("/build/app/outputs/apk");
+                                    
+                                if ( iBuildType == RELEASE_BUILD )
+                                    commandSb.append("/release/");
+                                else if ( iBuildType == DEBUG_BUILD )
+                                    commandSb.append("/debug/");
+                            }
+                            else
+                            {
+                                if ( bUsingAppProject )
+                                    commandSb.append("/app/build/outputs/apk/");
+                                else
+                                    commandSb.append("/build/outputs/apk/");
+                                
+                                if ( iBuildType == RELEASE_BUILD )
+                                    commandSb.append("release/");
+                                else if ( iBuildType == DEBUG_BUILD )
+                                    commandSb.append("debug/");
+                            }
+                        }
+                        else
+                            commandSb.append("/bin/");
+    
 /*					
-					if ( apkNameS == null )
-						System.out.println("apkNameS null");
-					else
-						System.out.println("apkNameS: '"+apkNameS+"'");
+                        if ( apkNameS == null )
+                            System.out.println("apkNameS null");
+                        else
+                            System.out.println("apkNameS: '"+apkNameS+"'");
 /**/
-
-					commandSb.append(apkNameS);
-					commandSb.append("\n");
-				}
+    
+                        commandSb.append(apkNameS);
+                        commandSb.append("\n");
+                    }
 /*
-				if ( bWirelessConnected == false )
-				{
-					// Signal to kill adb..
-					bKillLogcat = true;
-				}
+                    if ( bWirelessConnected == false )
+                    {
+                        // Signal to kill adb..
+                        bKillLogcat = true;
+                    }
 /**/
-				commandS = commandSb.toString();
-				
-				ioBgThread = new IOBgThread();
-				ioBgThread.start();
+                    commandS = commandSb.toString();
+                    
+                    ioBgThread = new IOBgThread();
+                    ioBgThread.start();
+                }
 				
 			}
 			else if ( (BREAKPOINT.equals(actionCommandS)) && (iCardShowing == DEBUG_CARD) )

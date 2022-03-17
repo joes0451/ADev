@@ -193,6 +193,10 @@ Gradle builds:
 		
 		If your build fails, you can try using a higher	or lower Gradle version,
 		and that can sometimes get it to successfully build the project.
+		
+		*Note*:
+		If you are using buildToolsVersion 32.0.0, and it's complaining that it's
+		corrupt, try setting it to an older version in app/build.gradle.
 
 Release builds:
 		For Gradle, you can define your Keystore path, Key Alias, Keystore password
@@ -234,6 +238,13 @@ App Bundle:
 		
 		You can learn more about app signing here:
 		https://developer.android.com/studio/build/building-cmdline#gradle_signing
+		
+App Bundle Install:
+        If you are using App Bundle, when you hit the Install button, it will
+        figure out the path to the .aab file and then use two bundletool commands
+        to load the connected device.  If it can't find the path it will put up a Dialog
+        where you can point to it.  Also works with Emulator.
+        There is usually a delay before you see all the output.
 
 Use Flutter:
 		Install, Android Studio not required:
@@ -443,9 +454,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.3:
-    Improved checking Keystore Password info so it can put up Dialog if needed.
-
 ADev-3.1.4:
     Improved updating the UI when projects are changed.
     Improved Select Device.
@@ -456,6 +464,10 @@ ADev-3.1.6:
     can run from a new menu "Commands", and you can add tasks in config.properties.
     New Refresh menu item to refresh config.properties.
     Other improvements.
+
+ADev-3.1.8:
+    For App Bundles, Install button will now use bundletool commands
+    to install to connected device.
 
 
 I use it for all of my own development, and try to fix what issues I see,
