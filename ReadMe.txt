@@ -158,6 +158,10 @@ Gradle builds:
 		Make sure that you have 'android_sdk_path', 'gradle_path' and 'java_path' paths
 		defined	in 'config.properties'.
 		Be sure that the 'gradle_path' points to the 'bin' Gradle install directory.
+
+        Normally it will try to modify the app/build.gradle to allow for signing
+        but you can use the 'dont_modify_build_gradle' switch in config.properties
+        to not modify your project.
 		
 		Option in config.properties to use 'gradle' or 'gradlew'.
 		It also modifies the default Gradle version to use, in gradle/wrapper/gradle-wrapper.properties,
@@ -214,7 +218,8 @@ Release builds:
 		
 Gradlew:
         With 'use_gradlew' enabled in config.properties, you'll have a Commands
-        menu with standard gradlew tasks, and you can add tasks in config.properties.
+        menu with standard gradlew tasks, and you can add tasks with 'additional_commands'
+        in config.properties and run them from there.
         Combined with the 'dont_modify_build_gradle' option, you can run gradlew commands
         in projects without modifying them, useful when trying to build projects you
         download from GitHub.        
@@ -454,11 +459,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.4:
-    Improved updating the UI when projects are changed.
-    Improved Select Device.
-    Tried to improve PID logcat output.
-
 ADev-3.1.6:
     Better support for gradlew, now has standard gradlew tasks you
     can run from a new menu "Commands", and you can add tasks in config.properties.
@@ -469,6 +469,11 @@ ADev-3.1.8:
     For App Bundles, Install button will now use bundletool commands
     to install to connected device.
 
+ADev-3.1.9:
+    Improved resolving .apk for builds.
+    Improved not modifying projects if you have 'dont_modify_build_gradle' turned on.
+    Some improvements for building LibGdx projects.
+    
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.

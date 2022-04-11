@@ -461,6 +461,7 @@ public class ADev
 	static volatile boolean bDoRefresh;
 	static volatile boolean bIsReleaseBuild;
 	static volatile boolean bIsDebugBuild;
+	static volatile boolean bUsingAndroid;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -625,6 +626,7 @@ public class ADev
 	static volatile String sAdditionalCommands;
 	static volatile String sPropertiesPackageName;
 	static volatile String sBundleToolJarPath;
+	static volatile String sGradlewCommand;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -1083,7 +1085,7 @@ public class ADev
 		bUninstallPressed = false;
 		bIsReleaseBuild = false;
 		bIsDebugBuild = false;
-		
+		bUsingAndroid = false;
 		
 		iCardShowing = BUILD_CARD;
 		iPreviousIndex = -1;
@@ -1124,6 +1126,7 @@ public class ADev
 		//bDebugRan = false;
 		lPrevTime = 0;
 		bWirelessEnabled = false;
+		sGradlewCommand = "";
 		
 		
 		//messageObject = new Object();
@@ -1255,6 +1258,19 @@ public class ADev
 				bUsingAppProject = true;
 			else
 				bUsingAppProject = false;
+		}
+
+        // Look for [Project]/android
+        // For LibGdx projects..
+		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+		{
+			StringBuffer sB = new StringBuffer(projectHomeS);
+			sB.append("/android");
+			File tFile = new File(sB.toString());
+			if ( tFile.exists() )
+				bUsingAndroid = true;
+			else
+				bUsingAndroid = false;
 		}
 		
 		getPackageName();
@@ -4328,7 +4344,24 @@ public class ADev
 									}
 								}
 							}
-							
+/*
+                            if ( sGradlewCommand == null )
+                                System.out.println("sGradlewCommand null");
+                            else
+                                System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
+/**/                                
+                            //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");
+                            
+							//System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
+							if ( (sGradlewCommand != null) && (lineSb.indexOf(sGradlewCommand) != -1) )
+							{
+                                // Finish Progress Bar early..
+                                //System.out.println("--FOUND--");
+                                bFinished = true;
+							}
+
+                            //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");	
+                            //System.out.println("bFinished: "+bFinished);
 							if ( bGradleSelected && (! bFinished) )
 							{
 								if ( (lineSb.indexOf("preBuild") != -1) ||
@@ -5352,7 +5385,6 @@ public class ADev
 					@Override
 					public Void doInBackground()
 					{
-					    //System.out.println("doInBackground()");
 						progressJFrame = new JFrame();
 						jProgressBar = new JProgressBar();
 						jProgressBar.setIndeterminate(true);
@@ -9501,7 +9533,7 @@ public class ADev
 		public void run()
 		{
 			// Create: Flutter: /android/key.properties  Gradle: /key.properties
-			//System.out.println("\nReleaseBgThread run()");
+			System.out.println("\nReleaseBgThread run()");
 			byte[] zeroATab = {(byte)0x0a, (byte)0x20, (byte)0x20, (byte)0x20, (byte)0x20};
 			String zeroATabS = new String(zeroATab);
 			byte[] zeroDzeroATab = {(byte)0x0d, (byte)0x0a, (byte)0x20, (byte)0x20, (byte)0x20, (byte)0x20};
@@ -9594,7 +9626,7 @@ public class ADev
 			}
 
 			bReleaseFinished = true;
-			//System.out.println("Exiting ReleaseBgThread run()");
+			System.out.println("Exiting ReleaseBgThread run()");
 		}
 	}	//}}}
 	
@@ -13239,7 +13271,6 @@ public class ADev
 		createMenuItem.addActionListener(actListener);
 		
 		commandSubMenu = new JMenu("Command");
-
         if ( commandSubMenu != null )
         {
             if ( (CommandAr != null) && (CommandAr.size() > 0) )
@@ -15117,12 +15148,12 @@ public class ADev
      */
 	private void getApk()
 	{
-		//System.out.println("getApk()");
+		System.out.println("getApk()");
 		// Get the name of the .apk file..
 		StringBuffer sb = new StringBuffer(projectHomeS);
 		//System.out.println("sb: '"+sb.toString()+"'");
 
-		//System.out.println("bGradleSelected: "+bGradleSelected);
+		System.out.println("bGradleSelected: "+bGradleSelected);
 		if ( bGradleSelected )
 		{
 			// Note:
@@ -15142,11 +15173,17 @@ public class ADev
 			else
 			{
 				// Gradle and Kotlin..
-				//System.out.println("bUsingAppProject: "+bUsingAppProject);
+				System.out.println("bUsingAppProject: "+bUsingAppProject);
 				if ( bUsingAppProject )
 					sb.append("/app/build/outputs/apk");
 				else
+				{
+				    // For LibGdx projects..
+                    if ( bUsingAndroid )
+                        sb.append("/android");
+				    
 					sb.append("/build/outputs/apk");
+				}
 				
 				if ( iBuildType == RELEASE_BUILD )
 					sb.append("/release");
@@ -15160,7 +15197,7 @@ public class ADev
 			sb.append("/bin");
 		}
 
-		//System.out.println("(Final)sb: '"+sb.toString()+"'");
+		System.out.println("(Final)sb: '"+sb.toString()+"'");
 		
 		File folder = new File(sb.toString());
 		String altS = "";
@@ -15194,10 +15231,13 @@ public class ADev
 			String fNameS;		
 			for ( int g = 0; g < listOfFiles.length; g++ )
 			{
+			    System.out.println("--TOP-- g: "+g);
 				file = listOfFiles[g];
 				fNameS = file.getName();
-				//System.out.println("fNameS: '"+fNameS+"'");
+				System.out.println("fNameS: '"+fNameS+"'");
+/*				
 				if ( ((iBuildType == RELEASE_BUILD) && (fNameS.endsWith("release.apk"))) ||
+				    ((iBuildType == RELEASE_BUILD) && (fNameS.endsWith("unsigned.apk"))) ||
 					((iBuildType == DEBUG_BUILD) && (fNameS.endsWith("debug.apk"))) )
 				{
 					//System.out.println("Found file");
@@ -15208,20 +15248,30 @@ public class ADev
 				{
 					// Save alternate..
 					if ( fNameS.endsWith("release.apk") ||
-						fNameS.endsWith("debug.apk") )
+                            //fNameS.endsWith("debug.apk") )
+                            fNameS.endsWith("debug.apk") ||
+                            fNameS.endsWith("unsigned.apk") )
 						altS = fNameS;
+				}
+/**/				
+				if ( fNameS.endsWith(".apk") )
+				{
+					//System.out.println("Found file");
+					apkNameS = fNameS;
+					break;
 				}
 			}
 
-/*
+			//if ( apkNameS.equals("") )
+				//apkNameS = altS;
+
 			if ( apkNameS == null )
 				System.out.println("(Final)apkNameS null");
 			else
 				System.out.println("(Final)apkNameS: '"+apkNameS+"'");
 /**/
 			
-			if ( apkNameS.equals("") )
-				apkNameS = altS;
+			
 		//}
 	}	//}}}
 
@@ -18640,7 +18690,6 @@ While_Break:
 			StringBuffer commandSb = null;
 			boolean bMatch;
 			boolean bMatchedProject;
-			String sCommand = "";
 /*
 			if ( projectHomeS == null )
 				System.out.println("projectHomeS null");
@@ -19810,7 +19859,6 @@ While_Break:
 						@Override
 						public Void doInBackground()
 						{
-							//System.out.println("SwingWorker doInBackground()");
 							progressJFrame = new JFrame();
 							jProgressBar = new JProgressBar();
 							jProgressBar.setIndeterminate(true);
@@ -20643,7 +20691,7 @@ While_Break:
 			}
 			else if ( INSTALL.equals(actionCommandS) )
 			{
-				//System.out.println("\nINSTALL");
+				System.out.println("\nINSTALL");
 				//System.out.println("bLogcatOn: "+bLogcatOn);
 				// Install..
 				if ( bLogcatOn )
@@ -20666,7 +20714,6 @@ While_Break:
 					actionCommandS = INSTALL;
 				}
 				
-/*
 				if ( projectHomeS == null )
 					System.out.println("projectHomeS null");
 				else
@@ -20688,6 +20735,7 @@ While_Break:
 				// Do the Install..
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
+				
 /*				
 				if ( sUseAppBundle == null )
 				    System.out.println("sUseAppBundle null");
@@ -20965,7 +21013,13 @@ While_Break:
                                 if ( bUsingAppProject )
                                     commandSb.append("/app/build/outputs/apk/");
                                 else
+                                {
+                                    // For LibGdx projects..
+                                    if ( bUsingAndroid )
+                                        commandSb.append("/android");
+                                    
                                     commandSb.append("/build/outputs/apk/");
+                                }
                                 
                                 if ( iBuildType == RELEASE_BUILD )
                                     commandSb.append("release/");
@@ -21022,7 +21076,13 @@ While_Break:
                                 if ( bUsingAppProject )
                                     commandSb.append("/app/build/outputs/apk/");
                                 else
+                                {
+                                    // For LibGdx projects..
+                                    if ( bUsingAndroid )
+                                        commandSb.append("/android");
+                                        
                                     commandSb.append("/build/outputs/apk/");
+                                }
                                 
                                 if ( iBuildType == RELEASE_BUILD )
                                     commandSb.append("release/");
@@ -21032,8 +21092,8 @@ While_Break:
                         }
                         else
                             commandSb.append("/bin/");
-    
-/*					
+                        
+/*    
                         if ( apkNameS == null )
                             System.out.println("apkNameS null");
                         else
@@ -21726,8 +21786,9 @@ While_Break:
 						}
 
 						
-                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
-                                && (sDontModifyBuildGradle.equals("true"))  )
+                        //if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                            //&& (sDontModifyBuildGradle.equals("true"))  )
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
                             ;
                         else
                         {
@@ -21767,24 +21828,29 @@ While_Break:
 							if ( uFlutterMenuItem != null )
 							    uFlutterMenuItem.setState(true);
 							
-							// Modify app/build.gradle..	
-							bGradleConfigFinished = false;
-							gradleConfigBgThread = new GradleConfigBgThread();
-							gradleConfigBgThread.start();
-							
-							while ( true )
-							{
-								try
-								{
-									Thread.sleep(250);
-								}
-								catch (InterruptedException ie)
-								{
-								}
-								
-								if ( bGradleConfigFinished )
-									break;
-							}
+                            if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
+                                ;
+                            else
+                            {
+                                // Modify app/build.gradle..	
+                                bGradleConfigFinished = false;
+                                gradleConfigBgThread = new GradleConfigBgThread();
+                                gradleConfigBgThread.start();
+                                
+                                while ( true )
+                                {
+                                    try
+                                    {
+                                        Thread.sleep(250);
+                                    }
+                                    catch (InterruptedException ie)
+                                    {
+                                    }
+                                    
+                                    if ( bGradleConfigFinished )
+                                        break;
+                                }
+                            }
 						}
 						else
 						{
@@ -22682,7 +22748,6 @@ While_Break:
 						@Override
 						public Void doInBackground()
 						{
-							//System.out.println("SwingWorker doInBackground()");
 							jProgressBar = new JProgressBar();
 							jProgressBar.setIndeterminate(true);
 							jProgressBar.setPreferredSize(new Dimension(200, 30));
@@ -22812,25 +22877,30 @@ While_Break:
 									break;
 							}
 						}
-						
-						bGradleConfigFinished = false;
-						gradleConfigBgThread = new GradleConfigBgThread();
-						gradleConfigBgThread.start();
-						
-						// Wait for Thread to finish..
-						while ( true )
-						{
-							try
-							{
-								Thread.sleep(50);
-							}
-							catch (InterruptedException ie)
-							{
-							}
-				
-							if ( bGradleConfigFinished )
-								break;
-						}
+
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
+                            ;
+                        else
+                        {
+                            bGradleConfigFinished = false;
+                            gradleConfigBgThread = new GradleConfigBgThread();
+                            gradleConfigBgThread.start();
+                            
+                            // Wait for Thread to finish..
+                            while ( true )
+                            {
+                                try
+                                {
+                                    Thread.sleep(50);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                    
+                                if ( bGradleConfigFinished )
+                                    break;
+                            }
+                        }
 					}
 
 					// Note:
@@ -24797,8 +24867,8 @@ While_Break:
 							    {
 							        for ( int iX = 0; iX < CommandAr.size(); iX++ )
 							        {
-							            sCommand = (String)CommandAr.get(iX);
-							            if ( actionCommandS.equals(sCommand) )
+							            sGradlewCommand = (String)CommandAr.get(iX);
+							            if ( actionCommandS.equals(sGradlewCommand) )
 							            {
 							                bMatch = true;
 							                break;
@@ -24843,7 +24913,7 @@ While_Break:
                                         }
                                         
                                         commandSb.append("gradlew ");
-                                        commandSb.append(sCommand);
+                                        commandSb.append(sGradlewCommand);
                                         
                                         if ( iOS == WINDOWS )
                                             commandSb.append("\n");
@@ -24853,7 +24923,6 @@ While_Break:
                                             @Override
                                             public Void doInBackground()
                                             {
-                                                //System.out.println("SwingWorker doInBackground()");
                                                 progressJFrame = new JFrame();
                                                 jProgressBar = new JProgressBar();
                                                 jProgressBar.setIndeterminate(true);
@@ -24865,30 +24934,37 @@ While_Break:
                                                 progressJFrame.setVisible(true);
                                                 progressJFrame.setLocationRelativeTo(mainJFrame);
                                                 progressJFrame.setAlwaysOnTop(true);
-                                                
-                                                // Create /android/key.properties..
-                                                bReleaseFinished = false;
-                                                releaseBgThread = new ReleaseBgThread();
-                                                releaseBgThread.start();
-                                                
-                                                // Wait for ReleaseBgThread to end..
-                                                while ( true )
+
+                                                // If we didn't set up signing, we shouldn't set up /key.properties.. 
+                                                if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
+                                                    ;
+                                                else
                                                 {
-                                                    try
-                                                    {
-                                                        Thread.sleep(20);
-                                                    }
-                                                    catch (InterruptedException ie)
-                                                    {
-                                                    }
+                                                    // Create Flutter or Gradle /key.properties..
+                                                    bReleaseFinished = false;
+                                                    releaseBgThread = new ReleaseBgThread();
+                                                    releaseBgThread.start();
                                                     
-                                                    if ( bReleaseFinished )
-                                                        break;
+                                                    // Wait for ReleaseBgThread to end..
+                                                    while ( true )
+                                                    {
+                                                        try
+                                                        {
+                                                            Thread.sleep(20);
+                                                        }
+                                                        catch (InterruptedException ie)
+                                                        {
+                                                        }
+                                                        
+                                                        if ( bReleaseFinished )
+                                                            break;
+                                                    }
                                                 }
 
                                                 //commandS = commandSb.toString();
                                                 
                                                 bFinished = false;
+                                                //bIOBgThreadFinished = false;
                                                 ioBgThread = new IOBgThread();
                                                 ioBgThread.start();
                     
@@ -24904,7 +24980,11 @@ While_Break:
                                                     }
                                                     
                                                     if ( bFinished )
+                                                    //if ( bIOBgThreadFinished )
+                                                    {
+                                                        progressJFrame.dispose();
                                                         break;
+                                                    }
                                                 }
                                                 
                                                 return null;
