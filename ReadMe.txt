@@ -459,12 +459,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.6:
-    Better support for gradlew, now has standard gradlew tasks you
-    can run from a new menu "Commands", and you can add tasks in config.properties.
-    New Refresh menu item to refresh config.properties.
-    Other improvements.
-
 ADev-3.1.8:
     For App Bundles, Install button will now use bundletool commands
     to install to connected device.
@@ -474,6 +468,10 @@ ADev-3.1.9:
     Improved not modifying projects if you have 'dont_modify_build_gradle' turned on.
     Some improvements for building LibGdx projects.
     
+ADev-3.2.0:
+    For Uninstall, if the device is asleep, it wakes up the display so that
+    the Uninstall will work.
+
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.
