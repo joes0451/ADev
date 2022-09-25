@@ -167,6 +167,7 @@ import javax.swing.plaf.ColorUIResource;
 import javax.swing.border.EtchedBorder;
 import java.util.concurrent.Semaphore;
 
+
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
@@ -230,6 +231,7 @@ public class ADev
 	private JSplitPane horzSplitPane;
 	private static JTabbedPane tabbedPane;
 	private StyledDocument doc;
+	private DefaultStyledDocument defStyledDoc;
 	private Style normalStyle;
 	private Style warningStyle;
 	private Style errorStyle;
@@ -761,7 +763,6 @@ public class ADev
 	private String internalCommandS;
 	private boolean bBreakOut;
 	private volatile boolean bLogcatOn;
-	private volatile boolean bLogcatWasOn;
 	private volatile boolean bDoKill;
 	
 	private boolean bReIssueRelease;
@@ -897,6 +898,8 @@ public class ADev
 	static final String RELEASE_DIALOG_CANCEL = "release_dialog_cancel";
 	static final String KEYSTORE_PATH_CHOOSER = "keystore_path_chooser";
 	static final String VARIABLES = "VARIABLES";
+	
+	DocumentFilter dfilter;
 	
 	private static IOBgThread ioBgThread;
 	private ReleaseBgThread releaseBgThread;
@@ -1048,6 +1051,7 @@ public class ADev
 	"Android 13.0 (API level 32)"};
 
 	//}}}
+
 	
 	//{{{	ADev()  constructor
 	/**
@@ -1185,7 +1189,7 @@ public class ADev
 		init();
 
 		// Select SDK..
-		//System.out.println("androidSdkPathAntS: '"+androidSdkPathAntS+"'");
+		//("androidSdkPathAntS: '"+androidSdkPathAntS+"'");
 		//System.out.println("androidSdkPathGradleS: '"+androidSdkPathGradleS+"'");
 		//System.out.println("bGradleSelected: "+bGradleSelected);
 		//System.out.println("bKotlinSelected: "+bKotlinSelected);
@@ -1216,7 +1220,6 @@ public class ADev
 		bBreakOut = false;
 		bLogcatOn = false;
 		bReIssueRelease = false;
-		bLogcatWasOn = false;
 		apkNameS = "";
 		iBuildType = DEBUG_BUILD;
 
@@ -3875,7 +3878,8 @@ public class ADev
                         // Without this, console output
                         // can get really laggy and unresponsive..
                         if ( lineSb.length() < 4096 )
-                            Thread.sleep(10);
+                            //Thread.sleep(10);
+                            Thread.sleep(7);
                         else
                         {
                             if ( lDif > 0 )
@@ -3885,6 +3889,7 @@ public class ADev
                                 //Thread.sleep(30);
                                 Thread.sleep(20);
                         }
+/**/                        
                     }
 
 					if ( (lineSb != null) && (iBytesRead > 0) )
@@ -3907,7 +3912,7 @@ public class ADev
 						String sT = "";
 						String sT2 = "";
 						
-						//System.out.println("bLogcatOn: "+bLogcatOn);
+						//System.out.println("\nbLogcatOn: "+bLogcatOn);
 						//System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
 						//System.out.println("lineSb.length(): "+lineSb.length());
 						//System.out.println("sPid: '"+sPid+"'");
@@ -3918,9 +3923,10 @@ public class ADev
                             {
                                 // Use PID Logcat..
                                 //System.out.println("Using PID");
-                                if ( (sPid != null) && (sPid.length() > 0) )
-                                    ;   // Have it..
-                                else
+                                //if ( (sPid != null) && (sPid.length() > 0) )
+                                    //;   // Have it..
+                                //else
+                                //if ( true )
                                 {
                                     if ( (packageNameS != null) && (packageNameS.length() > 0) )
                                     {
@@ -3967,37 +3973,37 @@ public class ADev
                                             if ( bInternalFinished )
                                                 break;
                                         }
-                                        
-                                        iLoc3 = commandResultS.indexOf(packageNameS);
-                                        if ( iLoc3 != -1 )
+
+                                        if ( (commandResultS != null) && (commandResultS.length() > 0) )
                                         {
-                                            // Grab PID..
-                                            for ( ; commandResultS.charAt(iLoc3) != (char)0x0a; iLoc3-- );
-                            
-                                            iLoc3++;
-                                            for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
-                                            for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
-                                            iStart = iLoc3;
-                                            for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
-                                            sPid = commandResultS.substring(iStart, iLoc3);
+                                            iLoc3 = commandResultS.indexOf(packageNameS);
+                                            if ( iLoc3 != -1 )
+                                            {
+                                                // Grab PID..
+                                                for ( ; commandResultS.charAt(iLoc3) != (char)0x0a; iLoc3-- );
+                                
+                                                iLoc3++;
+                                                for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                iStart = iLoc3;
+                                                for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                sPid = commandResultS.substring(iStart, iLoc3);
+                                            }
+                                            else
+                                            {
+                                                sPid = "";
+                                                lineSb = new StringBuffer();
+                                            }
                                         }
-                                        else
-                                        {
-                                            sPid = "";
-                                            lineSb = new StringBuffer();
-                                        }
-                                        
-                                        //System.out.println("sPid: '"+sPid+"'");
                                     }
                                 }
-                                
-/*
+
+/*                                
                                 if ( sPid == null )
                                     System.out.println("sPid null");
                                 else
                                     System.out.println("sPid: '"+sPid+"'");
 /**/                                
-                                
                                 
                                 if ( (sPid != null) && (sPid.length() > 0) )
                                 {
@@ -4303,7 +4309,8 @@ public class ADev
 									}
 								}
 
-								if ( lineSb.charAt(lineSb.length() - 1) == '>' )
+								//if ( lineSb.charAt(lineSb.length() - 1) == '>' )
+								if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
 								{
 									lineS = lineSb.substring(0, lineSb.length());
 
@@ -20439,9 +20446,17 @@ While_Break:
 				RefreshProperties();
 				boolean bSelected = logcatToggleButton.isSelected();
 
-				//System.out.println("bSelected: "+bSelected);
+				//System.out.println("(logcatToggleButton.isSelected())bSelected: "+bSelected);
 				if ( bSelected )
 				{
+				    
+/*				    
+				    if ( sUsePidLogcat == null )
+				        System.out.println("sUsePidLogcat null");
+				    else
+				        System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
+/**/
+/*				    
 					// Not currently selected..
 					if ( (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
 					{
@@ -20465,14 +20480,14 @@ While_Break:
                                 sb.append(";%PATH%");
                                 sb.append("&&adb ");
                             }
-/*        
+                            
                             if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
                             {
                                 sb.append("-s ");
                                 sb.append(sDeviceName);
                                 sb.append(" ");
                             }
-/**/                            
+                            
                             sb.append("shell ps");
                                 
                             if ( iOS == WINDOWS )
@@ -20499,17 +20514,20 @@ While_Break:
                                     break;
                             }
 
-                            //System.out.println("commandResultS: '"+commandResultS+"'");
-/*                            
+                            System.out.println("commandResultS: '"+commandResultS+"'");
+                            
                             if ( packageNameS == null )
                                 System.out.println("packageNameS null");
                             else
                                 System.out.println("packageNameS: '"+packageNameS+"'");
-/**/                    
-                            
+
+                            // Note:
+                            // It seems like it won't find the PID here,
+                            // it finds it in IOBgThread..
                             if ( (packageNameS != null) && (packageNameS.length() > 0) )
                             {
                                 iLoc = commandResultS.indexOf(packageNameS);
+                                System.out.println("(Fing package name) iLoc: "+iLoc);
                                 if ( iLoc != -1 )
                                 {
                                     // Grab PID..
@@ -20522,13 +20540,13 @@ While_Break:
                                     iStart = iLoc;
                                     for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
                                     sPid = commandResultS.substring(iStart, iLoc);
-                                    //System.out.println("sPid: '"+sPid+"'");
+                                    System.out.println("\nsPid: '"+sPid+"'");
                                 }
                             }
 					    }
 					}
-					
-					
+/**/
+
 					bLogcatOn = true;
 					commandSb = new StringBuffer();
 
@@ -20539,6 +20557,9 @@ While_Break:
 						commandSb.append("/platform-tools");
 						
 						commandSb.append(";");
+						
+						commandSb.append("adb logcat -c");
+						commandSb.append(";");
 					}
 					else
 					{
@@ -20548,9 +20569,12 @@ While_Break:
 						commandSb.append(";%PATH%");
 						
 						commandSb.append("&&");
+
+                        // Clear the buffer so that any slowdowns
+                        // will be gone..						
+						commandSb.append("adb logcat -c");
+						commandSb.append("&&");
 					}
-					
-					bLogcatWasOn = true;
 	
 					String tS;
 					StringTokenizer st = null;
@@ -22263,7 +22287,7 @@ While_Break:
 			}
 			else if ( GENERATE_KEY_STORE.equals(actionCommandS) )
 			{
-				System.out.println("GENERATE_KEY_STORE");
+				//System.out.println("GENERATE_KEY_STORE");
 				
 				bDoRefresh = true;
 				
@@ -22271,14 +22295,15 @@ While_Break:
                 bCheckPasswordsFinished = false;			    
 			    CheckKeystorePasswords();
 			    
-			    System.out.println("Back from CheckKeystorePasswords()");
-			    
+			    //System.out.println("Back from CheckKeystorePasswords()");
+/*			    
 			    if ( sAppBundleKeystorePath == null )
 			        System.out.println("sAppBundleKeystorePath null");
 			    else
 			        System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
+/**/
 
-			    System.out.println("bOkayToDoKeytool: "+bOkayToDoKeytool);
+			    //System.out.println("bOkayToDoKeytool: "+bOkayToDoKeytool);
                 if ( bOkayToDoKeytool )
                 {
                     keytoolDialog();	
@@ -22331,7 +22356,7 @@ While_Break:
 			}
 			else if ( GENERATE_KEY_STORE_SUBMIT.equals(actionCommandS) )
 			{
-			    System.out.println("GENERATE_KEY_STORE_SUBMIT");
+			    //System.out.println("GENERATE_KEY_STORE_SUBMIT");
 			    StringBuffer sB = new StringBuffer();
 			    int iLoc = 0;
 			    int iLoc2 = 0;
@@ -22356,12 +22381,14 @@ While_Break:
 			    }
 			    
 			    System.out.println("Back from CheckKeystorePasswords()");
-/**/			    
+/**/	
+
+/*
 			    if ( sAppBundleKeystorePath == null )
 			        System.out.println("sAppBundleKeystorePath null");
 			    else
 			        System.out.println("sAppBundleKeystorePath: '"+sAppBundleKeystorePath+"'");
-			    
+/**/			    
 			    //sB.append("keytool -genkey -keystore ");
 			    sB.append("keytool -genkey -v -keystore ");
 			    sB.append("\"");
@@ -23897,8 +23924,14 @@ While_Break:
 				//System.out.println("iCaretPosition: "+iCaretPosition);
 
 				// Get Search text..
-				sSearchText = searchField.getText();
+				if ( searchField != null )
+				{
+				    sSearchText = "";
+				    sSearchText = searchField.getText();
+				}
+				
 				sSearchText = sSearchText.trim();
+				//System.out.println("sSearchText: '"+sSearchText+"'");
 				iSearchLength = sSearchText.length();
 
 				if ( bIsNext )
@@ -23923,6 +23956,8 @@ While_Break:
 				else
 				{
 					// Didn't find..
+					//System.out.println("Didn't find");
+					//System.out.println("bIsNext: "+bIsNext);
 					if ( bIsNext )
 					{
 						iStartOffset = iPreviousIndex;
@@ -23938,6 +23973,7 @@ While_Break:
 				Color granite = new Color((int)0x83, (int)0x7e, (int)0x7c, (int)255);
 				Color lightRed = new Color((int)0xf4, (int)0x22, (int)0x04, (int)255);
 
+				//System.out.println("bDoHighlight: "+bDoHighlight);
 				if ( bDoHighlight )
 				{
 					try

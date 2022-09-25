@@ -5,76 +5,6 @@ You can use my SDK Manager, if you want, to manage the SDK:
 
 https://sourceforge.net/projects/sdk-manager/
 
-The latest SDK version: 
-
-https://developer.android.com/studio/#downloads
-
-Note:
-    It looks like every new SDK version requires the --sdk_root command option
-    be on every command line using the sdkmanager.
-    Include it at the end of all commands below.
-	If you used a directory 'android-sdk' you would run 'sdkmanager' like:
-	
-	sdkmanager --list --sdk_root=c:\android-sdk 
-	
-Scroll down to "Command line tools only" and choose the Windows, Mac or Linux
-version of the Android SDK tools package.
-
-- Create a directory for your Android SDK, with no embedded spaces in the path,
-	like: C:\android-sdk
-
-- Unzip into your directory.
-
-- CD into your tools/bin directory and run:     sdkmanager --list [--include_obsolete]
-	to show all available packages.
-	
-!! To ensure that the SDK has the best chance of being properly set up
-please follow these steps in order:
-	
-- Select the highest 'build-tools;..' level that you'd like to use, like 'build-tools;31.0.0'
-    and run:    sdkmanager "build-tools;31.0.0"
-
-** Note **
-    If you get: 'Warning: Dependant package with key emulator not found!'
-    while trying to install a Package, and you don't have the 'tools' directory yet,
-    run:     sdkmanager --list --include_obsolete
-    
-    then run:    sdkmanager "tools"
-    
-- Select the highest 'platforms;..' level that you'd like to use, like 'platforms;android-30', 
-    and run:    sdkmanager "platforms;android-30"
-    
-- Run:  sdkmanager --list
-
-    Check if the 'platform-tools' package was installed, from above,
-    if it's there jump to below to finish accepting the licenses,
-    otherwise run:   sdkmanager "platform-tools" 
-    
-- When finished downloading all the packages you want, run:    sdkmanager --licenses 
-	and agree with all the licenses.
-    
-	
-Ant builds:
-
-For Ant builds you need to use an older Android SDK that has an
-android.bat that supports 'android create project' and 'android update project',
-and has a tools/ant directory.
-
-Windows:
-https://dl.google.com/android/repository/tools_r25.2.5-windows.zip
-
-Mac:
-https://dl.google.com/android/repository/tools_r25.2.5-macosx.zip
-
-Linux:
-https://dl.google.com/android/repository/tools_r25.2.5-linux.zip
-
-
-Install as above, but you can CD into the tools directory and run the
-	SDK Manager GUI with:   android sdk
-
-
-
 How to use ADev:
 
 - It works on Windows, Linux, and Mac.
@@ -89,7 +19,8 @@ How to use ADev:
 	
 	Note:
 	For Gradle based projects, it will normally modify app/build.gradle
-	to allow for signing.
+	to allow for signing.  If you want, you can turn this off by setting
+	'dont_modify_build_gradle' to "true" in config properties.
 
 - To be able to build a sample Android Ant project, or one that
 	does not have a build.xml, from the menu choose Project->Update.
@@ -119,14 +50,17 @@ Ant Create options:
 			Select the SDK Build-tools version to use.
 
 
-Logcat: Logcat output can be enabled by pressing the "Logcat" toggle button, press again to
+Logcat:
+        Logcat output can be enabled by pressing the "Logcat" toggle button, press again to
 		disable output.  If you hit another command button while Logcat is running
 		it will automatically be disabled.
 		
-		You can choose to just view log output from the running Process Id,
-		there can be a delay before it starts sending output.
-		You can edit the "logcat_filter" property in config.properties which will
+		You can also edit the "logcat_filter" property in config.properties which will
 		help to block the output of the selected tags.
+		
+PID Logcat:		
+		You can choose to just view log output from the running Process Id
+		by setting 'use_pid_logcat' to "true" in config properties.
 		
 		All warning and error messages are color highlighted in the output.
 		
@@ -459,10 +393,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.8:
-    For App Bundles, Install button will now use bundletool commands
-    to install to connected device.
-
 ADev-3.1.9:
     Improved resolving .apk for builds.
     Improved not modifying projects if you have 'dont_modify_build_gradle' turned on.
@@ -471,6 +401,12 @@ ADev-3.1.9:
 ADev-3.2.0:
     For Uninstall, if the device is asleep, it wakes up the display so that
     the Uninstall will work.
+    
+ADev-3.2.2:
+    Improved logcat.  It now clears the logcat buffer each time it starts to 
+    reduce any slowdowns caused by long previous outputs.
+    Improved PID logcat.  Found out that the secound time you would run it,
+    it wouldn't get any output, and fixed it.
 
 
 I use it for all of my own development, and try to fix what issues I see,
