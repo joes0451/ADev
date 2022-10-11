@@ -3655,7 +3655,7 @@ public class ADev
 
 			//System.out.println("\n\n(IOBgThread)commandS: '"+commandS+"'");
 			//System.out.println("\nIOBgThread run()");
-/*
+/*			
 			if ( commandS == null )
 				System.out.println("commandS null");
 			else
@@ -3711,7 +3711,7 @@ public class ADev
 					}
 					
 					//System.out.println("currDirSb: '"+currDirSb.toString()+"'");
-/*
+/*					
 					if ( actionCommandS == null )
 						System.out.println("actionCommandS null");
 					else
@@ -3833,6 +3833,8 @@ public class ADev
 						iTotalBytes += iBytesRead;
 					}
 
+
+
 /*					
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
@@ -3922,11 +3924,12 @@ public class ADev
                             if ( sUsePidLogcat.equals("true") )
                             {
                                 // Use PID Logcat..
+                                
                                 //System.out.println("Using PID");
-                                //if ( (sPid != null) && (sPid.length() > 0) )
-                                    //;   // Have it..
-                                //else
-                                //if ( true )
+                                
+                                if ( (sPid != null) && (! sPid.equals("null")) && (sPid.length() > 0) )
+                                    ;   // Have it..
+                                else
                                 {
                                     if ( (packageNameS != null) && (packageNameS.length() > 0) )
                                     {
@@ -3988,6 +3991,8 @@ public class ADev
                                                 iStart = iLoc3;
                                                 for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
                                                 sPid = commandResultS.substring(iStart, iLoc3);
+                                                
+                                                // Try changing to use PID command..
                                             }
                                             else
                                             {
@@ -3998,13 +4003,14 @@ public class ADev
                                     }
                                 }
 
+
 /*                                
                                 if ( sPid == null )
                                     System.out.println("sPid null");
                                 else
                                     System.out.println("sPid: '"+sPid+"'");
 /**/                                
-                                
+
                                 if ( (sPid != null) && (sPid.length() > 0) )
                                 {
                                     sB = new StringBuffer();
@@ -4118,6 +4124,10 @@ public class ADev
                                     
                                     lineSb = sB;
                                 }
+/**/                                
+                                
+                                
+                                
                             }
                         }
 
@@ -4678,7 +4688,7 @@ public class ADev
 			bLogcatOn = false;
 			bFinished = true;
 
-			//System.out.println("\nExiting IOBgThread run()");
+			//System.out.println("\n\nExiting IOBgThread run()");
 			
 		}
 	}	//}}}
@@ -14181,7 +14191,7 @@ public class ADev
 				}
 			}
 
-			//System.out.println("bOK: "+bOK);
+			//System.out.println("\nbOK: "+bOK);
 			if ( bOK )
 			{
 				bOK = false;
@@ -14194,7 +14204,7 @@ public class ADev
 						iWirelessErrorCode = 0;
 						sDeviceName = (String)ConnectDevicesAr.get(0);
 						sDeviceName = sDeviceName.trim();
-						//System.out.println("(Single device)sDeviceName: '"+sDeviceName+"'");
+						//System.out.println("\n(Single device)sDeviceName: '"+sDeviceName+"'");
 					}
 					else
 					{
@@ -14642,7 +14652,7 @@ public class ADev
 						// Success..
 						// Set to use 'sWirelessID' as the new device name for -s..
 						sDeviceName = sWirelessID;
-						//System.out.println("sDeviceName: '"+sDeviceName+"'");
+						System.out.println("\nsDeviceName: '"+sDeviceName+"'");
 						
 /*						
 						if ( (DevicesAr != null) && (DevicesAr.size() > 1) )
@@ -20437,11 +20447,16 @@ While_Break:
 			else if ( LOGCAT.equals(actionCommandS) )
 			{
 				// Logcat..
-				//System.out.println("LOGCAT");
+				//System.out.println("\nLOGCAT");
 
 				StringBuffer sb;
+				StringBuffer internalSb;
 				int iLoc = 0;
+				int iLoc1 = 0;
+				int iLoc2 = 0;
 				int iStart = 0;
+				//boolean bDidReconnect = false;
+				boolean bDoReconnect = false;
 				
 				RefreshProperties();
 				boolean bSelected = logcatToggleButton.isSelected();
@@ -20449,104 +20464,101 @@ While_Break:
 				//System.out.println("(logcatToggleButton.isSelected())bSelected: "+bSelected);
 				if ( bSelected )
 				{
+				    // Logcat being turned on..
+				    //System.out.println("Logcat turned on");
 				    
-/*				    
-				    if ( sUsePidLogcat == null )
-				        System.out.println("sUsePidLogcat null");
-				    else
-				        System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
-/**/
-/*				    
-					// Not currently selected..
-					if ( (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
-					{
-					    if ( sUsePidLogcat.equals("true") )
-					    {
-					        // Get PID..
-                            sb = new StringBuffer();
-                            
-                            if ( iOS == LINUX_MAC )
+                    while ( true )
+                    {
+                        internalSb = new StringBuffer();
+                        
+                        if ( iOS == LINUX_MAC )
+                        {
+                            internalSb.append("export PATH=${PATH}:");
+                            internalSb.append(androidSdkPathS);
+                            internalSb.append("/platform-tools");
+            
+                            internalSb.append(";adb devices");
+                        }
+                        else
+                        {
+                            internalSb.append("SET PATH=");
+                            internalSb.append(androidSdkPathS);
+                            internalSb.append("/platform-tools");
+                            internalSb.append(";%PATH%");
+
+                            if ( bDoReconnect )
                             {
-                                sb.append("export PATH=${PATH}:");
-                                sb.append(androidSdkPathS);
-                                sb.append("/platform-tools");
-                                sb.append(";adb ");
+                                internalSb.append("&&adb reconnect");
+                                bDoReconnect = false;   // Reset..
                             }
                             else
-                            {
-                                sb.append("SET PATH=");
-                                sb.append(androidSdkPathS);
-                                sb.append("/platform-tools");
-                                sb.append(";%PATH%");
-                                sb.append("&&adb ");
-                            }
+                                internalSb.append("&&adb devices");
                             
-                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-                            {
-                                sb.append("-s ");
-                                sb.append(sDeviceName);
-                                sb.append(" ");
-                            }
-                            
-                            sb.append("shell ps");
-                                
-                            if ( iOS == WINDOWS )
-                                sb.append("\n");
-                            
-                            //System.out.println("sb: '"+sb.toString()+"'");
-                            bInternalFinished = false;
-                            internalCommandS = sb.toString();
-                            commandBgThread = new CommandBgThread();
-                            commandBgThread.start();
+                            internalSb.append("\n");
+                        }
+                        
+                        //System.out.println("(Cmd): '"+internalSb.toString()+"'");
+            
+                        bInternalFinished = false;		
+                        internalCommandS = internalSb.toString();
+                        commandBgThread = new CommandBgThread();
+                        commandBgThread.start();
                 
-                            // Wait for Thread to finish..
-                            while ( true )
+                        // Wait for Thread to finish..
+                        while ( true )
+                        {
+                            try
                             {
-                                try
-                                {
-                                    Thread.sleep(250);
-                                }
-                                catch (InterruptedException ie)
-                                {
-                                }
-                
-                                if ( bInternalFinished )
-                                    break;
+                                Thread.sleep(200);
                             }
-
+                            catch (InterruptedException ie)
+                            {
+                            }
+            
+                            if ( bInternalFinished )
+                                break;
+                        }
+/*            
+                        if ( commandResultS == null )
+                            System.out.println("commandResultS null");
+                        else
                             System.out.println("commandResultS: '"+commandResultS+"'");
-                            
-                            if ( packageNameS == null )
-                                System.out.println("packageNameS null");
-                            else
-                                System.out.println("packageNameS: '"+packageNameS+"'");
-
-                            // Note:
-                            // It seems like it won't find the PID here,
-                            // it finds it in IOBgThread..
-                            if ( (packageNameS != null) && (packageNameS.length() > 0) )
+/**/
+                        
+                        if ( (commandResultS != null) && (commandResultS.length() > 0) )
+                        {
+                            iLoc2 = commandResultS.indexOf("attached");
+                            if ( iLoc2 != -1 )
                             {
-                                iLoc = commandResultS.indexOf(packageNameS);
-                                System.out.println("(Fing package name) iLoc: "+iLoc);
-                                if ( iLoc != -1 )
+                                iLoc1 = commandResultS.indexOf("device", iLoc2);
+                                if ( iLoc1 != -1 )
                                 {
-                                    // Grab PID..
-                                    iStart = 0;
-                                    for ( ; commandResultS.charAt(iLoc) != (char)0x0a; iLoc-- );
-                    
-                                    iLoc++;
-                                    for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
-                                    for ( ; Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
-                                    iStart = iLoc;
-                                    for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc)); iLoc++ );
-                                    sPid = commandResultS.substring(iStart, iLoc);
-                                    System.out.println("\nsPid: '"+sPid+"'");
+                                    // Have device..
+                                    break;
+                                }
+                                else
+                                {
+                                    // No device
+/*                                    
+                                    if ( sWirelessID == null )
+                                        System.out.println("sWirelessID null");
+                                    else
+                                        System.out.println("sWirelessID: '"+sWirelessID+"'");
+/**/                                    
+                                    
+/*                                    
+                                    if ( sDeviceName == null )
+                                        System.out.println("sDeviceName null");
+                                    else
+                                        System.out.println("sDeviceName: '"+sDeviceName+"'");
+/**/                                    
+                                    ;
                                 }
                             }
-					    }
-					}
-/**/
-
+                        }
+                    }   // End while..
+				    
+                    //System.out.println("\n=== DROPPED OUT ===");
 					bLogcatOn = true;
 					commandSb = new StringBuffer();
 
@@ -20558,7 +20570,18 @@ While_Break:
 						
 						commandSb.append(";");
 						
-						commandSb.append("adb logcat -c");
+						//commandSb.append("adb logcat -c");
+						commandSb.append("adb ");
+                        
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("logcat -c");
+						    
 						commandSb.append(";");
 					}
 					else
@@ -20572,7 +20595,19 @@ While_Break:
 
                         // Clear the buffer so that any slowdowns
                         // will be gone..						
-						commandSb.append("adb logcat -c");
+						//commandSb.append("adb logcat -c");
+						commandSb.append("adb ");
+						
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("logcat -c");
+						
+						    
 						commandSb.append("&&");
 					}
 	
@@ -20610,6 +20645,7 @@ While_Break:
 					
 					commandSb.append("logcat");
 					
+					
 					// !! TESTING !!
 					//commandSb.append(" -v brief");
 					
@@ -20637,7 +20673,12 @@ While_Break:
 				}
 				else
 				{
+				    // Logcat being turned off..
 					// Already selected..
+					//System.out.println("Logcat turned off");
+					
+					sPid = "";    // Reset..
+					
 					bBreakOut = true;	// Set to kill IOBgThread..
 					bLogcatOn = false;
 					bKillLogcat = true;	// Signal to kill for logcat..

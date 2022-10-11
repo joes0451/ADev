@@ -34,6 +34,6 @@ fi
 
 cd $SCRIPTPATH
 
-exec "$JDK_PATH/java" -jar ADev-3.2.2.jar
+exec "$JDK_PATH/java" -jar ADev-3.2.3.jar
 
 

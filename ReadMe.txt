@@ -284,6 +284,9 @@ Wireless debugging:
 		
 		You can check if your device is still connected by hitting the 'Devices' button
 		and see if it's listed, or its status.
+		
+		If you had a previous wireless debugging session going, it's a good
+		idea to select Wireless->Disconnect before you start.
 
 		- Attach your Android device to your computer with USB cable.
 		
@@ -393,11 +396,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.1.9:
-    Improved resolving .apk for builds.
-    Improved not modifying projects if you have 'dont_modify_build_gradle' turned on.
-    Some improvements for building LibGdx projects.
-    
 ADev-3.2.0:
     For Uninstall, if the device is asleep, it wakes up the display so that
     the Uninstall will work.
@@ -407,6 +405,9 @@ ADev-3.2.2:
     reduce any slowdowns caused by long previous outputs.
     Improved PID logcat.  Found out that the secound time you would run it,
     it wouldn't get any output, and fixed it.
+
+ADev-3.2.3:
+    Improved logcat and PID logcat, also works better with wireless debugging.
 
 
 I use it for all of my own development, and try to fix what issues I see,
