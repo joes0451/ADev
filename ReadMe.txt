@@ -396,10 +396,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.2.0:
-    For Uninstall, if the device is asleep, it wakes up the display so that
-    the Uninstall will work.
-    
 ADev-3.2.2:
     Improved logcat.  It now clears the logcat buffer each time it starts to 
     reduce any slowdowns caused by long previous outputs.
@@ -409,6 +405,9 @@ ADev-3.2.2:
 ADev-3.2.3:
     Improved logcat and PID logcat, also works better with wireless debugging.
 
+ADev-3.2.4:
+    Improved logcat by using 'brief' so highlighting will always work.
+    
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.

@@ -14652,7 +14652,7 @@ public class ADev
 						// Success..
 						// Set to use 'sWirelessID' as the new device name for -s..
 						sDeviceName = sWirelessID;
-						System.out.println("\nsDeviceName: '"+sDeviceName+"'");
+						//System.out.println("\nsDeviceName: '"+sDeviceName+"'");
 						
 /*						
 						if ( (DevicesAr != null) && (DevicesAr.size() > 1) )
@@ -20559,6 +20559,8 @@ While_Break:
                     }   // End while..
 				    
                     //System.out.println("\n=== DROPPED OUT ===");
+                    
+                    // Clear the buffer..
 					bLogcatOn = true;
 					commandSb = new StringBuffer();
 
@@ -20645,9 +20647,15 @@ While_Break:
 					
 					commandSb.append("logcat");
 					
+					// Note:
+					// On newer devices it looks like it defaults to
+					// something like -v threadtime
+					// looking like:
+					// 10-19 12:06:03.396  1438  1628 I GestureDetector: ...
 					
-					// !! TESTING !!
-					//commandSb.append(" -v brief");
+					// Try to default to a more compact version..
+					// Also ensures that highlighting will work..
+					commandSb.append(" -v brief");
 					
 					if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
 					{
