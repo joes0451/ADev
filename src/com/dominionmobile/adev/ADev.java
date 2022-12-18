@@ -466,6 +466,8 @@ public class ADev
 	static volatile boolean bUsingAndroid;
 	static volatile boolean bCheckDeviceFinished;
 	static volatile boolean bWakeDeviceFinished;
+	static volatile boolean bDidClean;
+	static volatile boolean bUseNamespace;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
 	
@@ -622,7 +624,6 @@ public class ADev
 	static volatile String packageNameS;
 	static volatile String sDebugMessage;
 	static volatile String sEnableDebugOutput;
-	static volatile String sGradleSuppressWarnings;
 	static volatile String sDontModifyBuildGradle;
 	static volatile String sUsePidLogcat;
 	static volatile String sPid;
@@ -632,6 +633,12 @@ public class ADev
 	static volatile String sBundleToolJarPath;
 	static volatile String sGradlewCommand;
 	static volatile String sWakefulness;
+	static volatile String sGradleWarningMode;
+	static volatile String sUseGradleUninstallInstall;
+	static volatile String sProjectLevelPath;
+	static volatile String sModuleLevelPath;
+	static volatile String sOpenJdkPath;
+	static volatile String sSavedPackageName;
 	
 	static String sDebugPackageName;
 	static String sApplicationName;
@@ -842,8 +849,10 @@ public class ADev
 	static final String CREATE = "Create";
 	static final String GENERATE_KEY_STORE = "Generate Key Store";
 	static final String UPDATE = "Update";
+	//static final String UPDATE = "Update (Ant)";
 	static final String LAUNCH = "Launch Emulator";
-	static final String REFRESH = "Refresh";
+	//static final String REFRESH = "Refresh";
+	static final String REFRESH = "Refresh Properties";
 
 	static final String CREATE_SUBMIT = "create_submit";
 	static final String CREATE_CANCEL = "create_cancel";
@@ -1048,10 +1057,10 @@ public class ADev
 	"Android 10.0 Q (API level 29)",
 	"Android 11.0 (API level 30)",
 	"Android 12.0 (API level 31)",
-	"Android 13.0 (API level 32)"};
+	"Android 12L (API level 32)",
+	"Android 13.0 (API level 33)"};
 
 	//}}}
-
 	
 	//{{{	ADev()  constructor
 	/**
@@ -1059,6 +1068,10 @@ public class ADev
      */
 	public ADev()
 	{
+	    //System.out.println("ADev  constructor");
+	    
+	    File tFile;
+	    
 		// Determine OS..
 		String osS = System.getProperty("os.name").toLowerCase();
 		if ( osS.indexOf("win") >= 0 )
@@ -1096,6 +1109,7 @@ public class ADev
 		bIsReleaseBuild = false;
 		bIsDebugBuild = false;
 		bUsingAndroid = false;
+		bUseNamespace = false;
 		
 		iCardShowing = BUILD_CARD;
 		iPreviousIndex = -1;
@@ -1137,6 +1151,7 @@ public class ADev
 		lPrevTime = 0;
 		bWirelessEnabled = false;
 		sGradlewCommand = "";
+		bDidClean = false;
 		
 		
 		//messageObject = new Object();
@@ -1166,7 +1181,7 @@ public class ADev
 		// Event related..
 		EventReplyObject = new Object();		
 		EventPacketAr = new ArrayList();
-
+		
 		RefreshProperties();
 
 		// Note:
@@ -1205,16 +1220,6 @@ public class ADev
 			androidSdkPathS = androidSdkPathGradleS;
 		}
 
-/*
-		// Try to detect OpenJdk being used..
-		if ( (javaPathS != null) && (javaPathS.length() > 0) )
-		{
-		    if ( javaPathS.contains("openjdk") )
-		        sUsingOpenJdk = "true";
-		    else
-		        sUsingOpenJdk = "false";
-		}
-/**/		
 		//System.out.println("(Selected)androidSdkPathS: '"+androidSdkPathS+"'");
 		// Defaults..		
 		bBreakOut = false;
@@ -1257,7 +1262,50 @@ public class ADev
 			}
 		}
 
+		bUsingAppProject = false;
+		String sRet = "";
+		StringBuffer tSb;
+		
+		tSb = new StringBuffer(projectHomeS);
+		sRet = FindBuildGradle(tSb.toString());
+        if (! sRet.equals("") )
+        {
+            sProjectLevelPath = sRet;
+        }
+		
+        tSb = new StringBuffer(projectHomeS);
+        tSb.append("/app");
+        tFile = new File(tSb.toString());
+        if ( tFile.exists() )
+        {
+            // 'app' exists..
+            //System.out.println("app exists");
+            bUsingAppProject = true;
+        		
+            sRet = FindBuildGradle(tSb.toString());
+            if (! sRet.equals("") )
+            {
+                // Found build.gradle..
+                sModuleLevelPath = sRet;
+            }
+        }
+		
+        tSb = new StringBuffer(projectHomeS);
+        tSb.append("/android/app");
+        sRet = FindBuildGradle(tSb.toString());
+        if (! sRet.equals("") )
+        {
+            // Found build.gradle..
+            sModuleLevelPath = sRet;
+        }
+/*		
+        if ( sModuleLevelPath == null )
+            System.out.println("sModuleLevelPath null");
+        else
+            System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/                
 
+/*
 		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 		{
 			StringBuffer sB = new StringBuffer(projectHomeS);
@@ -1268,14 +1316,15 @@ public class ADev
 			else
 				bUsingAppProject = false;
 		}
-
+/**/
         // Look for [Project]/android
         // For LibGdx projects..
 		if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 		{
 			StringBuffer sB = new StringBuffer(projectHomeS);
 			sB.append("/android");
-			File tFile = new File(sB.toString());
+			//File tFile = new File(sB.toString());
+			tFile = new File(sB.toString());
 			if ( tFile.exists() )
 				bUsingAndroid = true;
 			else
@@ -1303,7 +1352,7 @@ public class ADev
             }
         }
 /**/
-
+        //System.out.println("Exiting ADev  constructor");
 	}	//}}}
 
 	//{{{	RefreshProperties()
@@ -1323,6 +1372,7 @@ public class ADev
 			// Get Property Values..
 			antPathS = Utils.processPath(prop.getProperty("ant_path"));
 			javaPathS = Utils.processPath(prop.getProperty("java_path"));
+			sOpenJdkPath = Utils.processPath(prop.getProperty("openjdk_path"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
 			sBundleToolJarPath = Utils.processPath(prop.getProperty("bundletool_jar_path"));
 			
@@ -1345,8 +1395,9 @@ public class ADev
 			sDontModifyBuildGradle = Utils.processPath(prop.getProperty("dont_modify_build_gradle"));
 			sAdditionalCommands = Utils.processPath(prop.getProperty("additional_commands"));
 			sPropertiesPackageName = Utils.processPath(prop.getProperty("package_name"));
+			sUseGradleUninstallInstall = Utils.processPath(prop.getProperty("use_gradle_uninstall_install"));
 			
-			sGradleSuppressWarnings = Utils.processPath(prop.getProperty("gradle_suppress_warnings"));
+			sGradleWarningMode = Utils.processPath(prop.getProperty("gradle_warning_mode"));
 			sGPSLatitude = Utils.processPath(prop.getProperty("gps_latitude"));
 			sUseGradlew = Utils.processPath(prop.getProperty("use_gradlew"));
 			sUseAppBundle = Utils.processPath(prop.getProperty("use_app_bundle"));
@@ -1365,6 +1416,18 @@ public class ADev
 			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
 			sAppBundleKeyAliasPassword = Utils.processPath(prop.getProperty("app_bundle_key_alias_password"));
 
+			
+			if ( (sOpenJdkPath != null) && (sOpenJdkPath.length() > 0) && (! sOpenJdkPath.equals("null")) )
+			{
+			    sUsingOpenJdk = "true";
+			    javaPathS = sOpenJdkPath;
+			}
+			else
+			{
+			    sUsingOpenJdk = "false";
+			}
+			    
+/*			
             if ( (javaPathS != null) && (javaPathS.length() > 0) && (! javaPathS.equals("null")) )
             {
                 //System.out.println("javaPathS: '"+javaPathS+"'");
@@ -1379,6 +1442,7 @@ public class ADev
             {
                 sUsingOpenJdk = "false";
             }
+/**/            
 /*
             if ( sUseGradlew == null )
                 System.out.println("sUseGradlew null");
@@ -1518,6 +1582,8 @@ public class ADev
 			String sPackageName = packageField.getText();
 			sPackageName = sPackageName.trim();
 			//System.out.println("sPackageName: '"+sPackageName+"'");
+			sSavedPackageName = sPackageName;
+			
 			//System.out.println("projectHomeS: '"+projectHomeS+"'");
 
 			// Flip slashes..
@@ -1583,6 +1649,8 @@ public class ADev
 
 				commandSb.append("&&gradle init\n");
 			}
+			
+			//System.out.println("(Create)commandSb: '"+commandSb.toString()+"'");
 			
 			bInternalFinished = false;		
 			internalCommandS = commandSb.toString();
@@ -1961,7 +2029,9 @@ public class ADev
 				outSb.append("        <activity android:name=\"");
 				outSb.append(sActivityName);
 				outSb.append("\"");
-				outSb.append(sTrail);	
+				outSb.append(sTrail);
+				outSb.append("            android:exported=\"false\"");	
+				outSb.append(sTrail);
 				outSb.append("            android:label=\"@string/app_name\">");	
 				outSb.append(sTrail);
 				outSb.append("        <intent-filter>");
@@ -2170,6 +2240,7 @@ public class ADev
 							sT = sT.substring(iLoc2 + 1);
 						}
 						
+						//System.out.println("(Add): '"+sT+"'");
 						targetDescAr.add((String)sT);
 					}
 				}
@@ -2220,7 +2291,8 @@ public class ADev
 				{
 					sBuildToolsVersion = (String)buildToolsSpinner.getValue();
 				}
-				
+
+                // Cannot be above plugins {} block..				
 				outSb = new StringBuffer();
 				outSb.append("def keystoreProperties = new Properties()");
 				outSb.append(sTrail);
@@ -2279,6 +2351,21 @@ public class ADev
 				{
 					outSb.append("    buildToolsVersion '");
 					outSb.append(sBuildToolsVersion);
+					outSb.append("'");
+					outSb.append(sTrail);
+				}
+				
+                if ( bUseNamespace )				
+				{
+/*				    
+				    if ( sSavedPackageName == null )
+				        System.out.println("sSavedPackageName null");
+				    else
+				        System.out.println("sSavedPackageName: '"+sSavedPackageName+"'");
+/**/				    
+
+					outSb.append("    namespace '");
+					outSb.append(sSavedPackageName);
 					outSb.append("'");
 					outSb.append(sTrail);
 				}
@@ -3585,6 +3672,7 @@ public class ADev
 			int iTotalBytes;
 			int iG;
 			int iLoc;
+			int iLoc3 = 0;
 			int iLen;
 			int iLEnd = -1;
 			int iLenSave = 0;
@@ -3637,6 +3725,7 @@ public class ADev
 			String inLineS;
 			String lineS = "";
 			String outS;
+			StringBuffer sb;
 			
 			
 			ArrayList locAr = new ArrayList(384);
@@ -3661,6 +3750,16 @@ public class ADev
 			else
 				System.out.println("commandS: '"+commandS+"'");
 /**/
+
+
+            //System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
+/*            
+            if ( packageNameS == null )
+                System.out.println("packageNameS null");
+            else
+                System.out.println("packageNameS: '"+packageNameS+"'");
+/**/
+
 
 			try
 			{
@@ -3833,9 +3932,8 @@ public class ADev
 						iTotalBytes += iBytesRead;
 					}
 
-
-
-/*					
+/*
+                    // Debbuging..					
 					if ( (lineSb != null) && (iBytesRead > 0) )
 					{
 						System.out.println();
@@ -3903,16 +4001,20 @@ public class ADev
 						boolean bFirst2;
 						int iLastZeroA = 0;
 						int iLoc2 = 0;
-						int iLoc3 = 0;
+						//int iLoc3 = 0;
 						int iLoc4 = 0;
 						int iLoc5 = 0;
 						int iLoc6 = 0;
 						StringBuffer endSb;
 						StringBuffer sB;
-						StringBuffer sb;
+						//StringBuffer sb;
 						String sPrevEnd = "";
 						String sT = "";
 						String sT2 = "";
+						
+						// TESTING
+						//sPid = "";
+						
 						
 						//System.out.println("\nbLogcatOn: "+bLogcatOn);
 						//System.out.println("sUsePidLogcat: '"+sUsePidLogcat+"'");
@@ -3926,11 +4028,15 @@ public class ADev
                                 // Use PID Logcat..
                                 
                                 //System.out.println("Using PID");
-                                
                                 if ( (sPid != null) && (! sPid.equals("null")) && (sPid.length() > 0) )
+                                {
+                                    //System.out.println("Have it");
                                     ;   // Have it..
+                                }
                                 else
                                 {
+                                    // We have to keep checking with this
+                                    // until we get a PID..
                                     if ( (packageNameS != null) && (packageNameS.length() > 0) )
                                     {
                                         // Check Process..
@@ -3991,6 +4097,7 @@ public class ADev
                                                 iStart = iLoc3;
                                                 for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
                                                 sPid = commandResultS.substring(iStart, iLoc3);
+                                                //System.out.println("sPid: '"+sPid+"'");
                                                 
                                                 // Try changing to use PID command..
                                             }
@@ -4003,8 +4110,7 @@ public class ADev
                                     }
                                 }
 
-
-/*                                
+/*
                                 if ( sPid == null )
                                     System.out.println("sPid null");
                                 else
@@ -4062,7 +4168,10 @@ public class ADev
                                                         
                                                             sT = sT.trim();
                                                             if ( sPid.equals(sT) )
+                                                            {
+                                                                //System.out.println("--Matches PID--");
                                                                 sB.append(endSb.toString());
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -4126,8 +4235,6 @@ public class ADev
                                 }
 /**/                                
                                 
-                                
-                                
                             }
                         }
 
@@ -4153,19 +4260,21 @@ public class ADev
                         // In Flutter there
                         // were some bad lead characters
                         // so kill any of those..
-/*                        
-                        while ( true )
+                        if ( lineSb.length() > 0 )
                         {
-                            if ( lineSb.charAt(0) > 0x7f )
+                            while ( true )
                             {
-                                lineSb.deleteCharAt(0);
-                                continue;
+                                if ( lineSb.charAt(0) > 0x7f )
+                                {
+                                    lineSb.deleteCharAt(0);
+                                    continue;
+                                }
+                                else
+                                    break;
                             }
-                            else
-                                break;
                         }
-/**/                        
-						
+/**/
+
 						iIdx = 0;
 						bDoBreak = false;
 						bSplit = false;
@@ -4189,7 +4298,9 @@ public class ADev
 								// Hit end of block..
 								cChr = ' ';
 								if ( ((lineSb.length() - 1) >= 0) && ((lineSb.length() - 1) < lineSb.length()) )
+								{
 								    cChr = lineSb.charAt(lineSb.length() - 1);
+								}
 								
 								if ( (cChr == (char)0x0a) || (cChr == (char)0x0d) )
 									;
@@ -4665,7 +4776,7 @@ public class ADev
 				}
 				catch (InterruptedException ie)
 				{
-					System.out.println(ie.toString());
+					System.out.println("Exception: "+ie.toString());
 				}
 			}
 
@@ -4699,11 +4810,19 @@ public class ADev
 		public void run()
 		{
 			// Make sure that signingConfigs storeFile is commented out..
-			//System.out.println("InitializeBuildGradleBgThread run()");
+			//System.out.println("\nInitializeBuildGradleBgThread run()");
 			byte[] buildBuf = null;
 			StringBuffer outSb;
 			int iLoc;
-			
+
+/*			
+			if ( sModuleLevelPath == null )
+			    System.out.println("sModuleLevelPath null");
+			else
+			    System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/
+
+/*
 			// Construct path..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
 
@@ -4718,33 +4837,55 @@ public class ADev
 				else
 					fileNameSb.append("/build.gradle");
 			}
-
+/**/
 			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
-			File buildFile = new File(fileNameSb.toString());
-			if ( buildFile.exists() )
+			//File buildFile = new File(fileNameSb.toString());
+			if ( sModuleLevelPath != null )
 			{
-				buildBuf = readFile(
-					1024,					// iInitialSize
-					fileNameSb.toString());	// fileName
-				
-				if ( (buildBuf != null) && (buildBuf.length > 0) )
-				{
-					outSb = new StringBuffer(new String(buildBuf));
-					iLoc = outSb.indexOf("storeFile");
-					if ( iLoc != -1 )
-					{
-						if ( outSb.charAt(iLoc - 1) == '/' )
-							;
-						else
-						{
-							// Comment it out..
-							outSb.insert(iLoc, "//");
-							
-							writeFile(outSb.toString().getBytes(), fileNameSb.toString());	
-						}
-					}
-				}
-			}
+                File buildFile = new File(sModuleLevelPath);
+                if ( buildFile.exists() )
+                {
+                    buildBuf = readFile(
+                        1024,					// iInitialSize
+                        //fileNameSb.toString());	// fileName
+                        sModuleLevelPath);	// fileName
+
+                    // Seems to need a little delay..                    
+                    try
+                    {
+                        Thread.sleep(500);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( (buildBuf != null) && (buildBuf.length > 0) )
+                    {
+                        outSb = new StringBuffer(new String(buildBuf));
+                        iLoc = outSb.indexOf("storeFile");
+                        if ( iLoc != -1 )
+                        {
+                            //System.out.println("Found storeFile");
+                            if ( outSb.charAt(iLoc - 1) == '/' )
+                            {
+                                //System.out.println("Already commented out");
+                                ;   // Already commented out..
+                            }
+                            else
+                            {
+                                // Comment it out..
+                                //System.out.println("Commenting out");
+                                outSb.insert(iLoc, "//");
+                                
+                                //writeFile(outSb.toString().getBytes(), fileNameSb.toString());
+                                writeFile(outSb.toString().getBytes(), sModuleLevelPath);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            //System.out.println("Exiting InitializeBuildGradleBgThread");
 			
 			bInitBuildGradleFinished = true;
 		}
@@ -4844,7 +4985,15 @@ public class ADev
 			//System.out.println("DebugReleaseBgThread run()");
 			byte[] buildBuf = null;
 			int iLoc = 0;
-			
+
+/*			
+			if ( sModuleLevelPath == null )
+			    System.out.println("sModuleLevelPath null");
+			else
+			    System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/
+
+/*
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
 			if ( bFlutterSelected )
 				fileNameSb.append("/android/app/build.gradle");
@@ -4855,10 +5004,11 @@ public class ADev
 				else
 					fileNameSb.append("/build.gradle");
 			}
-
+/**/
 			buildBuf = readFile(
 				512,					// iInitialSize
-				fileNameSb.toString());	// fileName
+				//fileNameSb.toString());	// fileName
+			    sModuleLevelPath);
 /*
             if ( buildBuf == null )
                 System.out.println("buildBuf null");
@@ -4955,7 +5105,8 @@ public class ADev
 					}
 				}
 				
-				writeFile(outSb.toString().getBytes(), fileNameSb.toString());
+				//writeFile(outSb.toString().getBytes(), fileNameSb.toString());
+				writeFile(outSb.toString().getBytes(), sModuleLevelPath);
 			}
 			
 			bDebugReleaseFinished = true;
@@ -4963,6 +5114,7 @@ public class ADev
 		}
 		
 		//System.out.println("Exiting DebugReleaseBgThread");
+		
 	}	//}}}
 
 	//{{{	UpdateAppNameBgThread
@@ -8686,7 +8838,13 @@ public class ADev
 				
 				if ( (sKeystorePath == null) || (sKeystorePath.equals("null")) || (sKeystorePath.equals("")) )
 					sKeystorePath = Utils.processPath(antProp.getProperty("key.store"));
-				
+/*				
+				if ( sKeystorePath == null )
+				    System.out.println("sKeystorePath null");
+				else
+				    System.out.println("sKeystorePath: '"+sKeystorePath+"'");
+/**/
+
 				if ( (sKeyAlias == null) || (sKeyAlias.equals("null")) || (sKeyAlias.equals("")) )
 					sKeyAlias = Utils.processPath(antProp.getProperty("key.alias"));
 				
@@ -8947,6 +9105,9 @@ public class ADev
 			byte[] zeroDzeroA = {(byte)0x0d, (byte)0x0a};
 			String zeroDzeroAS = new String(zeroDzeroA);
 			
+			byte[] Aandroid = {(byte)0x0a, (byte)'a', (byte)'n', (byte)'d', (byte)'r', (byte)'o', (byte)'i', (byte)'d'};
+			String sAndroid = new String(Aandroid);
+			
 			byte[] buildBuf = null;
 			StringBuffer outSb;
 			StringBuffer insertSb = null;
@@ -8955,6 +9116,7 @@ public class ADev
 			int iLoc2 = 0;
 			int iLoc3;
 			int iEnd;
+			boolean bIsKts = false;
 			String sEnd;
 			String sTabEnd;
 			
@@ -8989,6 +9151,14 @@ public class ADev
 				System.out.println("projectHomeS: '"+projectHomeS+"'");
 /**/
 
+/*
+			if ( sModuleLevelPath == null )
+			    System.out.println("sModuleLevelPath null");
+			else
+			    System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/
+
+/*
 			// Construct filename..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
 
@@ -9007,12 +9177,19 @@ public class ADev
 					fileNameSb.append("/build.gradle");
 				}
 			}
-
-
-			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
-			buildFilenameS = fileNameSb.toString();	// Save original name..
+/**/
 			
-			File buildFile = new File(fileNameSb.toString());
+            if ( sModuleLevelPath != null )
+                if ( sModuleLevelPath.endsWith(".kts") )
+                    bIsKts = true;
+                
+                
+			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
+			//buildFilenameS = fileNameSb.toString();	// Save original name..
+			buildFilenameS = sModuleLevelPath;
+			
+			//File buildFile = new File(fileNameSb.toString());
+			File buildFile = new File(sModuleLevelPath);
 
 /*
 			if ( buildFile == null )
@@ -9042,7 +9219,8 @@ public class ADev
 
 				buildBuf = readFile(
 					512,					// iInitialSize
-					fileNameSb.toString());	// fileName
+					//fileNameSb.toString());	// fileName
+				    sModuleLevelPath);
 			}
 
 /*			
@@ -9065,13 +9243,21 @@ public class ADev
 					// Not defined, add def..
 					StringBuffer defSb = new StringBuffer();
 
-					iLoc = outSb.indexOf("apply plugin");
-
+					// Cannot be above plugins {} block
+					//iLoc = outSb.indexOf("apply plugin");    // build.gradle
+					iLoc = outSb.indexOf(sAndroid);
 					if ( iLoc != -1 )
 					{
+					    defSb.append(sEnd);
+					    defSb.append(sEnd);
 						defSb.append("def keystoreProperties = new Properties()");
 						defSb.append(sEnd);
-						defSb.append("def keystorePropertiesFile = rootProject.file('key.properties')");
+						
+						if ( bIsKts )
+						    defSb.append("def keystorePropertiesFile = rootProject.file("+'"'+"key.properties"+'"'+")");
+						else    
+						    defSb.append("def keystorePropertiesFile = rootProject.file('key.properties')");
+						
 						defSb.append(sEnd);
 						defSb.append("if (keystorePropertiesFile.exists()) {");
 						defSb.append(sEnd);
@@ -9104,22 +9290,42 @@ public class ADev
 						signSb.append(zero9S);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
-						signSb.append("keyAlias keystoreProperties['keyAlias']");
+						
+						if ( bIsKts )
+						    signSb.append("keyAlias keystoreProperties["+'"'+"keyAlias"+'"'+"]");
+						else
+						    signSb.append("keyAlias keystoreProperties['keyAlias']");
+						
 						signSb.append(sEnd);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
-						signSb.append("keyPassword keystoreProperties['keyPassword']");  
+						
+						if ( bIsKts )
+						    signSb.append("keyPassword keystoreProperties["+'"'+"keyPassword"+'"'+"]");
+						else
+						    signSb.append("keyPassword keystoreProperties['keyPassword']");
+						
 						signSb.append(sEnd);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
-						signSb.append("//storeFile file(keystoreProperties['storeFile'])");
+						
+						if ( bIsKts )
+						    signSb.append("//storeFile file(keystoreProperties["+'"'+"storeFile"+'"'+"])");
+						else
+						    signSb.append("//storeFile file(keystoreProperties['storeFile'])");
+						
 						signSb.append(sEnd);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
-						signSb.append("storePassword keystoreProperties['storePassword']");
+						
+						if ( bIsKts )
+						    signSb.append("storePassword keystoreProperties["+'"'+"storePassword"+'"'+"]");
+						else
+						    signSb.append("storePassword keystoreProperties['storePassword']");
+						
 						signSb.append(sEnd);
 						signSb.append(zero9S);
 						signSb.append(zero9S);
@@ -9292,13 +9498,21 @@ public class ADev
 		public void run()
 		{
 		    //System.out.println("\nCheckGradleProjectBgThread run()");
+		    // Using project level build.gradle..
 		    int iLoc2 = 0;
 		    int iLoc3 = 0;
 		    int iLoc4 = 0;
 		    String sIn = "";
+		    String sRet = "";
 		    StringBuffer sB;
 		    byte[] buildBuf = null;
-		    
+/*
+            if ( sProjectLevelPath == null )
+                System.out.println("sProjectLevelPath null");
+            else
+                System.out.println("sProjectLevelPath: '"+sProjectLevelPath+"'");
+/**/                
+
 			// Construct filename..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
 			
@@ -9306,15 +9520,25 @@ public class ADev
 			{
 			    sB = new StringBuffer(projectHomeS);
 			    sB.append("/android");
+			    
+                sRet = FindBuildGradle(sB.toString());
+                if (! sRet.equals("") )
+                {
+                    sProjectLevelPath = sRet;
+                }
+/*			    
 			    File tFile = new File(sB.toString());
 			    if ( tFile.exists() )
 			        fileNameSb.append("/android");
+/**/			    
 			}
 			
-			fileNameSb.append("/build.gradle");
+			//fileNameSb.append("/build.gradle");
 			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
-			
-			File buildFile = new File(fileNameSb.toString());
+/**/
+
+			//File buildFile = new File(fileNameSb.toString());
+			File buildFile = new File(sProjectLevelPath);
 
 			while ( true )
 			{
@@ -9329,10 +9553,14 @@ public class ADev
 				if ( buildFile.exists() )
 					break;
 			}
+			
+			//System.out.println("Dropped out");
 
 			buildBuf = readFile(
 				512,					// iInitialSize
-				fileNameSb.toString());	// fileName
+				//fileNameSb.toString());	// fileName
+			    sProjectLevelPath);
+
 /*			
 			if ( buildBuf == null )
 			    System.out.println("buildBuf null");
@@ -9361,12 +9589,15 @@ public class ADev
                                 sB = new StringBuffer(sIn);
                                 sB = sB.replace(iLoc4 - 2, iLoc4, "//");
                                 
-                                writeFile(sB.toString().getBytes(), fileNameSb.toString());
+                                //writeFile(sB.toString().getBytes(), fileNameSb.toString());
+                                writeFile(sB.toString().getBytes(), sProjectLevelPath);
                             }
                         }
                     }
 			    }
 			}
+			
+			//System.out.println("Exiting CheckGradleProjectBgThread");
 			
 			bCheckGradleProjectFinished = true;
 		}
@@ -9399,13 +9630,20 @@ public class ADev
 			else
 				sTrail = new String(zeroDzeroA);
 
-		    			
+/*			
+			if ( sProjectLevelPath == null )
+			    System.out.println("sProjectLevelPath null");
+			else
+			    System.out.println("sProjectLevelPath: '"+sProjectLevelPath+"'");
+/**/
+/*		    			
 			// Construct filename..
 			StringBuffer fileNameSb = new StringBuffer(projectHomeS);
 			fileNameSb.append("/build.gradle");
 			//System.out.println("fileNameSb: '"+fileNameSb.toString()+"'");
-			
-			File buildFile = new File(fileNameSb.toString());
+/**/			
+			//File buildFile = new File(fileNameSb.toString());
+			File buildFile = new File(sProjectLevelPath);
 
 			while ( true )
 			{
@@ -9423,7 +9661,8 @@ public class ADev
 
 			buildBuf = readFile(
 				512,					// iInitialSize
-				fileNameSb.toString());	// fileName
+				//fileNameSb.toString());	// fileName
+			    sProjectLevelPath);
 
 			if ( ((buildBuf != null) && (buildBuf.length > 0)) &&
 			    ((sDebugArg != null) && (sDebugArg.length() > 0)) )
@@ -9496,7 +9735,8 @@ public class ADev
                     }
 			    }
 			    
-			    writeFile(sB.toString().getBytes(), fileNameSb.toString());			    
+			    //writeFile(sB.toString().getBytes(), fileNameSb.toString());
+                writeFile(sB.toString().getBytes(), sProjectLevelPath);				    
 			}
 			
 			bDebugOptionFinished = true;
@@ -9508,7 +9748,7 @@ public class ADev
 	{
 		public void run()
 		{
-			// Remove 'android:configChanges' for Flutter
+			// Remove 'android:configChanges' for Flutter only..
 			// Causing build issues..
 			//System.out.println("ModifyAndroidManifestBgThread()");
 			byte[] buildBuf = null;
@@ -9623,6 +9863,8 @@ public class ADev
 		public void run()
 		{
 			//System.out.println("DeleteKeyPropertiesBgThread run()");
+			//System.out.println("projectHomeS: '"+projectHomeS+"'");
+			
 			// Construct file name..
 			StringBuffer fNameSb = new StringBuffer(projectHomeS);
 			fNameSb.append("/");
@@ -9700,9 +9942,16 @@ public class ADev
 			}
 			
 			//System.out.println("keyFileSb: '"+keyFileSb.toString()+"'");
+/*			
+			if ( sKeystorePath == null )
+			    System.out.println("sKeystorePath null");
+			else
+			    System.out.println("sKeystorePath: '"+sKeystorePath+"'");
+/**/			
 			
 			File checkFile = new File(keyFileSb.toString());
 			boolean bExists = checkFile.exists();
+			//System.out.println("bExists: "+bExists);
 			if ( bExists == false )
 			{
 				StringBuffer keysSb = new StringBuffer();
@@ -9739,12 +9988,12 @@ public class ADev
 				
 				keysSb.append(sEnding);
 
-				//System.out.println("keyFileSb: '"+keyFileSb.toString()+"'");
+				//System.out.println("writeFile())keyFileSb: '"+keyFileSb.toString()+"'");
 				writeFile(keysSb.toString().getBytes(), keyFileSb.toString());
 			}
 
 			bReleaseFinished = true;
-			//System.out.println("Exiting ReleaseBgThread run()");
+			//System.out.println("\nExiting ReleaseBgThread run()");
 		}
 	}	//}}}
 	
@@ -11870,11 +12119,11 @@ public class ADev
 		gbc.gridwidth = 1;
 		panel.add(targetSdkLbl, gbc);
 
-/*
+/*		
 		if ( targetDescAr == null )
 			System.out.println("targetDescAr null");
 		else
-			System.out.println("targetDescAr not null");
+			System.out.println("targetDescAr.size(): "+targetDescAr.size());
 /**/		
 		// Construct Target API choices..
 		String[] tSa;
@@ -12286,7 +12535,7 @@ public class ADev
 	public void createDialog()
 	{
 		//System.out.println("createDialog()");
-/*
+/*		
 		if ( targetDescAr == null )
 			System.out.println("targetDescAr null");
 		else
@@ -12573,8 +12822,26 @@ public class ADev
 					//System.out.println("sJVMVersion: '"+sJVMVersion+"'");
 				}
 			}
+
+			// https://developer.android.com/studio/releases/gradle-plugin
+			// MvnRepository: https://mvnrepository.com/artifact/com.android.tools.build/gradle?repo=google
+			// Plugin version
+			//            Minimum required Gradle version
+			// 8.0        8.0
+			// 7.4        7.5
+			// 7.3        7.4
+			// 7.2        7.3.3
+			// 7.1        7.2
+			// 7.0        7.0
+			// 4.2.0+     6.7.1
+			// 4.1.0+     6.5+
+			// 4.0.0+         6.1.1+
+			// 3.6.0-3.6.4    5.6.4+
+			// 3.5.0-3.5.4    5.4.1+
 			
 			//String gradleVersionS = "";
+			bUseNamespace = false;
+			
 			if ( iLoc != -1 )
 			{
 				int iG3;
@@ -12704,14 +12971,69 @@ public class ADev
 					gradleVersionS.equals("6.5") ||
 					gradleVersionS.equals("6.5.1") ||
 					gradleVersionS.equals("6.6") ||
-					gradleVersionS.equals("6.6.1") )
+					gradleVersionS.equals("6.6.1") ||
+					gradleVersionS.equals("6.7") )
 				{
 				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
-				        sAndroidPluginVersion = "4.0.0";
+				        //sAndroidPluginVersion = "4.0.0";
+				        sAndroidPluginVersion = "3.6.0";
 				    else
 				        sAndroidPluginVersion = "3.3.3";
 
 					bDoBuildGradleUpdate = true;
+				}
+				else if ( gradleVersionS.equals("6.7.1") ||
+					gradleVersionS.equals("6.8") ||
+					gradleVersionS.equals("6.8.1") ||
+					gradleVersionS.equals("6.8.2") ||
+					gradleVersionS.equals("6.8.3") ||
+					gradleVersionS.equals("6.9") )
+				{
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "4.2.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+
+					bDoBuildGradleUpdate = true;
+					bUseNamespace = true;
+				}
+				else if ( gradleVersionS.equals("7.0") ||
+					gradleVersionS.equals("7.0.1") ||
+					gradleVersionS.equals("7.0.2") ||
+					gradleVersionS.equals("7.1") || 
+					gradleVersionS.equals("7.1.1") )
+				{
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "7.0.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+
+					bDoBuildGradleUpdate = true;
+					bUseNamespace = true;
+				}
+				else if ( gradleVersionS.equals("7.2") ||
+					gradleVersionS.equals("7.3") ||
+					gradleVersionS.equals("7.3.1") ||
+					gradleVersionS.equals("7.3.2") )
+				{
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "7.1.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+
+					bDoBuildGradleUpdate = true;
+					bUseNamespace = true;
+				}
+				else if ( gradleVersionS.equals("7.3.3") ||
+					gradleVersionS.equals("7.4") )
+				{
+				    if ( (sUsingOpenJdk != null) && (sUsingOpenJdk.equals("true")) )
+				        sAndroidPluginVersion = "7.2.0";
+				    else
+				        sAndroidPluginVersion = "3.3.3";
+
+					bDoBuildGradleUpdate = true;
+					bUseNamespace = true;
 				}
 				else if ( gradleVersionS.equals("2.4") ||
 					gradleVersionS.equals("2.5") ||
@@ -13014,9 +13336,9 @@ public class ADev
 			panel.add(minSdkLbl, gbc);
 			 
 			SpinnerListModel minSdkModel;
-			if ( bFlutterSelected )
-				minSdkModel = new SpinnerListModel(tSa);
-			else
+			//if ( bFlutterSelected )
+				//minSdkModel = new SpinnerListModel(tSa);
+			//else
 				minSdkModel = new SpinnerListModel(fullSDKSa);
 			
 			minSdkSpinner = new JSpinner(minSdkModel);
@@ -13146,7 +13468,7 @@ public class ADev
 	//{{{	createGui()
 	public void createGui()
 	{
-		//System.out.println("createGui()");
+		//System.out.println("\ncreateGui()");
 		
         //System.out.println("bFlutterSelected: "+bFlutterSelected);
         //System.out.println("bKotlinSelected: "+bKotlinSelected);
@@ -13162,6 +13484,7 @@ public class ADev
 		Icon breakpoint24Icon = new ImageIcon("images/breakpoint24.png");
 		Icon killserver24Icon = new ImageIcon("images/killserver24.png");
 		Icon logcat24Icon = new ImageIcon("images/logcat24.png");
+		//Icon logcat24Icon = new ImageIcon("images/nulogcat24.png");
 		Icon install24Icon = new ImageIcon("images/install24.png");
 		Icon uninstall24Icon = new ImageIcon("images/uninstall24.png");
 		Icon release24Icon = new ImageIcon("images/release24.png");
@@ -13388,7 +13711,8 @@ public class ADev
 		JMenuItem createMenuItem = new JMenuItem("Create");
 		createMenuItem.addActionListener(actListener);
 		
-		commandSubMenu = new JMenu("Command");
+		//commandSubMenu = new JMenu("Command");
+		commandSubMenu = new JMenu("Gradlew Command");
         if ( commandSubMenu != null )
         {
             if ( (CommandAr != null) && (CommandAr.size() > 0) )
@@ -13408,7 +13732,8 @@ public class ADev
 		JMenuItem privateKeyMenuItem = new JMenuItem("Generate Key Store");
 		privateKeyMenuItem.addActionListener(actListener);
 
-		updateMenuItem = new JMenuItem("Update");    // Android update for Ant buiilds..
+		//updateMenuItem = new JMenuItem("Update (Ant)");    // Android update for Ant buiilds..
+		updateMenuItem = new JMenuItem("Update");
 		updateMenuItem.addActionListener(actListener);
 		
 		JMenuItem selectDeviceMenuItem = new JMenuItem("Select Device");
@@ -13430,7 +13755,7 @@ public class ADev
 		gpsMenuItem.addActionListener(actListener);
 		JMenuItem searchMenuItem = new JMenuItem("Search");
 		searchMenuItem.addActionListener(actListener);
-		JMenuItem refreshMenuItem = new JMenuItem("Refresh");
+		JMenuItem refreshMenuItem = new JMenuItem("Refresh Properties");
 		refreshMenuItem.addActionListener(actListener);
 		
 		JMenuItem selectAllMenuItem = new JMenuItem("Select All");
@@ -14803,6 +15128,7 @@ public class ADev
 				internalSb.append("\n");
 			}
 	
+			//System.out.println("(Command): '"+internalSb.toString()+"'");
 			
 			bInternalFinished = false;		
 			internalCommandS = internalSb.toString();
@@ -14898,6 +15224,8 @@ public class ADev
 
 			//bDevicesFinished = true;
 			completeLatch.countDown();
+			
+			//System.out.println("\nExiting GetDevicesBgThread");
 			
 		}
 	}	//}}}
@@ -15495,7 +15823,7 @@ public class ADev
 		//System.out.println("sSourcePath: '"+sSourcePath+"'");
 		String sRoot = "";
 		String sRootPath = "";
-		System.out.println();
+		//System.out.println();
 		if ( SourceClassInfoHm == null )
 		    SourceClassInfoHm = new HashMap();
 		
@@ -17811,7 +18139,7 @@ While_Break:
 /**/
     
     
-            // Save the state of each..		
+            // Get the state..		
             // [Home]~[Use Gradle]~[Use NDK]~[Use Kotlin]~[UseFlutter]		
             if ( (tokS != null) && (! tokS.equals("")) )
             {
@@ -18929,6 +19257,7 @@ While_Break:
                 // Refresh..				
 				bIsReleaseBuild = false;
 				bIsDebugBuild = false;
+				bDidClean = true;
 
 				init();
 				RefreshProperties();
@@ -19172,6 +19501,18 @@ While_Break:
 								commandSb.append(sGradleCommandOption);
 								commandSb.append(" ");
 							}
+
+							if ( sGradleWarningMode != null )
+							{
+							    if ( sGradleWarningMode.equals("all") )
+							        commandSb.append("--warning-mode=all ");
+							    else if ( sGradleWarningMode.equals("fail") )
+							        commandSb.append("--warning-mode=fail ");
+							    else if ( sGradleWarningMode.equals("none") )
+							        commandSb.append("--warning-mode=none ");
+							    else if ( sGradleWarningMode.equals("summary") )
+							        commandSb.append("--warning-mode=summary ");
+							}
 							
 							//commandSb.append("clean\n");
 							commandSb.append("clean");
@@ -19253,6 +19594,24 @@ While_Break:
 							{
 								commandSb.append(sGradleCommandOption);
 								commandSb.append(" ");
+							}
+/*							
+                            if ( sGradleWarningMode == null )
+                                System.out.println("sGradleWarningMode null");
+                            else
+                                System.out.println("sGradleWarningMode: '"+sGradleWarningMode+"'");
+/**/                            
+							
+							if ( sGradleWarningMode != null )
+							{
+							    if ( sGradleWarningMode.equals("all") )
+							        commandSb.append("--warning-mode=all ");
+							    else if ( sGradleWarningMode.equals("fail") )
+							        commandSb.append("--warning-mode=fail ");
+							    else if ( sGradleWarningMode.equals("none") )
+							        commandSb.append("--warning-mode=none ");
+							    else if ( sGradleWarningMode.equals("summary") )
+							        commandSb.append("--warning-mode=summary ");
 							}
 	
 							commandSb.append("clean\n");
@@ -19343,7 +19702,61 @@ While_Break:
 				bIsDebugBuild = true;
 				bIsReleaseBuild = false;
 				
-
+				//System.out.println("bDidClean: "+bDidClean);
+                if ( bDidClean == false )
+                {
+                    // Do things Clean would have done..
+                    RefreshProperties();
+                    getPackageName();
+                    
+                    if ( bGradleSelected )	
+                    {
+                        // Comment out signingConfigs storeFile
+                        bInitBuildGradleFinished = false;
+                        initializeBuildGradleBgThread = new InitializeBuildGradleBgThread();
+                        initializeBuildGradleBgThread.start();
+                        
+                        while ( true )
+                        {
+                            if ( bInitBuildGradleFinished )
+                                break;
+                            
+                            try
+                            {
+                                Thread.sleep(250);						
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                        }
+                        
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                                && (sDontModifyBuildGradle.equals("true"))  )
+                            ;
+                        else
+                        {
+                            // Comment out projectsEvaluated debug
+                            bCheckGradleProjectFinished = false;
+                            checkGradleProjectBgThread = new CheckGradleProjectBgThread();
+                            checkGradleProjectBgThread.start();
+                            
+                            while ( true )
+                            {
+                                if ( bCheckGradleProjectFinished )
+                                    break;
+                                
+                                try
+                                {
+                                    Thread.sleep(250);						
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                            }
+                        }
+                    }
+                }
+                
 				//bKillAdb = true;	// Set to kill adb..
 				
 				init();
@@ -19360,6 +19773,8 @@ While_Break:
                         ;
                     else
                     {
+                        // Handle commenting and un-commenting 'storeFile', 'debug' and 'release'
+                        // in build.gradle..
                         debugReleaseBgThread = new DebugReleaseBgThread();
                         debugReleaseBgThread.start();
     
@@ -19492,12 +19907,27 @@ While_Break:
 							commandSb.append(";");
 							commandSb.append(sGradleType);
 							commandSb.append(" ");
+							
+                            if ( bDidClean == false )
+                            {
+                                // Add 'clean'..
+                                commandSb.append("clean ");
+                            }
 
 							if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 								commandSb.append("--offline ");
-							
-                            if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
-							    commandSb.append("--warning-mode=none ");
+
+							if ( sGradleWarningMode != null )
+							{
+							    if ( sGradleWarningMode.equals("all") )
+							        commandSb.append("--warning-mode=all ");
+							    else if ( sGradleWarningMode.equals("fail") )
+							        commandSb.append("--warning-mode=fail ");
+							    else if ( sGradleWarningMode.equals("none") )
+							        commandSb.append("--warning-mode=none ");
+							    else if ( sGradleWarningMode.equals("summary") )
+							        commandSb.append("--warning-mode=summary ");
+							}
 	
 							if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
 							{
@@ -19626,8 +20056,17 @@ While_Break:
 							if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 								commandSb.append("--offline ");
 
-                            if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
-							    commandSb.append("--warning-mode=none ");
+							if ( sGradleWarningMode != null )
+							{
+							    if ( sGradleWarningMode.equals("all") )
+							        commandSb.append("--warning-mode=all ");
+							    else if ( sGradleWarningMode.equals("fail") )
+							        commandSb.append("--warning-mode=fail ");
+							    else if ( sGradleWarningMode.equals("none") )
+							        commandSb.append("--warning-mode=none ");
+							    else if ( sGradleWarningMode.equals("summary") )
+							        commandSb.append("--warning-mode=summary ");
+							}
 							
 							if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
 							{
@@ -19690,6 +20129,10 @@ While_Break:
 					ioBgThread = new IOBgThread();
 					ioBgThread.start();
 				}
+				
+                // Reset..
+                bDidClean = false;
+				
 			}
 			else if ( PRE_RELEASE.equals(actionCommandS) )
 			{
@@ -19733,6 +20176,63 @@ While_Break:
 				
 				bIsReleaseBuild = true;
 				bIsDebugBuild = false;
+
+                if ( bDidClean == false )
+                {
+                    // Do things Clean would have done..
+                    RefreshProperties();
+                    getPackageName();
+
+                    //System.out.println("bGradleSelected: "+bGradleSelected);                    
+                    if ( bGradleSelected )	
+                    {
+                        // Comment out signingConfigs storeFile
+                        bInitBuildGradleFinished = false;
+                        initializeBuildGradleBgThread = new InitializeBuildGradleBgThread();
+                        initializeBuildGradleBgThread.start();
+                        
+                        while ( true )
+                        {
+                            if ( bInitBuildGradleFinished )
+                                break;
+                            
+                            try
+                            {
+                                Thread.sleep(250);						
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                        }
+/* 
+                        // Commented out only for testing..
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
+                                && (sDontModifyBuildGradle.equals("true"))  )
+                            ;
+                        else
+                        {
+                            // Comment out projectsEvaluated debug
+                            bCheckGradleProjectFinished = false;
+                            checkGradleProjectBgThread = new CheckGradleProjectBgThread();
+                            checkGradleProjectBgThread.start();
+                            
+                            while ( true )
+                            {
+                                if ( bCheckGradleProjectFinished )
+                                    break;
+                                
+                                try
+                                {
+                                    Thread.sleep(250);						
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                            }
+                        }
+/**/                        
+                    }
+                }
 				
 				init();
 				
@@ -19746,6 +20246,9 @@ While_Break:
 					bEnableStoreFile = true;
 					bEnableBuildTypesDebug = false;
 					bEnableBuildTypesRelease = true;
+					
+                    // Handle commenting and un-commenting 'storeFile', 'debug' and 'release'
+                    // in build.gradle..
 					debugReleaseBgThread = new DebugReleaseBgThread();
 					debugReleaseBgThread.start();
 
@@ -19926,7 +20429,6 @@ While_Break:
 					{
 						// Release..
 						// Flutter..
-
 						bRegularBuild = true;
 						if ( (sUseAppBundle != null) && (sUseAppBundle.length() > 0) )
 						{
@@ -19992,12 +20494,27 @@ While_Break:
 						// Like: 'gradlew'
 						commandSb.append(sGradleType);
 						commandSb.append(" ");
-
+						
+						if ( bDidClean == false )
+						{
+						    // Add 'clean'..
+						    commandSb.append("clean ");
+						}
+/**/
 						if ( (gradleOfflineS != null) && (gradleOfflineS.equals("true")) )
 							commandSb.append("--offline ");
 
-                        if ( (sGradleSuppressWarnings != null) && (sGradleSuppressWarnings.equals("true")) )						
-                            commandSb.append("--warning-mode=none ");
+                        if ( sGradleWarningMode != null )
+                        {
+                            if ( sGradleWarningMode.equals("all") )
+                                commandSb.append("--warning-mode=all ");
+                            else if ( sGradleWarningMode.equals("fail") )
+                                commandSb.append("--warning-mode=fail ");
+                            else if ( sGradleWarningMode.equals("none") )
+                                commandSb.append("--warning-mode=none ");
+                            else if ( sGradleWarningMode.equals("summary") )
+                                commandSb.append("--warning-mode=summary ");
+                        }
 						
                         //System.out.println("sGradleCommandOption: '"+sGradleCommandOption+"'");
 						if ( (sGradleCommandOption != null) && (sGradleCommandOption.length() > 0) )
@@ -20059,7 +20576,7 @@ While_Break:
                                 ;
                             else
                             {
-                                // Create /android/key.properties..
+                                // Create: Flutter: /android/key.properties  Gradle: /key.properties
                                 bReleaseFinished = false;
                                 releaseBgThread = new ReleaseBgThread();
                                 releaseBgThread.start();
@@ -20115,6 +20632,10 @@ While_Break:
 					ioBgThread = new IOBgThread();
 					ioBgThread.start();
 				}
+				
+				// Reset..
+				bDidClean = false;
+				
 			}
 			else if ( RUN.equals(actionCommandS) )
 			{
@@ -20920,48 +21441,155 @@ While_Break:
 
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
+/*				
+				if ( sUseGradleUninstallInstall == null )
+				    System.out.println("sUseGradleUninstallInstall null");
+				else
+				    System.out.println("sUseGradleUninstallInstall: '"+sUseGradleUninstallInstall+"'");
+/**/				
+				//System.out.println("bGradleSelected: "+bGradleSelected);
 				
-				if ( iOS == LINUX_MAC )
+				if ( (sUseGradleUninstallInstall != null) && (sUseGradleUninstallInstall.equals("true")) )
 				{
-					commandSb.append("export PATH=${PATH}:");
-					commandSb.append(androidSdkPathS);
-					commandSb.append("/platform-tools");
-					
-					commandSb.append(";adb ");
+				    // Use Gradle/Gradlew..
+                    if ( iOS == LINUX_MAC )
+                    {
+                        if ( bGradleSelected )
+                        {
+							// Gradle, Kotlin..
+							commandSb.append("export ANDROID_HOME=");
+							commandSb.append(androidSdkPathS);
 
-					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-					{
-						commandSb.append("-s ");
-						commandSb.append(sDeviceName);
-						commandSb.append(" ");
+							if ( sGradleType.equals("gradle") )
+							{
+								commandSb.append(";export PATH=${PATH}:");
+								commandSb.append(gradlePathS);
+								commandSb.append(":");
+								commandSb.append(javaPathS);
+							}
+							else
+							{
+								commandSb.append(";export PATH=${PATH}:");
+								commandSb.append(javaPathS);
+							}
+							
+							commandSb.append(";export JAVA_HOME=");
+							commandSb.append(javaPathS);
+							
+							commandSb.append(";cd ");
+							commandSb.append(projectHomeS);
+							
+							commandSb.append(";");
+						}
 					}
-					
-					commandSb.append("uninstall ");
-					commandSb.append(packageNameS);
+					else
+					{
+                        if ( bGradleSelected )
+                        {
+							// Gradle, Kotlin..
+							commandSb.append("SET ANDROID_HOME=");
+							commandSb.append(androidSdkPathS);
+
+							//System.out.println("sGradleType: '"+sGradleType+"'");
+							if ( sGradleType.equals("gradle") )
+							{
+								commandSb.append("&&SET PATH=");
+								commandSb.append(gradlePathS);
+								commandSb.append(";");
+								commandSb.append(javaPathS);
+								commandSb.append(";%PATH%");
+							}
+							else
+							{
+								commandSb.append("&&SET PATH=");
+								commandSb.append(javaPathS);
+								commandSb.append(";%PATH%");
+							}
+							
+							commandSb.append("&&SET JAVA_HOME=");
+							commandSb.append(javaPathS);
+	
+							commandSb.append("&&CD ");
+							commandSb.append(projectHomeS);
+							
+							commandSb.append("&&");
+						}
+					}
+
+                    /**
+                     * Finish command with leading ';' or '&&'
+                     * supplied above..
+                     */
+    
+                    if ( bGradleSelected )
+                    {
+						// Gradle, Kotlin..
+						//commandPhrase = ASSEMBLE_RELEASE;
+						
+						//System.out.println("sGradleType: '"+sGradleType+"'");
+						// Like: 'gradlew'
+						commandSb.append(sGradleType);
+						commandSb.append(" ");
+						
+						//System.out.println("bIsReleaseBuild: "+bIsReleaseBuild);
+						//System.out.println("bIsDebugBuild: "+bIsDebugBuild);
+                            
+                        if ( bIsReleaseBuild )
+                            commandSb.append("uninstallRelease");
+                        else if ( bIsDebugBuild )
+                            commandSb.append("uninstallDebug");
+                        
+                    }
 				}
 				else
 				{
-					commandPhrase = "adb uninstall";
-					
-					commandSb.append("SET PATH=");
-					commandSb.append(androidSdkPathS);
-					commandSb.append("/platform-tools");
-					commandSb.append(";%PATH%");
-					
-					commandSb.append("&&adb ");
-					
-					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-					{
-						commandSb.append("-s ");
-						commandSb.append(sDeviceName);
-						commandSb.append(" ");
-					}
-					
-					commandSb.append("uninstall ");
-					commandSb.append(packageNameS);
+				    // Use adb..
+                    if ( iOS == LINUX_MAC )
+                    {
+                        commandSb.append("export PATH=${PATH}:");
+                        commandSb.append(androidSdkPathS);
+                        commandSb.append("/platform-tools");
+                        
+                        commandSb.append(";adb ");
+    
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("uninstall ");
+                        commandSb.append(packageNameS);
+                    }
+                    else
+                    {
+                        commandPhrase = "adb uninstall";
+                        
+                        commandSb.append("SET PATH=");
+                        commandSb.append(androidSdkPathS);
+                        commandSb.append("/platform-tools");
+                        commandSb.append(";%PATH%");
+                        
+                        commandSb.append("&&adb ");
+                        
+                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        {
+                            commandSb.append("-s ");
+                            commandSb.append(sDeviceName);
+                            commandSb.append(" ");
+                        }
+                        
+                        commandSb.append("uninstall ");
+                        commandSb.append(packageNameS);
+                        //commandSb.append("\n");
+                        
+                    }
+                }
+                
+				if ( iOS == WINDOWS )
 					commandSb.append("\n");
-					
-				}
+                
 
 /*				
 				if ( bWirelessConnected == false )
@@ -20974,6 +21602,7 @@ While_Break:
 				
 				ioBgThread = new IOBgThread();
 				ioBgThread.start();
+				
 			}
 			else if ( INSTALL.equals(actionCommandS) )
 			{
@@ -21021,16 +21650,16 @@ While_Break:
 				// Do the Install..
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
-				
+
 /*				
 				if ( sUseAppBundle == null )
 				    System.out.println("sUseAppBundle null");
 				else
 				    System.out.println("sUseAppBundle: '"+sUseAppBundle+"'");
-/**/				
+/**/
+
 				if ( (sUseAppBundle != null) && (sUseAppBundle.equals("true")) )
 				{
-				    
                     // App Bundle install..				    
                     if ( iOS == LINUX_MAC )
                     {
@@ -21127,6 +21756,10 @@ While_Break:
                             sB = new StringBuffer(tS);
                         }
                     }
+                    
+                    /**
+                     * build-apks
+                     */
 
                     //System.out.println("(aab path)sB: '"+sB.toString()+"'");
                     
@@ -21221,6 +21854,10 @@ While_Break:
                         commandSb.append('"');
                         commandSb.append(" ");
                     }
+
+                    /**
+                     * install-apks
+                     */
                     
 				    commandSb.append("install-apks --apks=");
 				    
@@ -21257,139 +21894,238 @@ While_Break:
 				else
 				{
 				    // Normal Install..
-                    if ( iOS == LINUX_MAC )
+                    if ( (sUseGradleUninstallInstall != null) && (sUseGradleUninstallInstall.equals("true")) )
                     {
-                        commandSb.append("export PATH=${PATH}:");
-                        commandSb.append(androidSdkPathS);
-                        commandSb.append("/platform-tools");
-                        
-                        commandSb.append(";adb ");
+                        // Use Gradle/Gradlew..
+                        if ( iOS == LINUX_MAC )
+                        {
+                            if ( bGradleSelected )
+                            {
+                                // Gradle, Kotlin..
+                                commandSb.append("export ANDROID_HOME=");
+                                commandSb.append(androidSdkPathS);
     
-                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-                        {
-                            commandSb.append("-s ");
-                            commandSb.append(sDeviceName);
-                            commandSb.append(" ");
-                        }
-                        
-                        commandSb.append("install ");
-                        if ( bUninstallPressed == false )
-                            commandSb.append("-r ");
-                        
-                        bUninstallPressed = false;    // Reset..
-                        //commandSb.append("install -r ");
-                        
-                        // Construct path to .apk..
-                        commandSb.append(projectHomeS);
-                        
-                        boolean bGradleSelected = uGradleMenuItem.getState();
-                        if ( bGradleSelected )
-                        {
-                            if ( bFlutterSelected )
-                            {
-                                commandSb.append("/build/app/outputs/apk");
-                                    
-                                if ( iBuildType == RELEASE_BUILD )
-                                    commandSb.append("/release/");
-                                else if ( iBuildType == DEBUG_BUILD )
-                                    commandSb.append("/debug/");
-                            }
-                            else
-                            {
-                                if ( bUsingAppProject )
-                                    commandSb.append("/app/build/outputs/apk/");
+                                if ( sGradleType.equals("gradle") )
+                                {
+                                    commandSb.append(";export PATH=${PATH}:");
+                                    commandSb.append(gradlePathS);
+                                    commandSb.append(":");
+                                    commandSb.append(javaPathS);
+                                }
                                 else
                                 {
-                                    // For LibGdx projects..
-                                    if ( bUsingAndroid )
-                                        commandSb.append("/android");
-                                    
-                                    commandSb.append("/build/outputs/apk/");
+                                    commandSb.append(";export PATH=${PATH}:");
+                                    commandSb.append(javaPathS);
                                 }
                                 
-                                if ( iBuildType == RELEASE_BUILD )
-                                    commandSb.append("release/");
-                                else if ( iBuildType == DEBUG_BUILD )
-                                    commandSb.append("debug/");
+                                commandSb.append(";export JAVA_HOME=");
+                                commandSb.append(javaPathS);
+                                
+                                commandSb.append(";cd ");
+                                commandSb.append(projectHomeS);
+                                
+                                commandSb.append(";");
                             }
                         }
                         else
-                            commandSb.append("/bin/");
-                        
-                        commandSb.append(apkNameS);
+                        {
+                            if ( bGradleSelected )
+                            {
+                                // Gradle, Kotlin..
+                                commandSb.append("SET ANDROID_HOME=");
+                                commandSb.append(androidSdkPathS);
+    
+                                //System.out.println("sGradleType: '"+sGradleType+"'");
+                                if ( sGradleType.equals("gradle") )
+                                {
+                                    commandSb.append("&&SET PATH=");
+                                    commandSb.append(gradlePathS);
+                                    commandSb.append(";");
+                                    commandSb.append(javaPathS);
+                                    commandSb.append(";%PATH%");
+                                }
+                                else
+                                {
+                                    commandSb.append("&&SET PATH=");
+                                    commandSb.append(javaPathS);
+                                    commandSb.append(";%PATH%");
+                                }
+                                
+                                commandSb.append("&&SET JAVA_HOME=");
+                                commandSb.append(javaPathS);
+        
+                                commandSb.append("&&CD ");
+                                commandSb.append(projectHomeS);
+                                
+                                commandSb.append("&&");
+                            }
+                        }
+    
+                        /**
+                         * Finish command with leading ';' or '&&'
+                         * supplied above..
+                         */
+        
+                        if ( bGradleSelected )
+                        {
+                            // Gradle, Kotlin..
+                            //commandPhrase = ASSEMBLE_RELEASE;
+                            
+                            //System.out.println("sGradleType: '"+sGradleType+"'");
+                            // Like: 'gradlew'
+                            commandSb.append(sGradleType);
+                            commandSb.append(" ");
+                            
+                            //System.out.println("bIsReleaseBuild: "+bIsReleaseBuild);
+                            //System.out.println("bIsDebugBuild: "+bIsDebugBuild);
+                                
+                            if ( bIsReleaseBuild )
+                                commandSb.append("installRelease");
+                            else if ( bIsDebugBuild )
+                                commandSb.append("installDebug");
+                        }
                     }
                     else
                     {
-                        commandPhrase = "adb install";
-                        
-                        commandSb.append("SET PATH=");
-                        commandSb.append(androidSdkPathS);
-                        commandSb.append("/platform-tools");
-                        commandSb.append(";%PATH%");
-                        
-                        commandSb.append("&&adb ");
-    
-                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                        // Use adb..
+                        if ( iOS == LINUX_MAC )
                         {
-                            commandSb.append("-s ");
-                            commandSb.append(sDeviceName);
-                            commandSb.append(" ");
-                        }
-                        
-                        commandSb.append("install ");
-                        if ( bUninstallPressed == false )
-                            commandSb.append("-r ");
-                        
-                        bUninstallPressed = false;    // Reset..
-                        
-                        //commandSb.append("install -r ");
-                        commandSb.append(projectHomeS);
-                        
-                        boolean bGradleSelected = uGradleMenuItem.getState();
-                        if ( bGradleSelected )
-                        {
-                            if ( bFlutterSelected )
+                            commandSb.append("export PATH=${PATH}:");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            
+                            commandSb.append(";adb ");
+        
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
                             {
-                                commandSb.append("/build/app/outputs/apk");
-                                    
-                                if ( iBuildType == RELEASE_BUILD )
-                                    commandSb.append("/release/");
-                                else if ( iBuildType == DEBUG_BUILD )
-                                    commandSb.append("/debug/");
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
                             }
-                            else
+                            
+                            commandSb.append("install ");
+                            if ( bUninstallPressed == false )
+                                commandSb.append("-r ");
+                            
+                            bUninstallPressed = false;    // Reset..
+                            //commandSb.append("install -r ");
+                            
+                            // Construct path to .apk..
+                            commandSb.append(projectHomeS);
+                            
+                            boolean bGradleSelected = uGradleMenuItem.getState();
+                            if ( bGradleSelected )
                             {
-                                //System.out.println("bUsingAppProject: "+bUsingAppProject);
-                                if ( bUsingAppProject )
-                                    commandSb.append("/app/build/outputs/apk/");
+                                if ( bFlutterSelected )
+                                {
+                                    commandSb.append("/build/app/outputs/apk");
+                                        
+                                    if ( iBuildType == RELEASE_BUILD )
+                                        commandSb.append("/release/");
+                                    else if ( iBuildType == DEBUG_BUILD )
+                                        commandSb.append("/debug/");
+                                }
                                 else
                                 {
-                                    // For LibGdx projects..
-                                    if ( bUsingAndroid )
-                                        commandSb.append("/android");
+                                    if ( bUsingAppProject )
+                                        commandSb.append("/app/build/outputs/apk/");
+                                    else
+                                    {
+                                        // For LibGdx projects..
+                                        if ( bUsingAndroid )
+                                            commandSb.append("/android");
                                         
-                                    commandSb.append("/build/outputs/apk/");
+                                        commandSb.append("/build/outputs/apk/");
+                                    }
+                                    
+                                    if ( iBuildType == RELEASE_BUILD )
+                                        commandSb.append("release/");
+                                    else if ( iBuildType == DEBUG_BUILD )
+                                        commandSb.append("debug/");
                                 }
-                                
-                                if ( iBuildType == RELEASE_BUILD )
-                                    commandSb.append("release/");
-                                else if ( iBuildType == DEBUG_BUILD )
-                                    commandSb.append("debug/");
                             }
+                            else
+                                commandSb.append("/bin/");
+                            
+                            commandSb.append(apkNameS);
                         }
                         else
-                            commandSb.append("/bin/");
-
-/*                        
-                        if ( apkNameS == null )
-                            System.out.println("apkNameS null");
-                        else
-                            System.out.println("apkNameS: '"+apkNameS+"'");
-/**/
+                        {
+                            commandPhrase = "adb install";
+                            
+                            commandSb.append("SET PATH=");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            commandSb.append(";%PATH%");
+                            
+                            commandSb.append("&&adb ");
+        
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
+                            }
+                            
+                            commandSb.append("install ");
+                            if ( bUninstallPressed == false )
+                                commandSb.append("-r ");
+                            
+                            bUninstallPressed = false;    // Reset..
+                            
+                            //commandSb.append("install -r ");
+                            commandSb.append(projectHomeS);
+                            
+                            boolean bGradleSelected = uGradleMenuItem.getState();
+                            if ( bGradleSelected )
+                            {
+                                if ( bFlutterSelected )
+                                {
+                                    commandSb.append("/build/app/outputs/apk");
+                                        
+                                    if ( iBuildType == RELEASE_BUILD )
+                                        commandSb.append("/release/");
+                                    else if ( iBuildType == DEBUG_BUILD )
+                                        commandSb.append("/debug/");
+                                }
+                                else
+                                {
+                                    //System.out.println("bUsingAppProject: "+bUsingAppProject);
+                                    if ( bUsingAppProject )
+                                        commandSb.append("/app/build/outputs/apk/");
+                                    else
+                                    {
+                                        // For LibGdx projects..
+                                        if ( bUsingAndroid )
+                                            commandSb.append("/android");
+                                            
+                                        commandSb.append("/build/outputs/apk/");
+                                    }
+                                    
+                                    if ( iBuildType == RELEASE_BUILD )
+                                        commandSb.append("release/");
+                                    else if ( iBuildType == DEBUG_BUILD )
+                                        commandSb.append("debug/");
+                                }
+                            }
+                            else
+                                commandSb.append("/bin/");
     
-                        commandSb.append(apkNameS);
-                        commandSb.append("\n");
+    /*                        
+                            if ( apkNameS == null )
+                                System.out.println("apkNameS null");
+                            else
+                                System.out.println("apkNameS: '"+apkNameS+"'");
+    /**/
+        
+                            commandSb.append(apkNameS);
+                            //commandSb.append("\n");
+                        }
                     }
+                    
+                    if ( iOS == WINDOWS )
+                        commandSb.append("\n");
+                    
 /*
                     if ( bWirelessConnected == false )
                     {
@@ -21968,18 +22704,25 @@ While_Break:
 				boolean bHaveDir = false;
 				String inS;
 				String sType = "";
+				String sRet = "";
 				int iLoc;
 				int iLoc2;
 				
 				File chosenFile;
+				File tFile;
 				JFileChooser fChooser;
 				
                 //System.out.println("bFlutterSelected: "+bFlutterSelected);
                 //System.out.println("bKotlinSelected: "+bKotlinSelected);
                 //System.out.println("bNDKSelected: "+bNDKSelected);
                 //System.out.println("bGradleSelected: "+bGradleSelected);
-				
-				
+/*                
+                if ( sProjectPathLead == null )
+                    System.out.println("sProjectPathLead null");
+                else
+                    System.out.println("sProjectPathLead: '"+sProjectPathLead+"'");
+/**/                
+                
 				if ( (sProjectPathLead != null) && (! sProjectPathLead.equals("")) )
 					fChooser = new JFileChooser(sProjectPathLead);
 				else
@@ -21999,10 +22742,7 @@ While_Break:
 					
 					// Reset all..
 					if ( uGradleMenuItem != null )
-					{
 					    uGradleMenuItem.setState(false);
-					    //System.out.println("\n(c)Setting to false");
-					}
 					
 					if ( uKotlinMenuItem != null )
 					    uKotlinMenuItem.setState(false);
@@ -22013,108 +22753,83 @@ While_Break:
 					if ( uNDKMenuItem != null )
 					    uNDKMenuItem.setState(false);
 					
+					bUsingAppProject = false;
+					
 					bHaveDir = true;
 					projectHomeS = fChooser.getSelectedFile().toString();
 					projectHomeS = Utils.processPath(projectHomeS);
 					//System.out.println("projectHomeS: '"+projectHomeS+"'");
 					File file;
 					byte[] buffer = null;
-					StringBuffer fSb;
-
-					fSb = new StringBuffer(projectHomeS);
-
-					// Check for /app directory..
-					// 'C:/Android/Dev/RPG/libGDX-master/build.gradle'
-					StringBuffer tSb = new StringBuffer(projectHomeS);
+					StringBuffer fSb = null;
+					StringBuffer tSb = null;
+					
+					tSb = new StringBuffer(projectHomeS);
+                    sRet = FindBuildGradle(tSb.toString());
+                    if (! sRet.equals("") )
+                    {
+                        sProjectLevelPath = sRet;
+                    }
+					
+					tSb = new StringBuffer(projectHomeS);
 					tSb.append("/app");
-					File tFile = new File(tSb.toString());
+					//System.out.println("(Path)tSb: '"+tSb.toString()+"'");
+					tFile = new File(tSb.toString());
 					if ( tFile.exists() )
 					{
 					    // 'app' exists..
+					    // Kotlin  Gradle
+					    //System.out.println("app exists");
 						bUsingAppProject = true;
-						fSb.append("/app/build.gradle");
-					}
-					else
-					{
-						bUsingAppProject = false;
-						fSb.append("/build.gradle");
-					}
-					
-					//System.out.println("fSb: '"+fSb.toString()+"'");
-					// Like:  'C:/Android/Dev/libgdx-demo-superjumper-master/build.gradle'
-					file = new File(fSb.toString());
-					if ( file.exists() )
-					{
-					    // Found build.gradle..
-						//System.out.println("--Exists--");
-/*						
-                        if ( uGradleMenuItem == null )
-                            System.out.println("uGradleMenuItem null");
-                        else
-                            System.out.println("uGradleMenuItem not null");
-/**/
 						
-						if ( uGradleMenuItem != null )
-						    uGradleMenuItem.setState(true);
-
-						buffer = readFile(2048, fSb.toString());
-						String tS = new String(buffer);
-						iLoc2 = tS.indexOf("kotlin");
-						if ( iLoc2 != -1 )
-						{
-						    //System.out.println("==Found kotlin==");
-							sType = "KOTLIN";
-							if ( uKotlinMenuItem != null )
-							    uKotlinMenuItem.setState(true);
-						}
-						else
-						{
-							sType = "GRADLE";
-						}
-
-						
-                        //if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.length() > 0)
-                            //&& (sDontModifyBuildGradle.equals("true"))  )
-                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
-                            ;
-                        else
+                        sRet = FindBuildGradle(tSb.toString());
+                        if (! sRet.equals("") )
                         {
-                            // Modify app/build.gradle..	
-                            bGradleConfigFinished = false;
-                            gradleConfigBgThread = new GradleConfigBgThread();
-                            gradleConfigBgThread.start();
-                            
-                            while ( true )
+                            // Found build.gradle..
+                            buffer = readFile(2048, sRet);
+                            String tS = new String(buffer);
+                            iLoc2 = tS.indexOf("kotlin");
+                            if ( iLoc2 != -1 )
                             {
-                                try
-                                {
-                                    Thread.sleep(250);
-                                }
-                                catch (InterruptedException ie)
-                                {
-                                }
-                                
-                                if ( bGradleConfigFinished )
-                                    break;
+                                // Kotlin..
+                                //System.out.println("==Found kotlin==");
+                                sType = "KOTLIN";
+                                if ( uKotlinMenuItem != null )
+                                    uKotlinMenuItem.setState(true);
                             }
+                            else
+                            {
+                                // Gradle..
+                                sType = "GRADLE";
+                                if ( uGradleMenuItem != null )
+                                    uGradleMenuItem.setState(true);
+                            }
+                            
+                            sModuleLevelPath = sRet;
                         }
+                    }
 						
-						//System.out.println("Past GradleConfigBgThread wait");
-						
-					}
-					else
-					{
-						// No build.gradle in project directory, check Flutter..
-						fSb = new StringBuffer(projectHomeS);
-						fSb.append("/android/app/build.gradle");
-						file = new File(fSb.toString());
-						if ( file.exists() )
-						{
-							// Flutter..
-							sType = "FLUTTER";
-							if ( uFlutterMenuItem != null )
-							    uFlutterMenuItem.setState(true);
-							
+					//StringBuffer tSb = new StringBuffer(projectHomeS);
+					tSb = new StringBuffer(projectHomeS);
+					//tSb.append("/android");
+					tSb.append("/android/app");
+                    sRet = FindBuildGradle(tSb.toString());
+                    if (! sRet.equals("") )
+                    {
+                        // Found build.gradle..
+                        buffer = readFile(2048, sRet);
+                        String tS = new String(buffer);
+                        iLoc2 = tS.indexOf("flutter");
+                        if ( iLoc2 != -1 )
+                        {
+                            // Flutter..
+                            //System.out.println("==Found flutter==");
+                            sType = "FLUTTER";
+                            if ( uFlutterMenuItem != null )
+                                uFlutterMenuItem.setState(true);
+                            
+                            sModuleLevelPath = sRet;
+/*                            
                             if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
                                 ;
                             else
@@ -22138,13 +22853,50 @@ While_Break:
                                         break;
                                 }
                             }
-						}
-						else
-						{
-							sType = "ANT";
-						}
-					}
-					
+/**/                            
+                        }
+                    }
+                    
+                    if ( sType.equals("") )
+                    {
+                        sType = "ANT";
+                    }
+/*
+                    if ( sType == null )
+                        System.out.println("sType null");
+                    else
+                        System.out.println("sType: '"+sType+"'");
+/**/                    
+                    
+                    if ( (sType.equals("GRADLE")) ||
+                        (sType.equals("FLUTTER")) ||
+                        (sType.equals("KOTLIN")) )
+                    {
+                        if ( (sDontModifyBuildGradle != null) && (sDontModifyBuildGradle.equals("true")) )
+                            ;
+                        else
+                        {
+                            // Modify app/build.gradle..	
+                            bGradleConfigFinished = false;
+                            gradleConfigBgThread = new GradleConfigBgThread();
+                            gradleConfigBgThread.start();
+                            
+                            while ( true )
+                            {
+                                try
+                                {
+                                    Thread.sleep(250);
+                                }
+                                catch (InterruptedException ie)
+                                {
+                                }
+                                
+                                if ( bGradleConfigFinished )
+                                    break;
+                            }
+                        }
+                    }
+						
 					//System.out.println("sType: '"+sType+"'");	
 					uSdkMenuItem.setState(false);
 					
@@ -22973,6 +23725,7 @@ While_Break:
 						commandSb.append(" --package ");
 						packageS = packageField.getText();
 						packageS = packageS.trim();
+						//System.out.println("packageS: '"+packageS+"'");
 						
 						sKPackageName = packageS;	// Save..
 						
@@ -23009,7 +23762,7 @@ While_Break:
 								break;
 						}
 
-						// Create root and app level build.gradles..
+						// Create Project and Module level build.gradles..
 						bCreateBuildGradleFinished = false;
 						createBuildGradleBgThread = new CreateBuildGradleBgThread();
 						createBuildGradleBgThread.start();
@@ -23109,6 +23862,7 @@ While_Break:
 					(bFlutterSelected == false)) )
 				{
 					// Ant only, add <uses-sdk> to AndroidManifest.xml..
+					bCreateFinished = false;
 					createBgThread = new CreateBgThread();
 					createBgThread.start();
 				}
@@ -23237,6 +23991,67 @@ While_Break:
 					modifyAndroidManifestBgThread = new ModifyAndroidManifestBgThread();
 					modifyAndroidManifestBgThread.start();
 				}
+				
+				// Wait for CreateBgThread to finish..
+                bUsingAppProject = false;
+                String sRet = "";
+                StringBuffer tSb;
+                File tFile;
+                
+                tSb = new StringBuffer(projectHomeS);
+                sRet = FindBuildGradle(tSb.toString());
+                if (! sRet.equals("") )
+                {
+                    sProjectLevelPath = sRet;
+                }
+                
+                tSb = new StringBuffer(projectHomeS);
+                tSb.append("/app");
+                tFile = new File(tSb.toString());
+                if ( tFile.exists() )
+                {
+                    // 'app' exists..
+                    //System.out.println("app exists");
+                    bUsingAppProject = true;
+                        
+                    sRet = FindBuildGradle(tSb.toString());
+                    if (! sRet.equals("") )
+                    {
+                        // Found build.gradle..
+                        sModuleLevelPath = sRet;
+                    }
+                }
+                
+                tSb = new StringBuffer(projectHomeS);
+                tSb.append("/android/app");
+                sRet = FindBuildGradle(tSb.toString());
+                if (! sRet.equals("") )
+                {
+                    // Found build.gradle..
+                    sModuleLevelPath = sRet;
+                }
+
+/*                
+                if ( sModuleLevelPath == null )
+                    System.out.println("sModuleLevelPath null");
+                else
+                    System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/                
+        
+                // Look for [Project]/android
+                // For LibGdx projects..
+                if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+                {
+                    StringBuffer sB = new StringBuffer(projectHomeS);
+                    sB.append("/android");
+                    //File tFile = new File(sB.toString());
+                    tFile = new File(sB.toString());
+                    if ( tFile.exists() )
+                        bUsingAndroid = true;
+                    else
+                        bUsingAndroid = false;
+                }
+				
 
 				uSdkMenuItem.setSelected(false);
 				bDoBuildGradleUpdate = false;
@@ -25012,6 +25827,7 @@ While_Break:
 			else
 			{
 			    //System.out.println("\nIn end else");
+			    // Recent Project selection.. 
 			    
 				if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 				{
@@ -25020,8 +25836,10 @@ While_Break:
 					
 					//System.out.println("sIn: '"+sIn+"'");
 					if ( sIn.equals(actionCommandS) )
+					{
 					    //System.out.println("Same project");
 						;	// Same project..
+					}
 					else
 					{
 						// Select project from submenu..
@@ -25108,6 +25926,66 @@ While_Break:
 											updateStorage();
 											
 											init();		// Reset..
+											
+                                            bUsingAppProject = false;
+                                            String sRet = "";
+                                            StringBuffer tSb;
+                                            File tFile;
+                                            
+                                            tSb = new StringBuffer(projectHomeS);
+                                            sRet = FindBuildGradle(tSb.toString());
+                                            if (! sRet.equals("") )
+                                            {
+                                                sProjectLevelPath = sRet;
+                                            }
+                                            
+                                            tSb = new StringBuffer(projectHomeS);
+                                            tSb.append("/app");
+                                            tFile = new File(tSb.toString());
+                                            if ( tFile.exists() )
+                                            {
+                                                // 'app' exists..
+                                                //System.out.println("app exists");
+                                                bUsingAppProject = true;
+                                                    
+                                                sRet = FindBuildGradle(tSb.toString());
+                                                if (! sRet.equals("") )
+                                                {
+                                                    // Found build.gradle..
+                                                    sModuleLevelPath = sRet;
+                                                }
+                                            }
+                                            
+                                            tSb = new StringBuffer(projectHomeS);
+                                            tSb.append("/android/app");
+                                            sRet = FindBuildGradle(tSb.toString());
+                                            if (! sRet.equals("") )
+                                            {
+                                                // Found build.gradle..
+                                                sModuleLevelPath = sRet;
+                                            }
+
+/*                                            
+                                            if ( sModuleLevelPath == null )
+                                                System.out.println("sModuleLevelPath null");
+                                            else
+                                                System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/                
+                                    
+                                            // Look for [Project]/android
+                                            // For LibGdx projects..
+                                            if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
+                                            {
+                                                StringBuffer sB = new StringBuffer(projectHomeS);
+                                                sB.append("/android");
+                                                //File tFile = new File(sB.toString());
+                                                tFile = new File(sB.toString());
+                                                if ( tFile.exists() )
+                                                    bUsingAndroid = true;
+                                                else
+                                                    bUsingAndroid = false;
+                                            }
+											
 											
                                             // Get Package name..
                                             getPackageName();
@@ -25510,9 +26388,12 @@ While_Break:
 	    {
             int iLoc;
             int iLoc2;
+            int iLoc3;
             String sIn = "";
             StringBuffer tSb;		
             File fileT3;
+            File fileT4;
+            byte[] buf = null;
 
             packageNameS = "";
             
@@ -25620,54 +26501,114 @@ While_Break:
                     
                     break;
                 }
-                        
-               //System.out.println("sb: '"+sb.toString()+"'");
-                    
-                byte[] buf = null;
-    
-                // Note:
-                // If it can't find AndroidManifest.xml
-                // the path in 'sb' will be invalid..
-                
-                // Check that it's a valid file..
-                File file = new File(sb.toString());
-                if ( file.isFile() )
+
+                // Try to get from namespace..               
+                if ( (sModuleLevelPath != null) && (sModuleLevelPath.length() > 0) )
                 {
-                    buf = readFile(896, sb.toString());
-                    if ( (buf != null) && (buf.length > 0) )
+                    fileT4 = new File(sModuleLevelPath);
+                    if ( fileT4.exists() )
                     {
-                        sIn = new String(buf);
-            
-                        iLoc = sIn.indexOf("package=");
-                        if ( iLoc != -1 )
+                        buf = readFile(896, sModuleLevelPath);
+                        if ( (buf != null) && (buf.length > 0) )
                         {
-                            iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
-                            if ( iLoc2 != -1 )
-                                packageNameS = sIn.substring((iLoc + 9), iLoc2);
+                            sIn = new String(buf);
+                            iLoc = sIn.indexOf("namespace");
+                            if ( iLoc != -1 )
+                            {
+                                iLoc2 = sIn.indexOf("'", iLoc);
+                                if ( iLoc2 != -1 )
+                                {
+                                    iLoc3 = sIn.indexOf("'", iLoc2 + 1);
+                                    if ( iLoc3 != -1 )
+                                    {
+                                        packageNameS = sIn.substring(iLoc2 + 1, iLoc3);
+                                        packageNameS = packageNameS.trim();
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                else
+
+                if ( packageNameS.equals("") )
                 {
-                    // Put up Dialog..
-                    JOptionPane.showMessageDialog(
-                        frame,
-                        "Cannot find package name, set in config.properties",
-                        "Package name",
-                        JOptionPane.WARNING_MESSAGE);
+                   //System.out.println("sb: '"+sb.toString()+"'");
+                        
+                    //byte[] buf = null;
+        
+                    // Note:
+                    // If it can't find AndroidManifest.xml
+                    // the path in 'sb' will be invalid..
+                    
+                    // Check that it's a valid file..
+                    File file = new File(sb.toString());
+                    if ( file.isFile() )
+                    {
+                        buf = readFile(896, sb.toString());
+                        if ( (buf != null) && (buf.length > 0) )
+                        {
+                            sIn = new String(buf);
+                
+                            iLoc = sIn.indexOf("package=");
+                            if ( iLoc != -1 )
+                            {
+                                iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
+                                if ( iLoc2 != -1 )
+                                    packageNameS = sIn.substring((iLoc + 9), iLoc2);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Put up Dialog..
+                        JOptionPane.showMessageDialog(
+                            frame,
+                            "Cannot find package name, set in config.properties",
+                            "Package name",
+                            JOptionPane.WARNING_MESSAGE);
+                    }
                 }
             }
         }
-        
-/*		
+
+/*        
 		if ( packageNameS == null )
 			System.out.println("packageNameS null");
 		else
 			System.out.println("packageNameS: '"+packageNameS+"'");
 /**/	
-		
+
+        //System.out.println("\nExiting getPackageName()");
+        
 	}	//}}}
-	
+
+	//{{{   FindBuildGradle()
+    private String FindBuildGradle(String sPath)
+    {
+        File folder = new File(sPath);
+        File file;
+        File[] listOfFiles = folder.listFiles();
+        String sFName = "";
+        String sRet = "";
+
+        if ( listOfFiles != null )
+        {
+            for ( int g = 0; g < listOfFiles.length; g++ )
+            {
+                file = listOfFiles[g];
+                sFName = file.getName();
+                if ( sFName.startsWith("build.gradle") )
+                {
+                    sRet = file.getAbsolutePath();      // Like:  'C:\Android\Dev\FancyShowCaseView-master\build.gradle'
+                    //System.out.println("sRet: '"+sRet+"'");
+                    break;
+                }
+            }
+        }
+        
+        return sRet;        
+    }   //}}}
+    
 	//{{{	orgCaretListener
 	private CaretListener orgCaretListener = new CaretListener()
 	{

@@ -18,20 +18,21 @@ How to use ADev:
 	status bar.
 	
 	Note:
-	For Gradle based projects, it will normally modify app/build.gradle
-	to allow for signing.  If you want, you can turn this off by setting
+	For Gradle based projects, it will normally modify the Module level build.gradle
+	to allow for signing.  If you want, you can turn off modifying your projects by setting
 	'dont_modify_build_gradle' to "true" in config properties.
 
-- To be able to build a sample Android Ant project, or one that
-	does not have a build.xml, from the menu choose Project->Update.
+- To create a new project, select the build environment switches "Use Flutter", "Use Gradle", etc.
+	and from the menu choose Project->Create.
+
+Ant:
+    To be able to build a sample Android Ant project, or one that
+	does not have a build.xml, from the menu choose 'Project->Update'.
 	The 'android' tool will generate any files or folders that need to be updated,
 	as needed for the Android project.
 	If the project already has a target defined in its project.properties file,
 	leave the Target SDK, in the Update Dialog, blank.
 	Or you can check the project's 'project.properties' file and try to match the target Id.
-
-- To create a new project, select the build environment switches "Use Flutter", "Use Gradle", etc.
-	and from the menu choose Project->Create.
  
   
 Add <uses-sdk>:
@@ -58,14 +59,15 @@ Logcat:
 		You can also edit the "logcat_filter" property in config.properties which will
 		help to block the output of the selected tags.
 		
-PID Logcat:		
-		You can choose to just view log output from the running Process Id
-		by setting 'use_pid_logcat' to "true" in config properties.
+		You can also easily do a Copy from the output.
 		
 		All warning and error messages are color highlighted in the output.
 		
-		You can also easily do a Copy from the output.
+PID Logcat:		
+		You can choose to just view log output from the running Process Id
+		by setting 'use_pid_logcat' to "true" in config properties.
 
+		
 Select Device:
 		Allows you to select the target device, or Emulator, for Logcat output,
 		Uninstall and Install, if you are running more than one.
@@ -81,7 +83,7 @@ Search: Search Dialog for searching through long Logcat or other output
 		You can select part of a line where you want to start the
 		search and use 'Reset Next'.
 		
-Refresh:
+Refresh Properties:
         Refreshes the settings in config.properties.
 		
 Select All:
@@ -132,10 +134,6 @@ Gradle builds:
 		If your build fails, you can try using a higher	or lower Gradle version,
 		and that can sometimes get it to successfully build the project.
 		
-		*Note*:
-		If you are using buildToolsVersion 32.0.0, and it's complaining that it's
-		corrupt, try setting it to an older version in app/build.gradle.
-
 Release builds:
 		For Gradle, you can define your Keystore path, Key Alias, Keystore password
 		and Key Alias passwords in
@@ -159,10 +157,15 @@ Gradlew:
         download from GitHub.        
 
 App Bundle:
+		For best results it is recommended to use Gradlew by setting "use_gradlew" to "true"
+		in config.properties.
+
 		Support for Gradle, Kotlin and Flutter.
 		Recommended to use Gradle version 5.5.1 or higher.
 
-		If you are letting Google Play handle your signing:
+		If you are letting Google Play handle your signing,
+		generate your Keystore .jks file using Java 'keytool' or use this:
+		
 		Fill in App Bundle Password realted items in config.properties,
 		then use "Project->Generate Key Store" to generate a Keystore		
 		for use with App Bundles.
@@ -177,10 +180,11 @@ App Bundle:
 		
 		You can learn more about app signing here:
 		https://developer.android.com/studio/build/building-cmdline#gradle_signing
+		https://support.google.com/googleplay/android-developer/answer/9842756?hl=en
 		
 App Bundle Install:
         If you are using App Bundle, when you hit the Install button, it will
-        figure out the path to the .aab file and then use two bundletool commands
+        figure out the path to the .aab file and then use bundletool commands
         to load the connected device.  If it can't find the path it will put up a Dialog
         where you can point to it.  Also works with Emulator.
         There is usually a delay before you see all the output.
@@ -194,20 +198,24 @@ Use Flutter:
 		
 		Download into, or create, a directory with no embedded spaces in the path,
 		like C:/Dev
-		
-		Configure Gradle and Android SDK for Flutter:
+
+        Currently this Flutter is configured to use Gradle and not Gradlew.		
+		Configure Flutter:
 		CD into your  flutter/bin  and run:
+		
+		flutter doctor
+		
+		This will check your environment and let you know
+		if it needs anything.
+		
+		You can make changes using:
+		
+		flutter config
+		
+		Like:
 		
 		flutter config --android-sdk [path to Android SDK]
 		
-		Note:
-			On Flutter 1.9.1, and later, it doesn't seem to support '--gradle-dir'
-			but it does list it under 'Settings:' after you run the command.
-			
-		flutter config --gradle-dir [path to Gradle]
-		
-		Flutter requires the Android SDK to have android-28.
-
 		Support for creating and building Flutter projects.
 		It relies on using Gradle for the builds, so the 'Use Gradle'
 		checkbox is automatically selected.
@@ -232,6 +240,8 @@ Use Kotlin:
 		Support for creating and building Kotlin projects.
 		It relies on using Gradle for the builds, so the 'Use Gradle'
 		checkbox is automatically selected.
+		
+		Kotlin DSL .kts is supported for existing projects.
 
         The minimum required Gradle version is 4.10.1.		
 		
@@ -396,17 +406,19 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.2.2:
-    Improved logcat.  It now clears the logcat buffer each time it starts to 
-    reduce any slowdowns caused by long previous outputs.
-    Improved PID logcat.  Found out that the secound time you would run it,
-    it wouldn't get any output, and fixed it.
-
 ADev-3.2.3:
     Improved logcat and PID logcat, also works better with wireless debugging.
 
 ADev-3.2.4:
     Improved logcat by using 'brief' so highlighting will always work.
+    
+ADev-3.2.6:
+    Support for Kotlin DSL .kts in projects.
+    One button builds for Gradlew and Gradle, but not for Flutter.  Now the Debug and Release buttons
+    will automatically do a 'clean' if Clean wasn't pressed.
+    Option to use Gradle/Gradlew or adb for Uninstall and Install.
+    Improved project detection.
+    Other improvements to config.properties.
     
 
 I use it for all of my own development, and try to fix what issues I see,
