@@ -6,7 +6,7 @@
 	/**
 	 *	  ADev is a lightweight Android development tool
 	 *
-	 *	  Copyright (c) 2013 - 2022 Joseph Siebenmann
+	 *	  Copyright (c) 2013 - 2023 Joseph Siebenmann
 	 *
 	 *    This program is free software: you can redistribute it and/or modify
 	 *    it under the terms of the GNU General Public License as published by

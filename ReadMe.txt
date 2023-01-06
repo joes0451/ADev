@@ -12,15 +12,20 @@ How to use ADev:
 - In config.properties, fill in paths to Java,
 	Ant, Android SDK, Gradle, Flutter, and any additional paths
 	needed for your builds.
-  
-- To build an existing project, from the menu choose Project->Home, and select
+
+Project->Home:
+    To build an existing project, from the menu choose Project->Home, and select
 	your project's Home directory.  The current Project Home is shown in the lower
 	status bar.
 	
 	Note:
-	For Gradle based projects, it will normally modify the Module level build.gradle
-	to allow for signing.  If you want, you can turn off modifying your projects by setting
+	For Gradle based projects, it will normally modify the module-level build.gradle
+	to allow for signing.
+	It will look at the settings in config.properties, like 'use_key_properties', to determine
+	how to set up signingConfigs and other things.
+	If you want, you can turn off modifying your projects by setting
 	'dont_modify_build_gradle' to "true" in config properties.
+	
 
 - To create a new project, select the build environment switches "Use Flutter", "Use Gradle", etc.
 	and from the menu choose Project->Create.
@@ -34,7 +39,8 @@ Ant:
 	leave the Target SDK, in the Update Dialog, blank.
 	Or you can check the project's 'project.properties' file and try to match the target Id.
  
-  
+	Also, Ant builds don't work well with the OpenJdk, use the older regular Java JDK.
+	
 Add <uses-sdk>:
 		If selected it will add a statement, like:
 		
@@ -95,10 +101,6 @@ Gradle builds:
 		defined	in 'config.properties'.
 		Be sure that the 'gradle_path' points to the 'bin' Gradle install directory.
 
-        Normally it will try to modify the app/build.gradle to allow for signing
-        but you can use the 'dont_modify_build_gradle' switch in config.properties
-        to not modify your project.
-		
 		Option in config.properties to use 'gradle' or 'gradlew'.
 		It also modifies the default Gradle version to use, in gradle/wrapper/gradle-wrapper.properties,
 		from '1.12' to a newer '3.5'.  You can modify it to a newer version if you want.
@@ -133,12 +135,15 @@ Gradle builds:
 		
 		If your build fails, you can try using a higher	or lower Gradle version,
 		and that can sometimes get it to successfully build the project.
+
 		
 Release builds:
-		For Gradle, you can define your Keystore path, Key Alias, Keystore password
-		and Key Alias passwords in
-		config.properties, or let it prompt you for them
-		with the Keystore Password Dialog..
+SingingConfigs:
+        For Gradle and Kotlin, but not Flutter, you can use the option in config.properties:
+        'use_key_properties' to use a key.properties file for the signingConfigs,
+        or have the keystore password information go through the command line
+        so no key.properties file is needed.  If the keystore password information
+        in config.properties is empty it will prompt you for them with the Keystore Password Dialog.
 		
 		For Linux, make sure that the build.gradle file has read and write permissions.
 		It tries to modify strings.xml so that might need it as well.
@@ -156,6 +161,11 @@ Gradlew:
         in projects without modifying them, useful when trying to build projects you
         download from GitHub.        
 
+Gradle clean, Unable to delete file '...\build'
+        If you have problems with Gradle not being able to delete the build directory
+        one option is to set the 'use_stop_gradle' option in config.properties,
+        which will use 'gradle clean --stop', which usually works. 
+
 App Bundle:
 		For best results it is recommended to use Gradlew by setting "use_gradlew" to "true"
 		in config.properties.
@@ -163,24 +173,24 @@ App Bundle:
 		Support for Gradle, Kotlin and Flutter.
 		Recommended to use Gradle version 5.5.1 or higher.
 
-		If you are letting Google Play handle your signing,
-		generate your Keystore .jks file using Java 'keytool' or use this:
-		
-		Fill in App Bundle Password realted items in config.properties,
-		then use "Project->Generate Key Store" to generate a Keystore		
-		for use with App Bundles.
-		If the Password items are not in config.properties you can
-		enter them in the password Dialog that will pop-up.
-		Then Gradle will build the App Bundle and sign it with the
-		Keystore information.
+		Generate your Keystore .jks file using Java 'keytool' or use this:
+
+Generate Key Store:
+        In config.properties, fill in the ..keystore_path, ..key_alias, ..key_store_password
+        and ..key_alias_password entries for either the App Bundle or APK.
+        Select 'Project->Generate Key Store', fill in all the fields
+        and hit 'Submit'.  If the fields are empty it will put up a Dialog for
+        you to enter them.  A certificate will be generated in the ..keystore_path directory.
+        Gradle will use this to sign your App Bundle or APK.
+        It will not overwrite an existing certificate of the same name and type.
 		
 		If you are changing an existing project to use app bundle
-		make sure that you delete any 'key.properties'
+		make sure that you delete the 'key.properties'
 		file in the project directory.
 		
 		You can learn more about app signing here:
 		https://developer.android.com/studio/build/building-cmdline#gradle_signing
-		https://support.google.com/googleplay/android-developer/answer/9842756?hl=en
+		https://developer.android.com/studio/publish/app-signing
 		
 App Bundle Install:
         If you are using App Bundle, when you hit the Install button, it will
@@ -257,15 +267,6 @@ Use NDK:
 		The Clean button will do 'ndk-build clean' and the Build button 'ndk-build'.
 		
 		
-Keystore passwords:
-		For Gradle, Kotlin and Flutter builds it now uses a key.properties
-		file to hold the Keystore passwords.
-		
-Clean:
-		Clean also deletes the key.properties file, used for signing, so that you can safely
-		archive your project.  And for older projects that are not set up
-		for the key.properties file, it will modify the app/build.gradle file to support it.
-		
 Pull Files:
 		Pulls a file from your Emulator or your device.
 		If 'sdcard_path' is defined in your config.properties file, it will append
@@ -294,7 +295,8 @@ Wireless debugging:
 		
 		You can check if your device is still connected by hitting the 'Devices' button
 		and see if it's listed, or its status.
-		
+
+Connect:		
 		If you had a previous wireless debugging session going, it's a good
 		idea to select Wireless->Disconnect before you start.
 
@@ -406,9 +408,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.2.3:
-    Improved logcat and PID logcat, also works better with wireless debugging.
-
 ADev-3.2.4:
     Improved logcat by using 'brief' so highlighting will always work.
     
@@ -419,6 +418,12 @@ ADev-3.2.6:
     Option to use Gradle/Gradlew or adb for Uninstall and Install.
     Improved project detection.
     Other improvements to config.properties.
+    
+ADev-3.2.8:
+    Fixed and improved 'Generate Key Store'.
+    New option for signingConfigs, Gradle and Kotlin no longer need a key.properties file for the
+    keystore password information.
+    Other improvements.
     
 
 I use it for all of my own development, and try to fix what issues I see,
