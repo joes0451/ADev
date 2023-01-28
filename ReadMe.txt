@@ -209,7 +209,6 @@ Use Flutter:
 		Download into, or create, a directory with no embedded spaces in the path,
 		like C:/Dev
 
-        Currently this Flutter is configured to use Gradle and not Gradlew.		
 		Configure Flutter:
 		CD into your  flutter/bin  and run:
 		
@@ -317,6 +316,14 @@ Java Debug Wire Protocol debugger:
 
 		Generally, you should run the debugger on a version of your application
 		that has a Debug build.
+		
+		Before you start the debugger, you should start the application that you want to debug.
+		
+		Once the application is running select Window->Debug and slect the source you want to use.
+		
+		*Note*:
+		Often you have to navigate around in the app till you are near the part you want to debug
+		and select 'Debug->Refresh Classes' to get the source you want to show.
 
 		Eclipse and Android Studio internally run DDMS and 'adb', and when trying to connect to
 		an Android device with the debugger, it can mess up the connection, so before you run
@@ -325,10 +332,8 @@ Java Debug Wire Protocol debugger:
 		first attempt at a connection will fail, sometimes 'adb' is slow to respond,
 		so try it one more time.
 		
-		Before you start the debugger, you should start the application that you want to debug.
-		
 		If you want to debug an (SDK) Gradle project or an Android Studio project
-		select 'Use Gradle', for an Android Ant project leave it unchecked, and the application's
+		select 'Use Gradle', for an Android Ant project leave everything unchecked, and the application's
 		Home Directory should be selected in Project->Home.
 		
 		
@@ -377,14 +382,22 @@ Variable Window:
 		
 Flutter debugger:
 
-        Select Run, or start the app on your device and use Attach,
-        then after application launches select Window->Debug.
+        There are two ways you can use the Flutter debugger,
+        both require a debug build of the application:
+
+Run
+        Select Run and wait for it to build and run the application and the progress bar to stop.
+        Then select Window->Debug and click on the name of the source file that you want to debug.
         
-		You can expand Class and nested Class variables.
-		List is now fully supported.
-		
-		There is a delay when the debugger first starts,
-		as it's setting things up in the background.
+Attach
+        The project of the application you want to run should be the currently selected project.
+        Start the Flutter application on the emulator or device.
+        
+        *Note*:
+        Wether Attach works for you depends on a lot of factors, I'm trying to improve it.
+        If the application was running from a previous debugging session, always restart it.        
+        Once the application is running, select Attach and wait for the progress bar to stop.
+        Then select Window->Debug and click on the name of the source file that you want to debug.
 		
 
 Build Errors:
@@ -408,9 +421,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.2.4:
-    Improved logcat by using 'brief' so highlighting will always work.
-    
 ADev-3.2.6:
     Support for Kotlin DSL .kts in projects.
     One button builds for Gradlew and Gradle, but not for Flutter.  Now the Debug and Release buttons
@@ -425,6 +435,13 @@ ADev-3.2.8:
     keystore password information.
     Other improvements.
     
+ADev-3.3.0:
+    New Clean option to safely delete module-level and project level 'build' directories.
+    Flutter Run and Attach have been fixed and improved.
+    New WebSocket code for Flutter debugger.
+    More use of SwingWorker and the progress bar for better output.
+    Other improvements.
+
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.
