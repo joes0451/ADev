@@ -390,12 +390,12 @@ Run
         Then select Window->Debug and click on the name of the source file that you want to debug.
         
 Attach
-        The project of the application you want to run should be the currently selected project.
+        The project of the application you want to run should be the selected project.
         Start the Flutter application on the emulator or device.
         
         *Note*:
-        Wether Attach works for you depends on a lot of factors, I'm trying to improve it.
-        If the application was running from a previous debugging session, always restart it.        
+        If the application was running from a previous debugging session, always restart it
+        to give Attach the best chance of working.        
         Once the application is running, select Attach and wait for the progress bar to stop.
         Then select Window->Debug and click on the name of the source file that you want to debug.
 		
@@ -421,14 +421,6 @@ BlueStacks Emulator:
 
 Release notes:
 	
-ADev-3.2.6:
-    Support for Kotlin DSL .kts in projects.
-    One button builds for Gradlew and Gradle, but not for Flutter.  Now the Debug and Release buttons
-    will automatically do a 'clean' if Clean wasn't pressed.
-    Option to use Gradle/Gradlew or adb for Uninstall and Install.
-    Improved project detection.
-    Other improvements to config.properties.
-    
 ADev-3.2.8:
     Fixed and improved 'Generate Key Store'.
     New option for signingConfigs, Gradle and Kotlin no longer need a key.properties file for the
@@ -442,6 +434,10 @@ ADev-3.3.0:
     More use of SwingWorker and the progress bar for better output.
     Other improvements.
 
+ADev-3.3.1:
+    Removed the Gradle 'clean --stop' option as it wasn't working.
+    Improved the running of commands in Linux.
+    
 
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.

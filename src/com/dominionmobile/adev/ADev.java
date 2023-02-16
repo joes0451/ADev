@@ -1426,7 +1426,6 @@ public class ADev
 			sOpenJdkPath = Utils.processPath(prop.getProperty("openjdk_path"));
 			androidSdkPathAntS = Utils.processPath(prop.getProperty("android_sdk_path_ant"));
 			sBundleToolJarPath = Utils.processPath(prop.getProperty("bundletool_jar_path"));
-			
 			androidSdkPathGradleS = Utils.processPath(prop.getProperty("android_sdk_path_gradle"));
 			sFlutterSdkPath = Utils.processPath(prop.getProperty("flutter_sdk_path"));
 			sAndroidLanguage = Utils.processPath(prop.getProperty("android_language"));
@@ -3787,6 +3786,7 @@ public class ADev
 			int iLoc;
 			int iLoc3 = 0;
 			int iLen;
+			int iExitCount = 0;
 			int iLEnd = -1;
 			int iLenSave = 0;
 			int iCurrentType = NORMAL;
@@ -4015,8 +4015,7 @@ public class ADev
                                 iTotalBytes += iBytesRead;
                             }
 
-
-/*                            
+/*
                             // Debbuging..					
                             if ( (lineSb != null) && (iBytesRead > 0) )
                             {
@@ -4809,7 +4808,15 @@ public class ADev
                                     {
                                         iExitVal = proc.exitValue();
                                         //System.out.println("iExitVal: "+iExitVal);
-                                        break;
+
+                                        // In cases like Install, it can quit before
+                                        // the result gets output, so this give it more
+                                        // time to output the results..                                        
+                                        iExitCount++;
+                                        if ( iExitCount > 15 )
+                                        {
+                                            break;
+                                        }
                                     }
                                     catch (IllegalThreadStateException itse)
                                     {
@@ -6442,7 +6449,7 @@ public class ADev
 				}
 				
 				sb.append(";adb ");
-/*
+				
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
@@ -6490,7 +6497,7 @@ public class ADev
 				else
 					System.out.println("sDeviceName: '"+sDeviceName+"'");
 /**/
-/*
+
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					sb.append("-s ");
@@ -15601,6 +15608,29 @@ public class ADev
 	
 			//System.out.println("(Command): '"+internalSb.toString()+"'");
 			
+/*			
+			commandS = internalSb.toString();
+			
+            bIOBgThreadFinished = false;
+            ioBgThread = new IOBgThread();
+            ioBgThread.start();
+            
+            // Wait for Thread to finish..
+            while ( true )
+            {
+                try
+                {
+                    Thread.sleep(20);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+
+                if ( bIOBgThreadFinished )
+                    break;
+            }
+/**/			
+			
 			bInternalFinished = false;		
 			internalCommandS = internalSb.toString();
 			commandBgThread = new CommandBgThread();
@@ -15623,18 +15653,18 @@ public class ADev
 			}
 
 /*			
-				System.out.println();
-				char cTChr;
-				
-				for ( int g = 0; g < commandResultS.length(); g++ )
-				{
-					cTChr = (char)commandResultS.charAt(g);
-					if ( (cTChr < 0x20) || (cTChr > 0x7e) )
-						System.out.print("["+Integer.toHexString((int)cTChr)+"]");
-					else
-						System.out.print(cTChr);
-				}
-				System.out.println();
+            System.out.println();
+            char cTChr;
+            
+            for ( int g = 0; g < commandResultS.length(); g++ )
+            {
+                cTChr = (char)commandResultS.charAt(g);
+                if ( (cTChr < 0x20) || (cTChr > 0x7e) )
+                    System.out.print("["+Integer.toHexString((int)cTChr)+"]");
+                else
+                    System.out.print(cTChr);
+            }
+            System.out.println();
 /**/
 
 /*
@@ -20067,14 +20097,6 @@ While_Break:
                                 }
                                 
                                 commandSb.append("clean");
-                                
-                                if ( (sCleanOptions != null) && (sCleanOptions.equals("clean stop")) )
-                                {
-                                    commandSb.append(";");
-                                    commandSb.append(sGradleType);
-                                    commandSb.append(" ");
-                                    commandSb.append(" --stop");
-                                }
                             }
                         }
                         else if ( bNDKSelected )
@@ -20171,14 +20193,6 @@ While_Break:
         
                                 commandSb.append("clean");
 
-                                if ( (sCleanOptions != null) && (sCleanOptions.equals("clean stop")) )
-                                {
-                                    commandSb.append("&&");
-                                    commandSb.append(sGradleType);
-                                    commandSb.append(" ");
-                                    commandSb.append(" --stop");
-                                }
-                                
                                 commandSb.append("\n");
                             }
                         }
@@ -20697,7 +20711,7 @@ While_Break:
                                 ;
                             else
                             {
-                                // Regular gradle clean or --stop..
+                                // Regular gradle clean..
                                 if ( iOS == LINUX_MAC )
                                     commandSb.append(";");
                                 else
@@ -20708,18 +20722,7 @@ While_Break:
                                 commandSb.append(" ");
 						    
                                 commandSb.append("clean");
-                                
-                                if ( (sCleanOptions != null) && (sCleanOptions.equals("clean stop")) )
-                                {
-                                    if ( iOS == LINUX_MAC )
-                                        commandSb.append(";");
-                                    else
-                                        commandSb.append("&&");
-                                    
-                                    commandSb.append(sGradleType);
-                                    commandSb.append(" ");
-                                    commandSb.append(" --stop");
-                                }
+
                             }
 						}
 						
@@ -21335,7 +21338,7 @@ While_Break:
 						        ;
 						    else
 						    {
-						        // Regular clean or --stop..
+						        // Regular clean..
                                 if ( iOS == LINUX_MAC )
                                     commandSb.append(";");
                                 else
@@ -21346,18 +21349,7 @@ While_Break:
                                 commandSb.append(" ");
 						    
                                 commandSb.append("clean");
-                                
-                                if ( (sCleanOptions != null) && (sCleanOptions.equals("clean stop")) )
-                                {
-                                    if ( iOS == LINUX_MAC )
-                                        commandSb.append(";");
-                                    else
-                                        commandSb.append("&&");
-                                    
-                                    commandSb.append(sGradleType);
-                                    commandSb.append(" ");
-                                    commandSb.append(" --stop");
-                                }
+
                             }
 						}
 						
@@ -24272,6 +24264,7 @@ While_Break:
 						bUsingAppProject = true;
 						
                         sRet = FindBuildGradle(tSb.toString());
+                        //System.out.println("sRet: '"+sRet+"'");
                         if (! sRet.equals("") )
                         {
                             // Found build.gradle..
@@ -24283,8 +24276,13 @@ While_Break:
                                 // Kotlin..
                                 //System.out.println("==Found kotlin==");
                                 sType = "KOTLIN";
+                                
+                                // Set both..
                                 if ( uKotlinMenuItem != null )
                                     uKotlinMenuItem.setState(true);
+                                
+                                if ( uGradleMenuItem != null )
+                                    uGradleMenuItem.setState(true);
                             }
                             else
                             {
