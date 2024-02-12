@@ -7,7 +7,7 @@
 	/**
 	 *	  ADev is a lightweight Android development tool
 	 *
-	 *	  Copyright (c) 2013 - 2023 Joseph Siebenmann
+	 *	  Copyright (c) 2013 - 2024 Joseph Siebenmann
 	 *
 	 *    This program is free software: you can redistribute it and/or modify
 	 *    it under the terms of the GNU General  Public License as published by
@@ -92,6 +92,7 @@ import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.Point;
 import java.awt.FontMetrics;
+import java.awt.Toolkit;
 import javax.swing.AbstractButton;
 import javax.swing.JViewport;
 import java.awt.FlowLayout;
@@ -408,7 +409,7 @@ public class ADev
 	static volatile boolean bEmulatorsFinished;
 	static volatile boolean bProcessResultFinished;
 	static volatile boolean bDoingProcessCommand;
-	static volatile boolean bWirelessConnected;
+	//static volatile boolean bWirelessConnected;
 	static volatile boolean bKillLogcat;
 	static volatile boolean bEnableStoreFile;
 	//static volatile boolean bEnableBuildTypesDebug;
@@ -657,6 +658,8 @@ public class ADev
 	static volatile String sSavedPackageName;
 	static volatile String sBundletoolBuildApksMode;
 	static volatile String sEnableIgnoreDeprecation;
+	static volatile String g_sT;
+	
 	//static volatile String sUseStopGradle;
 	//static volatile String sDeleteBuildDirectory;
 	static volatile String sUseKeyProperties;
@@ -1151,8 +1154,9 @@ public class ADev
         // Set default..		
         SingletonClass sc = SingletonClass.getInstance();
         sc.s_FoundAppStarted = false;
+        sc.s_WirelessConnected = false;
 		
-        bWirelessConnected = false;
+        //bWirelessConnected = false;
 		
 		iCardShowing = BUILD_CARD;
 		iPreviousIndex = -1;
@@ -1175,7 +1179,7 @@ public class ADev
 		sBuildToolsVersion = "";
 		bGetAndroidPluginVersion = true;
 		sDeviceIPAddress = "";
-		bWirelessConnected = false;
+		//bWirelessConnected = false;
 		bKillLogcat = false;
 		bDoGradleCleanup = false;
 		sGradleCommandOption = "";
@@ -1574,10 +1578,14 @@ public class ADev
 			int iLoc = javaPathS.lastIndexOf('/');
 			if ( iLoc != -1 )
 			{
-				String sT = javaPathS.substring(iLoc);
+			    String sT = "";
+			    if ( iLoc < javaPathS.length() )
+			        sT = javaPathS.substring(iLoc);
+				//String sT = javaPathS.substring(iLoc);
 				if ( sT.equalsIgnoreCase("/bin") )
 				{
-					javaPathS = javaPathS.substring(0, iLoc);
+				    if ( iLoc < javaPathS.length() )
+				        javaPathS = javaPathS.substring(0, iLoc);
 				}
 			}
 		}
@@ -2182,7 +2190,7 @@ public class ADev
 			int iId = 1;
 			int iLoc;
 			byte[] buf;
-			String sT;
+			String sT = "";
 			String sBuf;
 			File tFile;
 			
@@ -2201,7 +2209,8 @@ public class ADev
 					iLoc2 = Sb.indexOf("-");
 					if ( iLoc2 != -1 )
 					{
-						sT = Sb.substring(iLoc2 + 1);
+					    if ( (iLoc2 + 1) < Sb.length() )
+					        sT = Sb.substring(iLoc2 + 1);
 						if ( sT.length() == 1 )
 						{
 							Sb.insert(iLoc2 + 1, "0");
@@ -2247,8 +2256,11 @@ public class ADev
 						{
 							int j = iLoc;
 							for ( ; sBuf.charAt(j) != (char)0x0a; j++ );
-							sT = sBuf.substring((iLoc + 17), j);
-							sT = sT.trim();
+							if ( ((iLoc + 17) >= 0) && (j < sBuf.length()) )
+							{
+							    sT = sBuf.substring((iLoc + 17), j);
+							    sT = sT.trim();
+							}
 							lineSb.append(sT);
 							lineSb.append(" (API level ");
 						}
@@ -2256,8 +2268,11 @@ public class ADev
 						iLoc = sBuf.indexOf("ApiLevel");
 						if ( iLoc != -1 )
 						{
-							sT = sBuf.substring((iLoc + 9), (iLoc + 11));
-							sT = sT.trim();
+						    if ( ((iLoc + 9) >= 0) && ((iLoc + 11) < sBuf.length()) ) 
+						    {
+						        sT = sBuf.substring((iLoc + 9), (iLoc + 11));
+						        sT = sT.trim();
+						    }
 							//System.out.println("sT: '"+sT+"'");
 							lineSb.append(sT);		// '15'
 							lineSb.append(")");
@@ -2295,7 +2310,8 @@ public class ADev
 						iLoc2 = sT.indexOf(" ");
 						if ( iLoc2 != -1 )
 						{
-							sT = sT.substring(iLoc2 + 1);
+						    if ( (iLoc2 + 1) < sT.length() )
+						        sT = sT.substring(iLoc2 + 1);
 						}
 						
 						//System.out.println("(Add): '"+sT+"'");
@@ -2523,6 +2539,7 @@ public class ADev
 				outSb.append("    }");
 				outSb.append(sTrail);
 
+				
 				//System.out.println("bFlutterSelected: "+bFlutterSelected);				
 				if ( (sUseAppBundle.equals("true")) &&
 					(bFlutterSelected == false) )
@@ -2640,6 +2657,8 @@ public class ADev
 			writeFile(outSb.toString().getBytes(), tSb.toString());
 			
 			bCreateBuildGradleFinished = true;
+			
+			//System.out.println("Exiting CreateBuildGradleBgThread");
 		}
 	}	//}}}
 
@@ -3188,7 +3207,8 @@ public class ADev
 											iStart++;
 										}
 										
-										if ( sSignatureX.substring(iStart).equals("Ljava/lang/String;") )
+										//if ( sSignatureX.substring(iStart).equals("Ljava/lang/String;") )
+										if ( (iStart < sSignatureX.length()) && (sSignatureX.substring(iStart).equals("Ljava/lang/String;")) )
 											bIsString = true;
 
 										cChr = sSignatureX.charAt(iStart);
@@ -3709,7 +3729,7 @@ public class ADev
                 if ( bFlutterSelected )
                 {
                     iLoc2 = sFullSourcePath.indexOf(sLib);
-                    if ( iLoc2 != -1 )
+                    if ( (iLoc2 != -1) && (iLoc2 < sFullSourcePath.length()) )
                         sStatusPath = sFullSourcePath.substring(iLoc2);
                 }
                 else
@@ -3719,7 +3739,7 @@ public class ADev
                     statusPathSb.append("/");
                     
                     iLoc2 = sFullSourcePath.lastIndexOf((int)0x5c);     // '\'
-                    if ( iLoc2 != -1 )
+                    if ( (iLoc2 != -1) && ((iLoc2 + 1) < statusPathSb.length()) )
                     {
                         statusPathSb.append(sFullSourcePath.substring(iLoc2 + 1));
                         //System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
@@ -3753,14 +3773,8 @@ public class ADev
 		{
 		    //StringBuffer commandSb = null;
 		    
-			//System.out.println("\nIOBgThread run()");
-/*			
-            SwingWorker swingWorker = new SwingWorker()
-            {
-                @Override
-                public Void doInBackground() throws Exception
-                {
-/**/
+			//System.out.println("IOBgThread run()");
+			
             Process proc = null;
 			OutputStream os = null;
 			
@@ -3864,6 +3878,17 @@ public class ADev
 
 			//System.out.println("\n\n(IOBgThread)commandS: '"+commandS+"'");
 			//System.out.println("\nIOBgThread run()");
+
+			
+			SingletonClass sc = SingletonClass.getInstance();
+
+/*			
+			if ( sc.s_sCommand == null )
+				System.out.println("sc.s_sCommand null");
+			else
+				System.out.println("sc.s_sCommand: '"+sc.s_sCommand+"'");
+/**/			
+			
 /*			
 			if ( commandS == null )
 				System.out.println("commandS null");
@@ -3880,32 +3905,40 @@ public class ADev
                 System.out.println("packageNameS: '"+packageNameS+"'");
 /**/
 
+            // Moved out of try..            
+			Runtime rt = Runtime.getRuntime();
+				
 
 			try
 			{
 			    
                 //SingletonClass sc = SingletonClass.getInstance();
-			    
-				Runtime rt = Runtime.getRuntime();
+				//Runtime rt = Runtime.getRuntime();
+				
+                //if ( rt == null )
+                    //System.out.println("rt null");
+				
 				
 				if ( iOS == LINUX_MAC )
 				{
-					proc = rt.exec(new String[] {"/bin/bash", "-c", commandS});
-					//proc = rt.exec(new String[] {"/bin/bash", "-c", sc.s_Command});
+					//proc = rt.exec(new String[] {"/bin/bash", "-c", commandS});
+					proc = rt.exec(new String[] {"/bin/bash", "-c", sc.s_sCommand});
 				}
 				else
 				{
 					proc = rt.exec("cmd.exe");
 					
-					writeBuf = commandS.getBytes();
-					//writeBuf = sc.s_Command.getBytes();
+					
+					
+					//writeBuf = commandS.getBytes();
+					writeBuf = sc.s_sCommand.getBytes();
 					
 					// Command..				
 					os = proc.getOutputStream();
 					os.write(writeBuf);
 					os.flush();
 				}
-					
+
 				error_is = proc.getErrorStream();
 				out_is = proc.getInputStream();
 				
@@ -3930,31 +3963,13 @@ public class ADev
 				int iBreakLength = DISPLAY_WIDTH / 2;
 				boolean bInWord;
 				
+				//String sT = "";
 				long lCTM1;
 				long lCTM2;
 				long lDif = 0;
 				
 				lCurrentTime = System.currentTimeMillis();
 				
-/*				
-				JFrame tProgressJFrame = null;
-
-                if ( sc.s_ShowProgressBar )
-                {
-                    jProgressBar = new JProgressBar();
-                    jProgressBar.setIndeterminate(true);
-                    jProgressBar.setPreferredSize(new Dimension(200, 30));
-                    
-                    tProgressJFrame = new JFrame();
-                    tProgressJFrame.setUndecorated(true);
-                    tProgressJFrame.add(jProgressBar);
-                    tProgressJFrame.pack();
-                    tProgressJFrame.setVisible(true);
-                    tProgressJFrame.setLocationRelativeTo(mainJFrame);
-                    tProgressJFrame.setAlwaysOnTop(true);
-                    
-                }
-/**/                
                         while ( ! isInterrupted() )
                         {
                             //System.out.println("--TOP--");
@@ -3965,10 +3980,17 @@ public class ADev
                             // Kill for Logcat..					
                             //if ( bBreakOut )
                             if ( bEndBreakOut )
+                            {
+                                // End of line..
+                                //System.out.println("bEndBreakOut breaking");
                                 break;
+                            }
                             
                             if ( bIOBgThreadBreak )
+                            {
+                                //System.out.println("bIOBgThreadBreak breaking");
                                 break;
+                            }
                             
                             if ( out_bis.available() > 0 )	// Check Output Stream..
                             {
@@ -4015,7 +4037,9 @@ public class ADev
                                 iTotalBytes += iBytesRead;
                             }
 
-/*
+                            
+                            
+/*                            
                             // Debbuging..					
                             if ( (lineSb != null) && (iBytesRead > 0) )
                             {
@@ -4034,7 +4058,7 @@ public class ADev
                                             System.out.print(cTChr);
                                     }
                                 //}
-                                System.out.println("\n");
+                                System.out.println();
                             }
 /**/
         
@@ -4072,6 +4096,7 @@ public class ADev
                                 }
                             }
 /**/
+
                             if ( (lineSb != null) && (iBytesRead > 0) )
                             {
 /*                                
@@ -4193,7 +4218,9 @@ public class ADev
                                                         for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
                                                         iStart = iLoc3;
                                                         for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
-                                                        sPid = commandResultS.substring(iStart, iLoc3);
+                                                        
+                                                        if ( (iStart >= 0) && (iLoc3 < commandResultS.length()) )
+                                                            sPid = commandResultS.substring(iStart, iLoc3);
                                                         //System.out.println("sPid: '"+sPid+"'");
                                                         
                                                         // Try changing to use PID command..
@@ -4206,8 +4233,8 @@ public class ADev
                                                 }
                                             }
                                         }
-        
-/*
+
+/*                                        
                                         if ( sPid == null )
                                             System.out.println("sPid null");
                                         else
@@ -4231,7 +4258,8 @@ public class ADev
                                                     break;
                                                 }
                                                 
-                                                iLoc2 = lineSb.indexOf(sZeroA, iLoc3);
+                                                if ( iLoc3 < lineSb.length() ) 
+                                                    iLoc2 = lineSb.indexOf(sZeroA, iLoc3);
                                                 if ( iLoc2 != -1 )
                                                 {
                                                     iLastZeroA = iLoc2;
@@ -4242,7 +4270,8 @@ public class ADev
                                                         endSb = new StringBuffer();
                                                         endSb.append(sPrevEnd);
                                                         
-                                                        if ( (iLoc2 + 1) > 0 )
+                                                        //if ( (iLoc2 + 1) > 0 )
+                                                        if ( (iLoc2 + 1) < endSb.length() )
                                                         {
                                                             endSb.append(lineSb.substring(0, iLoc2 + 1));
                                                         }
@@ -4260,7 +4289,8 @@ public class ADev
                                                                 {
                                                                     //System.out.println("endSb.length(): "+endSb.length());
                                                                     // Statement's PID..
-                                                                    sT = endSb.substring(iLoc5 + 1, iLoc4);
+                                                                    if ( ((iLoc5 + 1) >= 0) && (iLoc4 < endSb.length()) )
+                                                                        sT = endSb.substring(iLoc5 + 1, iLoc4);
                                                                     //System.out.println("sT: '"+sT+"'");
                                                                 
                                                                     sT = sT.trim();
@@ -4283,15 +4313,18 @@ public class ADev
                                                         iLoc5 = lineSb.indexOf("(", iLoc2);
                                                         if ( iLoc5 != -1 )
                                                         {
-                                                                if ( (iLoc4 > 0) && (iLoc5 < iLoc4) )
-                                                                    sT = lineSb.substring(iLoc5 + 1, iLoc4);
+                                                            if ( ((iLoc5 + 1) >= 0) && (iLoc4 < lineSb.length()) )
+                                                            {
+                                                                sT = lineSb.substring(iLoc5 + 1, iLoc4);
+                                                                sT = sT.trim();
+                                                            }
                                                             
-                                                            sT = sT.trim();
                                                             if ( sPid.equals(sT) )
                                                             {
                                                                 //System.out.println("--PID Matched--");
                                                                 iLoc6 = lineSb.indexOf(sZeroA, iLoc2 + 1);
-                                                                if ( ((iLoc6 + 1) > (iLoc2 + 1)) && ((iLoc6 + 1) < lineSb.length()) )
+                                                                
+                                                                if ( ((iLoc2 + 1) >= 0) && ((iLoc6 + 1) < lineSb.length()) )
                                                                 {
                                                                     // Append to output..
                                                                     sT2 = lineSb.substring(iLoc2 + 1, iLoc6 + 1);
@@ -4317,7 +4350,7 @@ public class ADev
                                            //System.out.println("Dropped out");
                                            //System.out.println("lineSb.length(): "+lineSb.length());
                                            
-                                           if ( ((iLastZeroA + 1) >= 0) && ((iLastZeroA + 1) < lineSb.length()) )
+                                           if ( (iLastZeroA + 1) < lineSb.length() )
                                                sPrevEnd = lineSb.substring(iLastZeroA + 1);
                                             //System.out.println("(End of block)sPrevEnd: '"+sPrevEnd+"'");
                                             
@@ -4371,7 +4404,7 @@ public class ADev
                                     }
                                 }
 /**/
-        
+ 
                                 iIdx = 0;
                                 bDoBreak = false;
                                 bSplit = false;
@@ -4504,7 +4537,7 @@ public class ADev
                                     }
                                 }	// End for..
                                 
-                                //System.out.println("Dropped out");
+                                //System.out.println("(A)Dropped out");
                             }
 /**/	
 
@@ -4527,42 +4560,46 @@ public class ADev
                             {
                                 if ( ! bLogcatOn )
                                 {
-                                    //if ( iOS == WINDOWS )
-                                    //{
-                                        if ( (commandPhrase != null) && (commandPhrase.length() > 0) )
+                                    if ( (commandPhrase != null) && (commandPhrase.length() > 0) )
+                                    {
+                                        //System.out.println("commandPhrase: '"+commandPhrase+"'");
+                                        if ( lineSb.indexOf(commandPhrase) != -1 )
                                         {
-                                            //System.out.println("commandPhrase: '"+commandPhrase+"'");
-                                            if ( lineSb.indexOf(commandPhrase) != -1 )
-                                            {
-                                                //System.out.println("--Found Phrase--");
-                                                bFoundPhrase = true;
-                                            }
+                                            //System.out.println("--Found Phrase--");
+                                            bFoundPhrase = true;
                                         }
+                                    }
+                                    else
+                                    {
+                                        // Prevent early end..
+                                        if ( (lCurrentTime + 2000) < (long)System.currentTimeMillis() )
+                                            ;   // Too early..
                                         else
+                                            bFoundPhrase = true;
+                                    }
+                                    
+                                    //System.out.println("lineSb.length(): "+lineSb.length());
+                                    
+                                    if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
+                                    {
+                                        lineS = lineSb.substring(0, lineSb.length());
+    
+                                        if ( lineS.length() > 5 )
                                         {
-                                            // Prevent early end..
-                                            if ( (lCurrentTime + 2000) < (long)System.currentTimeMillis() )
-                                                ;   // Too early..
-                                            else
-                                                bFoundPhrase = true;
-                                        }
-                                        
-                                        //if ( lineSb.charAt(lineSb.length() - 1) == '>' )
-                                        if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
-                                        {
-                                            lineS = lineSb.substring(0, lineSb.length());
-        
-                                            if ( lineS.length() > 5 )
-                                            {
+                                            if ( (lineS.length() - 5) < lineS.length() )
                                                 sTest = lineS.substring(lineS.length() - 5);
-                                                if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
-                                                {
-                                                    //System.out.println("\nHit end");
-                                                    bEndBreakOut = true;
-                                                }
+                                            
+                                            //System.out.println("bFoundPhrase: "+bFoundPhrase);
+                                            //System.out.println("sTest: '"+sTest+"'");
+                                            //if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                            if ( (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                            {
+                                                //System.out.println("\nHit end");
+                                                bEndBreakOut = true;
                                             }
                                         }
-                                    //}
+                                    }
+                                    
 /*
                                     if ( sGradlewCommand == null )
                                         System.out.println("sGradlewCommand null");
@@ -4596,7 +4633,7 @@ public class ADev
                                 bContinued = false;
                                 iType = NORMAL;
                                 iLineLen = lineSb.length();
-        
+                                
                                 try
                                 {
                                     doc = textPane.getStyledDocument();
@@ -4641,7 +4678,8 @@ public class ADev
                                                     bSaveLen = false;	// Reset..
                                                     
                                                 iType = iCurrentType;
-                                                outLineS = lineSb.substring(iStart, iIndex);
+                                                if ( (iStart >= 0) && (iIndex < lineSb.length()) )
+                                                    outLineS = lineSb.substring(iStart, iIndex);
                                             }
                                             else
                                             {
@@ -4694,7 +4732,9 @@ public class ADev
                                                 if ( bOver )
                                                 {
                                                     // Set up to draw what we have..
-                                                    outLineS = lineSb.substring(iStart);
+                                                    if ( iStart < lineSb.length() )
+                                                        outLineS = lineSb.substring(iStart);
+                                                    
                                                     iCurrentType = iType;	// Save for next draw..
                                                     
                                                     if ( ! bHitTrailing )
@@ -4708,7 +4748,8 @@ public class ADev
                                                 }
                                                 else
                                                 {
-                                                    outLineS = lineSb.substring(iStart, iIndex);
+                                                    if ( (iStart >= 0) && (iIndex < lineSb.length()) )
+                                                        outLineS = lineSb.substring(iStart, iIndex);
                                                 }
                                             }
                                             
@@ -4795,7 +4836,7 @@ public class ADev
                             }
                             else
                             {
-                                
+
                                 // No output..
                                 if ( iOS == LINUX_MAC )
                                 //if ( true )
@@ -4813,7 +4854,7 @@ public class ADev
                                         // the result gets output, so this give it more
                                         // time to output the results..                                        
                                         iExitCount++;
-                                        if ( iExitCount > 15 )
+                                        if ( iExitCount > 10 )
                                         {
                                             break;
                                         }
@@ -4838,7 +4879,8 @@ public class ADev
                                 tProgressJFrame = null;
                             }
                         }
-/**/                        
+/**/ 
+
 				bIOBgThreadBreak = false;    // Reset..
 				
 				//System.out.println("\n====IOBgThread dropped out====");
@@ -4905,20 +4947,7 @@ public class ADev
 			bLogcatOn = false;
 			bFinished = true;
 
-/*			
-                    return null;
-                }
-                
-                @Override
-                public void done()
-                {
-                }
-            };
-            
-            //commandS = commandSb.toString();
-            swingWorker.execute();
-/**/
-			//System.out.println("\n\nExiting IOBgThread run()");
+			//System.out.println("\nExiting IOBgThread run()");
 			
 		}
 	}	//}}}
@@ -5329,7 +5358,7 @@ public class ADev
 	{
 		public void run()
 		{
-		    //System.out.println("\n======================================");
+		    //System.out.println("======================================");
 			//System.out.println("FlutterDaemonBgThread run()");
 			//InputStream out_is = null;
 			//InputStream error_is = null;
@@ -5379,8 +5408,10 @@ public class ADev
 				ioe.printStackTrace();
 			}
 
+			
 			if ( iDebugMode == DEBUG_RUN )
 			{
+			    //System.out.println("In iDebugMode == DEBUG_RUN");
                 // Set up build.gradle for debug or release..
                 if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
                 {
@@ -5592,7 +5623,8 @@ public class ADev
 				cmdSb.append("\n");
 			}
 
-			//System.out.println("\ncmdSb: '"+cmdSb.toString()+"'");
+			//System.out.println("\n");
+			//System.out.println("(Final)cmdSb: '"+cmdSb.toString()+"'");
 			
 /*			
 			try
@@ -5663,6 +5695,7 @@ public class ADev
 					@Override
 					public Void doInBackground() throws Exception
 					{
+					    //System.out.println("doInBackground()");
 						jProgressBar = new JProgressBar();
 						jProgressBar.setIndeterminate(true);
 						jProgressBar.setPreferredSize(new Dimension(200, 30));
@@ -5754,12 +5787,13 @@ public class ADev
                                     
                                     //System.out.println("sT: "+sT);
 
+                                    
 /*                                    
                                     // ------ Debugging from here ------
                                     if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
                                     {
-                                        System.out.println("sT:");
-                                        System.out.println();
+                                        //System.out.println("sT:");
+                                        //System.out.println();
                                         char cTChr;
                                         
                                         for ( int g = 0; g < sT.length(); g++ )
@@ -5771,14 +5805,14 @@ public class ADev
                                             else
                                                 System.out.print(cTChr);
                                         }
-                                        System.out.println("\n");
+                                        //System.out.println("\n");
                                     }
-    /**/
+/**/
  
                                     // Check for '"app.started"'..
                                     if ( sT.contains(sAppStarted) )
                                     {
-                                        //System.out.println("\nFound app.started");
+                                        //System.out.println("Found app.started");
                                         //bFoundAppStarted = true;
                                         
                                         SingletonClass sc = SingletonClass.getInstance();
@@ -5893,7 +5927,8 @@ public class ADev
                                                     iLoc4 = sT.indexOf((char)0x22, (iLoc3 + 8));
                                                     if ( iLoc4 != -1 )
                                                     {
-                                                        sAppId = sT.substring((iLoc3 + 8), iLoc4);
+                                                        if ( ((iLoc3 + 8) >= 0) && (iLoc4 < sT.length()) )
+                                                            sAppId = sT.substring((iLoc3 + 8), iLoc4);
                                                         //System.out.println("sAppId: '"+sAppId+"'");
                                                         bAppIdFound = true;
                                                     }
@@ -5906,7 +5941,8 @@ public class ADev
                                                 iLoc4 = sT.indexOf((char)0x22, (iLoc3 + 10));
                                                 if ( iLoc4 != -1 )
                                                 {
-                                                    sMessage = sT.substring((iLoc3 + 10), iLoc4);
+                                                    if ( ((iLoc3 + 10) >= 0) && (iLoc4 < sT.length()) )
+                                                        sMessage = sT.substring((iLoc3 + 10), iLoc4);
                                                     iLoc5 = sMessage.indexOf("Syncing files");
                                                     if ( iLoc5 != -1 )
                                                     {
@@ -5940,6 +5976,7 @@ public class ADev
                                                 if ( iLoc4 != -1 )
                                                 {
                                                     bError = true;
+                                                    if ( ((iLoc3 + 9) >= 0) && (iLoc4 < sT.length()) )
                                                     sErrorMessage = sT.substring((iLoc3 + 9), iLoc4);
                                                     //System.out.println("sErrorMessage: '"+sErrorMessage+"'");
                                                     sT2 = sErrorMessage;
@@ -5953,8 +5990,8 @@ public class ADev
                                                 iLoc4 = sT.indexOf((char)0x22, (iLoc3 + 8));	// Get end "..
                                                 if ( iLoc4 != -1 )
                                                 {
-                                                    sDebugUri = sT.substring((iLoc3 + 8), iLoc4);
-                                                    //sDebugUri = sT.substring((iLoc3 + 8), (iLoc4 - 3));   // w o end
+                                                    if ( ((iLoc3 + 8) >= 0) && (iLoc4 < sT.length()) )
+                                                        sDebugUri = sT.substring((iLoc3 + 8), iLoc4);
                                                     //System.out.println("sDebugUri: '"+sDebugUri+"'");
                                                 }
                                                 
@@ -5975,7 +6012,8 @@ public class ADev
                                                 iLoc4 = sT.indexOf((char)0x22, (iLoc3 + 9));
                                                 if ( iLoc4 != -1 )
                                                 {
-                                                    sErrorMessage = sT.substring((iLoc3 + 9), iLoc4);
+                                                    if ( ((iLoc3 + 9) >= 0) && (iLoc4 < sT.length()) )
+                                                        sErrorMessage = sT.substring((iLoc3 + 9), iLoc4);
                                                     //System.out.println("\nsErrorMessage: '"+sErrorMessage+"'");
                                                 }
                                                 
@@ -6125,13 +6163,13 @@ public class ADev
                                             }
                                         }
                                     }
-            
-            /*						
+
+/*                                    
                                     if ( sT2 == null )
                                         System.out.println("sT2 null");
                                     else
                                         System.out.println("sT2.length(): "+sT2.length());
-            /**/						        
+/**/						        
                                             
                                     if ( (sT2 != null) && (sT2.length() > 0) )
                                     {
@@ -6436,8 +6474,11 @@ public class ADev
 				sb.append(androidSdkPathS);
 				sb.append("/platform-tools");
 				
+				SingletonClass sc = SingletonClass.getInstance();
+				
 				//if ( bWirelessConnected )
-				if ( bWirelessConnected || bFlutterSelected )
+				//if ( bWirelessConnected || bFlutterSelected )
+				if ( sc.s_WirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -6478,8 +6519,11 @@ public class ADev
 				sb.append(";%PATH%");
 
 				//System.out.println("bWirelessConnected: "+bWirelessConnected);
+				SingletonClass sc = SingletonClass.getInstance();
+				
 				//if ( bWirelessConnected )
-				if ( bWirelessConnected || bFlutterSelected )
+				//if ( bWirelessConnected || bFlutterSelected )
+				if ( sc.s_WirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -6589,7 +6633,8 @@ public class ADev
 							for ( ; Character.isWhitespace(commandResultS.charAt(iLoc2)); iLoc2-- );	// Skip whitespace
 							iEnd = iLoc2;
 							for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc2)); iLoc2-- );	// Skip to start
-							sPackageName = commandResultS.substring(iLoc2 + 1, iEnd + 1);
+							if ( ((iLoc2 + 1) >= 0) && ((iEnd + 1) < commandResultS.length()) )
+							    sPackageName = commandResultS.substring(iLoc2 + 1, iEnd + 1);
 							
 							// Allow for truncated package name
 							// so we can get the other information..
@@ -6615,7 +6660,8 @@ public class ADev
 					iLoc2++;
 					iStart = iLoc2;
 					for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc2)); iLoc2++ );
-					sSdkVersion = commandResultS.substring(iStart, iLoc2);
+					if ( (iStart >= 0) && (iLoc2 < commandResultS.length()) )
+					    sSdkVersion = commandResultS.substring(iStart, iLoc2);
 					//System.out.println("sSdkVersion: '"+sSdkVersion+"'");
 
 					//System.out.println("bFoundPackageName: "+bFoundPackageName);
@@ -6629,7 +6675,8 @@ public class ADev
 						for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
 						iStart = iLoc3;
 						for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
-						pidS = commandResultS.substring(iStart, iLoc3);
+						if ( (iStart >= 0) && (iLoc3 < commandResultS.length()) )
+						    pidS = commandResultS.substring(iStart, iLoc3);
 					}
 					else
 					{
@@ -6790,7 +6837,8 @@ public class ADev
                             break;
                     }
                     
-                    sT = commandResultS.substring((iStart + 13), iLoc2);
+                    if ( ((iStart + 13) >= 0) && (iLoc2 < commandResultS.length()) )
+                        sT = commandResultS.substring((iStart + 13), iLoc2);
                     sT = sT.trim();
                     sWakefulness = sT;
                 }
@@ -6817,7 +6865,10 @@ public class ADev
 				sb.append(androidSdkPathS);
 				sb.append("/platform-tools");
 				
-				if ( bWirelessConnected || bFlutterSelected )
+				SingletonClass sc = SingletonClass.getInstance();
+				
+				//if ( bWirelessConnected || bFlutterSelected )
+				if ( sc.s_WirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -6843,9 +6894,12 @@ public class ADev
 				sb.append(androidSdkPathS);
 				sb.append("/platform-tools");
 				sb.append(";%PATH%");
+				
+				SingletonClass sc = SingletonClass.getInstance();
 
 				//System.out.println("bWirelessConnected: "+bWirelessConnected);
-				if ( bWirelessConnected || bFlutterSelected )
+				//if ( bWirelessConnected || bFlutterSelected )
+				if ( sc.s_WirelessConnected || bFlutterSelected )
 					;
 				else
 				{
@@ -6943,7 +6997,8 @@ public class ADev
 							for ( ; Character.isWhitespace(commandResultS.charAt(iLoc2)); iLoc2-- );	// Skip whitespace
 							iEnd = iLoc2;
 							for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc2)); iLoc2-- );	// Skip to start
-							sPackageName = commandResultS.substring(iLoc2 + 1, iEnd + 1);
+							if ( ((iLoc2 + 1) >= 0) && ((iEnd + 1) < commandResultS.length()) )
+							    sPackageName = commandResultS.substring(iLoc2 + 1, iEnd + 1);
 							//System.out.println("sPackageName: '"+sPackageName+"'");
 							
 							// You can have this happen:
@@ -7126,7 +7181,8 @@ public class ADev
 										iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 16);
 										if ( iLoc4 != -1 )
 										{
-											sT = g_sMessage.substring(iLoc3 + 16, iLoc4);
+										    if ( ((iLoc3 + 16) >= 0) && (iLoc4 < g_sMessage.length()) )
+										        sT = g_sMessage.substring(iLoc3 + 16, iLoc4);
 											//System.out.println("(sValueAsString): '"+sT+"'");
 
 											// Update if changed..											
@@ -7228,13 +7284,13 @@ public class ADev
 			String sType = "";
 			String sValueAsString = "";
 			String sDisplayClassName = "";
-			String sLength;
+			String sLength = "";
 			String sExpression = "";
 			String sStackObjectId = "";
 			String sTypeName = "";
 			String sTarget = "";
 			String sVmType;
-			String sT;
+			String sT = "";
 			String sKey;
 			String sEvalKind;
 			String sInstanceType = "";
@@ -7394,7 +7450,8 @@ public class ADev
                         if ( iLoc9 != -1 )
                         {
                             // Like: 'time'
-                            g_sName = sMessage.substring(iLoc8 + 8, iLoc9);
+                            if ( ((iLoc8 + 8) >= 0) && (iLoc9 < sMessage.length()) )
+                                g_sName = sMessage.substring(iLoc8 + 8, iLoc9);
                             //System.out.println("(Frame)g_sName: '"+g_sName+"'");
                             
                             if ( g_sName.equals(sSelectedName) )
@@ -7412,7 +7469,8 @@ public class ADev
                             iLoc7 = sMessage.indexOf((int)0x22, iLoc6);
                             if ( iLoc7 != -1 )
                             {
-                                g_sClassId = sMessage.substring(iLoc6, iLoc7);
+                                if ( (iLoc6 >= 0) && (iLoc7 < sMessage.length()) )
+                                    g_sClassId = sMessage.substring(iLoc6, iLoc7);
                                 //System.out.println("(Frame)g_sClassId: '"+g_sClassId+"'");
                             }
                         }
@@ -7424,7 +7482,8 @@ public class ADev
                             if ( iLoc4 != -1 )
                             {
                                 // Like: 'DateTime'
-                                g_sClassName = sMessage.substring(iLoc3 + 8, iLoc4);
+                                if ( ((iLoc3 + 8) >= 0) && (iLoc4 < sMessage.length()) )
+                                    g_sClassName = sMessage.substring(iLoc3 + 8, iLoc4);
                                 //System.out.println("(Frame)g_sClassName: '"+g_sClassName+"'");
                             }
                         }
@@ -7435,7 +7494,8 @@ public class ADev
                             iLoc11 = sMessage.indexOf((int)0x22, iLoc10);
                             if ( iLoc11 != -1 )
                             {
-                                g_sObjectId = sMessage.substring(iLoc10, iLoc11);
+                                if ( (iLoc10 >= 0) && (iLoc11 < sMessage.length()) )
+                                    g_sObjectId = sMessage.substring(iLoc10, iLoc11);
                                 sSelectedObjectId = g_sObjectId;
                                 //System.out.println("(Frame)g_sObjectId: '"+g_sObjectId+"'");
                             }
@@ -7510,7 +7570,8 @@ public class ADev
                                 iLoc5 = g_sMessage.indexOf((int)0x22, iLoc9 + 8);
                                 if ( iLoc5 != -1 )
                                 {
-                                    sKind = g_sMessage.substring(iLoc9 + 8, iLoc5);
+                                    if ( ((iLoc9 + 8) >= 0) && (iLoc5 < g_sMessage.length()) ) 
+                                        sKind = g_sMessage.substring(iLoc9 + 8, iLoc5);
                                     if ( sKind.equals("GetterFunction") )
                                     {
                                         iLoc6 = g_sMessage.indexOf(NAME_STRING, iLoc2);
@@ -7519,7 +7580,8 @@ public class ADev
                                             iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
                                             if ( iLoc7 != -1 )
                                             {
-                                                sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
+                                                if ( ((iLoc6 + 8) >= 0) && (iLoc7 < g_sMessage.length()) )
+                                                    sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
                                                 //System.out.println("(@Function)sName: '"+sName+"'");
                                             }
                                         }
@@ -7561,7 +7623,8 @@ public class ADev
                             iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 8);
                             if ( iLoc3 != -1 )
                             {
-                                sType = g_sMessage.substring(iLoc2 + 8, iLoc3);
+                                if ( ((iLoc2 + 8) >= 0) && (iLoc3 < g_sMessage.length()) ) 
+                                    sType = g_sMessage.substring(iLoc2 + 8, iLoc3);
                                 if ( sType.equals("BoundField") )
                                 {
                                     //System.out.println("\nBoundField");
@@ -7575,7 +7638,8 @@ public class ADev
                                         iLoc7 = g_sMessage.indexOf((int)0x22, iLoc6 + 8);
                                         if ( iLoc7 != -1 )
                                         {
-                                            sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
+                                            if ( ((iLoc6 + 8) >= 0) && (iLoc7 < g_sMessage.length()) )
+                                                sName = g_sMessage.substring(iLoc6 + 8, iLoc7);
                                             //System.out.println("(BoundField)sName: '"+sName+"'");
                                             tNodeFVInfo = new NodeFVInfo(sName);
                                         }
@@ -7596,7 +7660,8 @@ public class ADev
                                                 iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4);
                                                 if ( iLoc5 != -1 )
                                                 {
-                                                    sClassId = g_sMessage.substring(iLoc4, iLoc5);
+                                                    if ( (iLoc4 >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                        sClassId = g_sMessage.substring(iLoc4, iLoc5);
                                                     //System.out.println("sClassId: '"+sClassId+"'");
                                                     tNodeFVInfo.sClassId = sClassId;
                                                 }
@@ -7613,7 +7678,8 @@ public class ADev
                                         iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
                                         if ( iLoc5 != -1 )
                                         {
-                                            sKind = g_sMessage.substring(iLoc4 + 8, iLoc5);
+                                            if ( ((iLoc4 + 8) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                sKind = g_sMessage.substring(iLoc4 + 8, iLoc5);
                                             //System.out.println("sKind: '"+sKind+"'");
                                         }
             
@@ -7630,7 +7696,8 @@ public class ADev
                                                 iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
                                                 if ( iLoc5 != -1 )
                                                 {
-                                                    sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
+                                                    if ( ((iLoc12 + 9) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                        sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
                                                     sLength = sLength.trim();
                                                     //System.out.println("sLength: '"+sLength+"'");
                                                     
@@ -7664,7 +7731,8 @@ public class ADev
                                         iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7 + 8);
                                         if ( iLoc5 != -1 )
                                         {
-                                            sKind = g_sMessage.substring(iLoc7 + 8, iLoc5);
+                                            if ( ((iLoc7 + 8) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                sKind = g_sMessage.substring(iLoc7 + 8, iLoc5);
                                             //System.out.println("sKind: '"+sKind+"'");
                                         }
                                         
@@ -7681,7 +7749,8 @@ public class ADev
                                                 iLoc5 = g_sMessage.indexOf("}", iLoc12 + 9);
                                                 if ( iLoc5 != -1 )
                                                 {
-                                                    sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
+                                                    if ( ((iLoc12 + 9) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                        sLength = g_sMessage.substring(iLoc12 + 9, iLoc5);
                                                     sLength = sLength.trim();
                                                     //System.out.println("sLength: '"+sLength+"'");
                                                     
@@ -7715,7 +7784,8 @@ public class ADev
                                             iLoc11 = g_sMessage.indexOf((int)0x22, iLoc10 + 12);
                                             if ( iLoc11 != -1 )
                                             {
-                                                sT = g_sMessage.substring(iLoc10 + 12, iLoc11);
+                                                if ( ((iLoc10 + 12) >= 0) && (iLoc11 < g_sMessage.length()) )
+                                                    sT = g_sMessage.substring(iLoc10 + 12, iLoc11);
                                                 //System.out.println("(_vmType): '"+sT+"'");
                                                 if ( sT.equals("_vmType") )
                                                     ;
@@ -7732,7 +7802,8 @@ public class ADev
                                                 iLoc11 = g_sMessage.indexOf((int)0x22, iLoc12 + 8);
                                                 if ( iLoc11 != -1 )
                                                 {
-                                                    sClassName = g_sMessage.substring(iLoc12 + 8, iLoc11);
+                                                    if ( ((iLoc12 + 8) >= 0) && (iLoc11 < g_sMessage.length()) )
+                                                        sClassName = g_sMessage.substring(iLoc12 + 8, iLoc11);
                                                     //System.out.println("sClassName: '"+sClassName+"'");
                                                     tNodeFVInfo.sClassName = sClassName;
                                                 }
@@ -7746,7 +7817,8 @@ public class ADev
                                         iLoc11 = g_sMessage.indexOf((int)0x22, iLoc14);
                                         if ( iLoc11 != -1 )
                                         {
-                                            sObjectId = g_sMessage.substring(iLoc14, iLoc11);
+                                            if ( (iLoc14 >= 0) && (iLoc11 < g_sMessage.length()) )
+                                                sObjectId = g_sMessage.substring(iLoc14, iLoc11);
                                             //System.out.println("(_widget)sObjectId: '"+sObjectId+"'");
                                             tNodeFVInfo.sObjectId = sObjectId;
                                         }
@@ -7774,7 +7846,8 @@ public class ADev
                                             iLoc7 = g_sMessage.indexOf((int)0x22, iLoc8 + 17);
                                             if ( iLoc7 != -1 )
                                             {
-                                                sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc7);
+                                                if ( ((iLoc8 + 17) >= 0) && (iLoc7 < g_sMessage.length()) )
+                                                    sValueAsString = g_sMessage.substring(iLoc8 + 17, iLoc7);
                                                 //System.out.println("sValueAsString: '"+sValueAsString+"'");
                                                 tNodeFVInfo.sValueAsString = sValueAsString;
                                             }
@@ -7833,7 +7906,8 @@ public class ADev
                                     iLoc6 = g_sMessage.indexOf((int)0x22, iLoc2 + 20);
                                     if ( iLoc6 != -1 )
                                     {
-                                        sInstanceType = g_sMessage.substring(iLoc2 + 20, iLoc6);
+                                        if ( ((iLoc2 + 20) >= 0) && (iLoc6 < g_sMessage.length()) )
+                                            sInstanceType = g_sMessage.substring(iLoc2 + 20, iLoc6);
                                         if ( sInstanceType.equals("class") )
                                             tNodeFVInfo.bIsClass = true;
                                         else
@@ -7848,7 +7922,8 @@ public class ADev
                                         iLoc5 = g_sMessage.indexOf((int)0x22, iLoc7);
                                         if ( iLoc5 != -1 )
                                         {
-                                            sClassId = g_sMessage.substring(iLoc7, iLoc5);
+                                            if ( (iLoc7 >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                sClassId = g_sMessage.substring(iLoc7, iLoc5);
                                             //System.out.println("(@Instance)sClassId: '"+sClassId+"'");
                                             tNodeFVInfo.sClassId = sClassId;
                                         }
@@ -7874,7 +7949,8 @@ public class ADev
                                         iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 17);
                                         if ( iLoc5 != -1 )
                                         {
-                                            sValueAsString = g_sMessage.substring(iLoc4 + 17, iLoc5);
+                                            if ( ((iLoc4 + 17) >= 0) && (iLoc5 < g_sMessage.length()) ) 
+                                                sValueAsString = g_sMessage.substring(iLoc4 + 17, iLoc5);
                                             //System.out.println("sValueAsString: '"+sValueAsString+"'");
                                             tNodeFVInfo.sValueAsString = sValueAsString;
                                         }
@@ -7891,7 +7967,8 @@ public class ADev
                                             iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
                                             if ( iLoc5 != -1 )
                                             {
-                                                sClassName = g_sMessage.substring(iLoc4 + 8, iLoc5);
+                                                if ( ((iLoc4 + 8) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                                    sClassName = g_sMessage.substring(iLoc4 + 8, iLoc5);
                                                 //System.out.println("sClassName: '"+sClassName+"'");
                                                 tNodeFVInfo.sClassName = sClassName;
                                             }
@@ -7903,7 +7980,8 @@ public class ADev
                                             iLoc6 = g_sMessage.indexOf((int)0x22, iLoc5);
                                             if ( iLoc6 != -1 )
                                             {
-                                                sObjectId = g_sMessage.substring(iLoc5, iLoc6);
+                                                if ( (iLoc5 >= 0) && (iLoc6 < g_sMessage.length()) )
+                                                    sObjectId = g_sMessage.substring(iLoc5, iLoc6);
                                                 //System.out.println("sObjectId: '"+sObjectId+"'");
                                                 tNodeFVInfo.sObjectId = sObjectId;
                                             }
@@ -8059,7 +8137,8 @@ public class ADev
 								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 12);
 								if ( iLoc4 != -1 )
 								{
-									sType = g_sMessage.substring(iLoc3 + 12, iLoc4);
+								    if ( ((iLoc3 + 12) >= 0) && (iLoc4 < g_sMessage.length()) ) 
+								        sType = g_sMessage.substring(iLoc3 + 12, iLoc4);
 									//System.out.println("sType: '"+sType+"'");
 									if ( sType.equals("class") )
 									{
@@ -8074,7 +8153,8 @@ public class ADev
 											if ( iLoc6 != -1 )
 											{
 												// Like:  'Duration'
-												sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
+												if ( ((iLoc5 + 8) >= 0) && (iLoc6 < g_sMessage.length()) )
+												    sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
 												//System.out.println("(evaluate())sTypeName: '"+sTypeName+"'");
 											}
 										}
@@ -8095,7 +8175,8 @@ public class ADev
 								iLoc7 = g_sMessage.indexOf((int)0x22, iLoc5 + 8);
 								if ( iLoc7 != -1 )
 								{
-									sEvalKind = g_sMessage.substring(iLoc5 + 8, iLoc7);
+								    if ( ((iLoc5 + 8) >= 0) && (iLoc7 < g_sMessage.length()) )
+								        sEvalKind = g_sMessage.substring(iLoc5 + 8, iLoc7);
 									//System.out.println("sEvalKind: '"+sEvalKind+"'");
 									if ( sEvalKind.equals("List") )
 									{
@@ -8106,7 +8187,8 @@ public class ADev
                                             iLoc10 = g_sMessage.indexOf("}", iLoc9 + 9);
                                             if ( iLoc10 != -1 )
                                             {
-                                                sLength = g_sMessage.substring(iLoc9 + 9, iLoc10);
+                                                if ( ((iLoc9 + 9) >= 0) && (iLoc10 < g_sMessage.length()) )
+                                                    sLength = g_sMessage.substring(iLoc9 + 9, iLoc10);
                                                 sLength = sLength.trim();
                                                 //System.out.println("sLength: '"+sLength+"'");
                                                 
@@ -8140,7 +8222,8 @@ public class ADev
 											iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 16);
 											if ( iLoc4 != -1 )
 											{
-												sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
+											    if ( ((iLoc3 + 16) >= 0) && (iLoc4 < g_sMessage.length()) )
+											        sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
 												//System.out.println("sValueAsString: '"+sValueAsString+"'");
 											}
 										}
@@ -8154,7 +8237,8 @@ public class ADev
 								iLoc6 = g_sMessage.indexOf((int)0x22, iLoc7);
 								if ( iLoc6 != -1 )
 								{
-									sClassId = g_sMessage.substring(iLoc7, iLoc6);
+								    if ( (iLoc7 >= 0) && (iLoc6 < g_sMessage.length()) )
+								        sClassId = g_sMessage.substring(iLoc7, iLoc6);
 									//System.out.println("(PropertyName)sClassId: '"+sClassId+"'");
 								}
 							}
@@ -8165,7 +8249,8 @@ public class ADev
 								iLoc6 = g_sMessage.indexOf((int)0x22, iLoc5);
 								if ( iLoc6 != -1 )
 								{
-									sObjectId = g_sMessage.substring(iLoc5, iLoc6);
+								    if ( (iLoc5 >= 0) && (iLoc6 < g_sMessage.length()) )
+								        sObjectId = g_sMessage.substring(iLoc5, iLoc6);
 									//System.out.println("(PropertyName)sObjectId: '"+sObjectId+"'");
 								}
 							}
@@ -8448,7 +8533,8 @@ public class ADev
 				{
 					iSave = iLoc3;
 					for ( ; sSelectedScriptId.charAt(iLoc3) != 'F'; iLoc3-- );
-					sSourceName = sSelectedScriptId.substring(iLoc3 + 1, iSave);
+					if ( ((iLoc3 + 1) >= 0) && (iSave < sSelectedScriptId.length()) )
+					    sSourceName = sSelectedScriptId.substring(iLoc3 + 1, iSave);
 					//System.out.println("sSourceName: '"+sSourceName+"'");
 					
 				}
@@ -8855,7 +8941,8 @@ public class ADev
 								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 12);
 								if ( iLoc4 != -1 )
 								{
-									sType = g_sMessage.substring(iLoc3 + 12, iLoc4);
+								    if ( ((iLoc3 + 12) >= 0) && (iLoc4 < g_sMessage.length()) )
+								        sType = g_sMessage.substring(iLoc3 + 12, iLoc4);
 									//System.out.println("sType: '"+sType+"'");
 									if ( sType.equals("class") )
 									{
@@ -8866,7 +8953,8 @@ public class ADev
 											iLoc6 = g_sMessage.indexOf((int)0x22, iLoc5 + 8);
 											if ( iLoc6 != -1 )
 											{
-												sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
+											    if ( ((iLoc5 + 8) >= 0) && (iLoc6 < g_sMessage.length()) )
+											        sTypeName = g_sMessage.substring(iLoc5 + 8, iLoc6);
 												//System.out.println("sTypeName: '"+sTypeName+"'");
 											}
 										}
@@ -8881,7 +8969,8 @@ public class ADev
 								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 16);
 								if ( iLoc4 != -1 )
 								{
-									sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
+								    if ( ((iLoc3 + 16) >= 0) && (iLoc4 < g_sMessage.length()) )
+								        sValueAsString = g_sMessage.substring(iLoc3 + 16, iLoc4);
 									//System.out.println("sValueAsString: '"+sValueAsString+"'");
 								}
 							}
@@ -8969,6 +9058,7 @@ public class ADev
 				System.out.println("releaseButton not null");
 /**/
 
+            //System.out.println("Doing Release Event");
             // "Hit" Release button..
 			ActionEvent ae = new ActionEvent(
 				(Object)releaseButton,	// source
@@ -8985,6 +9075,8 @@ public class ADev
 			actListener.actionPerformed(ae);
 			
 			bFinalReleaseFinished = true;
+			
+			//System.out.println("Exiting ReleaseCheckBgThread");
 
 		}
 	}	//}}}
@@ -9819,7 +9911,8 @@ public class ADev
 									iLoc3 = sT.indexOf(")", iLoc2);
 									if ( iLoc3 != -1 )
 									{
-										sTargetSdk = sT.substring((iLoc2 + 5), iLoc3);
+									    if ( ((iLoc2 + 5) >= 0) && (iLoc3 < sT.length()) )
+									        sTargetSdk = sT.substring((iLoc2 + 5), iLoc3);
 										sTargetSdk = sTargetSdk.trim();
 									}
 								}
@@ -10388,6 +10481,9 @@ public class ADev
 
 			if ( bIsCleanDebug )
 			{
+			    SingletonClass sc = SingletonClass.getInstance();
+			    sc.s_sCommand = "";
+			    
 				//bFinished = false;
 				bIOBgThreadFinished = false;
 				ioBgThread = new IOBgThread();
@@ -10637,7 +10733,8 @@ public class ADev
 						for ( ; sScriptId.charAt(iX) != (char)'F'; iX-- );
 						
 						// Like: 'hand_minute.dart'
-						sSourceName = sScriptId.substring(iX + 1, iLoc2);
+						if ( ((iX + 1) >= 0) && (iLoc2 < sScriptId.length()) )
+						    sSourceName = sScriptId.substring(iX + 1, iLoc2);
 						//System.out.println("sSourceName: '"+sSourceName+"'");
 					}
 					
@@ -10676,7 +10773,8 @@ public class ADev
 						int iLoc = sSignature.lastIndexOf((int)'/');
 						if ( iLoc != -1 )
 						{
-							sClassName = sSignature.substring((iLoc + 1), (sSignature.length() - 1));
+						    if ( ((iLoc + 1) >= 0) && ((sSignature.length() - 1) < sSignature.length()) )
+						        sClassName = sSignature.substring((iLoc + 1), (sSignature.length() - 1));
 							//System.out.println("sClassName: '"+sClassName+"'");
 						}
 					}
@@ -11107,7 +11205,8 @@ public class ADev
                 iLoc3 = g_sMessage.indexOf((int)0x22, iLoc2 + 6);
                 if ( iLoc3 != -1 )
                 {
-                    sIsolateId = g_sMessage.substring(iLoc2 + 6, iLoc3);
+                    if ( ((iLoc2 + 6) >= 0) && (iLoc3 < g_sMessage.length()) )
+                        sIsolateId = g_sMessage.substring(iLoc2 + 6, iLoc3);
                     //System.out.println("sIsolateId: '"+sIsolateId+"'");
                 }
             }
@@ -11146,7 +11245,8 @@ public class ADev
                 if ( iLoc3 != -1 )
                 {
                     // Like: 'minesweeper_flutter'
-                    sPackageString = g_sMessage.substring(iLoc2 + 8, iLoc3);
+                    if ( ((iLoc2 + 8) >= 0) && (iLoc3 < g_sMessage.length()) )
+                        sPackageString = g_sMessage.substring(iLoc2 + 8, iLoc3);
                     //System.out.println("sPackageString: '"+sPackageString+"'");
                 }
             }
@@ -11157,7 +11257,7 @@ public class ADev
                 LibraryAr = new ArrayList();
                 LibraryInfo libraryInfo;
                 String sLibraryId = "";
-                String sT2;
+                String sT2 = "";
                 
                 iLoc2 = g_sMessage.indexOf("libraries");
                 if ( iLoc2 != -1 )
@@ -11173,7 +11273,8 @@ public class ADev
                                 iLoc5 = g_sMessage.indexOf((char)0x22, iLoc4 + 6);
                                 if ( iLoc5 != -1 )
                                 {
-                                    sLibraryId = g_sMessage.substring(iLoc4 + 6, iLoc5);
+                                    if ( ((iLoc4 + 6) >= 0) && ((iLoc4 + 6) < g_sMessage.length()) )
+                                        sLibraryId = g_sMessage.substring(iLoc4 + 6, iLoc4 + 6);
                                     //System.out.println("sLibraryId: '"+sLibraryId+"'");
                                 }
                             
@@ -11185,7 +11286,8 @@ public class ADev
                                     {
                                         libraryInfo = new LibraryInfo();
                                         
-                                        sT2 = g_sMessage.substring(iLoc4 + 6, iLoc5);
+                                        if ( ((iLoc4 + 6) >= 0) && (iLoc5 < g_sMessage.length()) )
+                                            sT2 = g_sMessage.substring(iLoc4 + 6, iLoc5);
                                         iLoc6 = sT2.indexOf("package:");
                                         if ( iLoc6 != -1 )
                                             libraryInfo.bIsPackage = true;
@@ -11289,7 +11391,8 @@ public class ADev
                         iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 6);
                         if ( iLoc4 != -1 )
                         {
-                            sTScript = g_sMessage.substring(iLoc3 + 6, iLoc4);
+                            if ( ((iLoc3 + 6) >= 0) && (iLoc4 < g_sMessage.length()) )
+                                sTScript = g_sMessage.substring(iLoc3 + 6, iLoc4);
                             iLoc5 = sTScript.indexOf("package");
                             if ( iLoc5 != -1 )
                             {
@@ -11650,7 +11753,7 @@ public class ADev
 		{
 			if ( iLoc3 < 30 )
 			{
-				System.out.println("--- Error ---");
+				//System.out.println("--- Error ---");
 				sResultMessage = sMessage;
 			}
 		}
@@ -11680,7 +11783,8 @@ public class ADev
 				{
 					try
 					{
-						iNum = Integer.parseInt(sMessage.substring(iLoc2 + 6, iLoc3));
+					    if ( ((iLoc2 + 6) >= 0) && (iLoc3 < sMessage.length()) )
+					        iNum = Integer.parseInt(sMessage.substring(iLoc2 + 6, iLoc3));
 						//System.out.println("iNum: "+iNum);
 					}
 					catch (NumberFormatException nfe)
@@ -11702,7 +11806,8 @@ public class ADev
 						{
 							try
 							{
-								iNum = Integer.parseInt(sMessage.substring(iLoc2 + 6, iLoc3));
+							    if ( ((iLoc2 + 6) >= 0) && (iLoc3 < sMessage.length()) )
+							        iNum = Integer.parseInt(sMessage.substring(iLoc2 + 6, iLoc3));
 								//System.out.println("iNum: "+iNum);
 								
 							}
@@ -11799,7 +11904,8 @@ public class ADev
 				iLoc4 = sMessage.indexOf((int)0x22, iLoc + 7);
 				if ( iLoc4 != -1 )
 				{
-					sKind = sMessage.substring(iLoc + 7, iLoc4);
+				    if ( ((iLoc + 7) >= 0) && (iLoc4 < sMessage.length()) )
+				        sKind = sMessage.substring(iLoc + 7, iLoc4);
 					//System.out.println("sKind: '"+sKind+"'");
 				}
 			}
@@ -11836,7 +11942,8 @@ public class ADev
 					{
 						try
 						{
-							iResumeTokenPos = Integer.parseInt(sMessage.substring(iLoc3 + 10, iLoc4));
+						    if ( ((iLoc3 + 10) >= 0) && (iLoc4 < sMessage.length()) )
+						        iResumeTokenPos = Integer.parseInt(sMessage.substring(iLoc3 + 10, iLoc4));
 							//System.out.println("iResumeTokenPos: "+iResumeTokenPos);
 						}
 						catch (NumberFormatException nfe)
@@ -11856,7 +11963,8 @@ public class ADev
 				if ( iLoc3 != -1 )
 				{
 					for ( iJ = iLoc3; sMessage.charAt(iJ) != '"'; iJ++ );
-					sBreakpointId = sMessage.substring(iLoc3, iJ);
+					if ( (iLoc3 >= 0) && (iJ < sMessage.length()) )
+					    sBreakpointId = sMessage.substring(iLoc3, iJ);
 					//System.out.println("sBreakpointId: '"+sBreakpointId+"'");
 				}
 				
@@ -11866,7 +11974,8 @@ public class ADev
 				if ( iLoc3 != -1 )
 				{
 					for ( iJ = iLoc3; sMessage.charAt(iJ) != '"'; iJ++ );
-					sBreakpointScriptId = sMessage.substring(iLoc3, iJ);
+					if ( (iLoc3 >= 0) && (iJ < sMessage.length()) )
+					    sBreakpointScriptId = sMessage.substring(iLoc3, iJ);
 					//System.out.println("sBreakpointScriptId: '"+sBreakpointScriptId+"'");
 				}
 
@@ -11903,7 +12012,8 @@ public class ADev
 					iLoc4 = sMessage.indexOf((int)0x22, iLoc3);
 					if ( iLoc4 != -1 )
 					{
-						sBreakpointId = sMessage.substring(iLoc3, iLoc4);
+					    if ( (iLoc3 >= 0) && (iLoc4 < sMessage.length()) )
+					        sBreakpointId = sMessage.substring(iLoc3, iLoc4);
 						//System.out.println("sBreakpointId: '"+sBreakpointId+"'");
 					}
 				}
@@ -11916,7 +12026,8 @@ public class ADev
 					iLoc4 = sMessage.indexOf((int)0x22, iLoc3);
 					if ( iLoc4 != -1 )
 					{
-						sBreakpointScriptId = sMessage.substring(iLoc3, iLoc4);
+					    if ( (iLoc3 >= 0) && (iLoc4 < sMessage.length()) )
+					        sBreakpointScriptId = sMessage.substring(iLoc3, iLoc4);
 						//System.out.println("sBreakpointScriptId: '"+sBreakpointScriptId+"'");
 					}
 				}
@@ -11928,7 +12039,8 @@ public class ADev
 					iLoc4 = sMessage.indexOf("}", iLoc3);
 					if ( iLoc4 != -1 )
 					{
-						sTokenPos = sMessage.substring(iLoc3 + 11, iLoc4);
+					    if ( ((iLoc3 + 11) >= 0) && (iLoc4 < sMessage.length()) )
+					        sTokenPos = sMessage.substring(iLoc3 + 11, iLoc4);
 						//System.out.println("sTokenPos: '"+sTokenPos+"'");
 					}
 					
@@ -12035,8 +12147,11 @@ public class ADev
                         iLoc5 = sMessage.indexOf((int)0x22, iLoc4);
                         if ( iLoc5 != -1 )
                         {
-                            sDebugMessage = sMessage.substring(iStart, iLoc5);
-                            sDebugMessage = sDebugMessage.trim();
+                            if ( (iStart >= 0) && (iLoc5 < sMessage.length()) )
+                            {
+                                sDebugMessage = sMessage.substring(iStart, iLoc5);
+                                sDebugMessage = sDebugMessage.trim();
+                            }
                             //System.out.println("sDebugMessage: '"+sDebugMessage+"'");
                             bIsDebugOutput = true;
                         }
@@ -12053,8 +12168,11 @@ public class ADev
                     iLoc5 = sMessage.indexOf((int)0x22, iLoc4);
                     if ( iLoc5 != -1 )
                     {
-                        sT = sMessage.substring(iStart, iLoc5);
-                        sT = sT.trim();
+                        if ( (iStart >= 0) && (iLoc5 < sMessage.length()) )
+                        {
+                            sT = sMessage.substring(iStart, iLoc5);
+                            sT = sT.trim();
+                        }
                         //System.out.println("sT: '"+sT+"'");
                         
                         byte[] bOut = DatatypeConverter.parseBase64Binary(sT);
@@ -12193,7 +12311,8 @@ public class ADev
 					if ( iLoc9 != -1 )
 					{
 						// Like: 'time'
-						g_sName = sMessage.substring(iLoc8 + 8, iLoc9);
+						if ( ((iLoc8 + 8) >= 0) && (iLoc9 < sMessage.length()) )
+						    g_sName = sMessage.substring(iLoc8 + 8, iLoc9);
 						//System.out.println("g_sName: '"+g_sName+"'");
 						
 						if ( bDoUpdate == false )
@@ -12208,7 +12327,8 @@ public class ADev
 						iLoc7 = sMessage.indexOf((int)0x22, iLoc6);
 						if ( iLoc7 != -1 )
 						{
-							g_sClassId = sMessage.substring(iLoc6, iLoc7);
+						    if ( (iLoc6 >= 0) && (iLoc7 < sMessage.length()) )
+						        g_sClassId = sMessage.substring(iLoc6, iLoc7);
 							//System.out.println("g_sClassId: '"+g_sClassId+"'");
 							
 							if ( bDoUpdate == false )
@@ -12225,7 +12345,8 @@ public class ADev
 						if ( iLoc4 != -1 )
 						{
 							// Like: 'DateTime'
-							g_sClassName = sMessage.substring(iLoc3 + 8, iLoc4);
+							if ( ((iLoc3 + 8) >= 0) && (iLoc4 < sMessage.length()) )
+							    g_sClassName = sMessage.substring(iLoc3 + 8, iLoc4);
 							//System.out.println("g_sClassName: '"+g_sClassName+"'");
 							
 							if ( bDoUpdate == false )
@@ -12244,7 +12365,8 @@ public class ADev
 							// We use this as the 'targetId' for
 							// the evaluate for the Class..
 							// Like: 'objects\/41'
-							g_sObjectId = sMessage.substring(iLoc10, iLoc11);
+							if ( (iLoc10 >= 0) && (iLoc11 < sMessage.length()) )
+							    g_sObjectId = sMessage.substring(iLoc10, iLoc11);
 							//System.out.println("g_sObjectId: '"+g_sObjectId+"'");
 							
 							iEndBrace = sMessage.indexOf("}", iLoc10);
@@ -12270,7 +12392,8 @@ public class ADev
 							iLoc5 = sMessage.indexOf((int)0x22, iLoc4 + 12);
 							if ( iLoc5 != -1 )
 							{
-								sT = sMessage.substring(iLoc4 + 12, iLoc5);
+							    if ( ((iLoc4 + 12) >= 0) && (iLoc5 < sMessage.length()) )
+							        sT = sMessage.substring(iLoc4 + 12, iLoc5);
 								
 								if ( bDoUpdate == false )
 								{
@@ -12297,7 +12420,8 @@ public class ADev
 							if ( iLoc4 != -1 )
 							{
 								// Like: '240.46946742441236'
-                                variableInfo.sValueAsString = sMessage.substring(iLoc3 + 17, iLoc4);
+								if ( ((iLoc3 + 17) >= 0) && (iLoc4 < sMessage.length()) )
+								    variableInfo.sValueAsString = sMessage.substring(iLoc3 + 17, iLoc4);
                                 //System.out.println("variableInfo.sValueAsString: '"+variableInfo.sValueAsString+"'");
 							}
 						}
@@ -12310,7 +12434,8 @@ public class ADev
 						iLoc11 = sMessage.indexOf((int)0x22, iLoc10 + 8);
 						if ( iLoc11 != -1 )
 						{
-							sKindName = sMessage.substring(iLoc10 + 8, iLoc11);
+						    if ( ((iLoc10 + 8) >= 0) && (iLoc11 < sMessage.length()) )
+						        sKindName = sMessage.substring(iLoc10 + 8, iLoc11);
 							//System.out.println("sKindName: '"+sKindName+"'");
 							if ( sKindName.equals("List") )
 							{
@@ -12330,8 +12455,11 @@ public class ADev
 									iLoc5 = sMessage.indexOf("}", iLoc12 + 9);
 									if ( iLoc5 != -1 )
 									{
-										sLength = sMessage.substring(iLoc12 + 9, iLoc5);
-										sLength = sLength.trim();
+									    if ( ((iLoc12 + 9) >= 0) && (iLoc5 < sMessage.length()) )
+									    {
+                                            sLength = sMessage.substring(iLoc12 + 9, iLoc5);
+                                            sLength = sLength.trim();
+                                        }
 										//System.out.println("sLength: '"+sLength+"'");
 										
 										// Construct List display info..
@@ -13274,10 +13402,14 @@ public class ADev
 				iLoc6 = commandResultS.indexOf(".", iLoc6);
 				if ( iLoc6 != -1 )
 				{
-					sJVMVersion = commandResultS.substring((iLoc6 + 1), (iLoc6 + 2));
+				    if ( ((iLoc6 + 1) >= 0) && ((iLoc6 + 2) < commandResultS.length()) )
+				        sJVMVersion = commandResultS.substring((iLoc6 + 1), (iLoc6 + 2));
 					//System.out.println("sJVMVersion: '"+sJVMVersion+"'");
 				}
 			}
+			
+			// Kotlin:
+			// https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
 
 			// https://developer.android.com/studio/releases/gradle-plugin
 			// MvnRepository: https://mvnrepository.com/artifact/com.android.tools.build/gradle?repo=google
@@ -13305,7 +13437,8 @@ public class ADev
 				for ( iG3 = iStart; Character.isWhitespace(commandResultS.charAt(iG3)); iG3++ );
 				iStart = iG3;
 				for ( ; ! Character.isWhitespace(commandResultS.charAt(iG3)); iG3++ );
-				gradleVersionS = commandResultS.substring(iStart, iG3);
+				if ( (iStart >= 0) && (iG3 < commandResultS.length()) )
+				    gradleVersionS = commandResultS.substring(iStart, iG3);
 				//System.out.println("gradleVersionS: '"+gradleVersionS+"'");
 
 				if ( gradleVersionS.equals("2.10") ||
@@ -13634,7 +13767,8 @@ public class ADev
 			buildToolsSpinner = new JSpinner(buildToolsModel);
 
 			// Default to latest..
-			buildToolsSpinner.setValue((String)fileSa[FileAr.size() - 1]);
+			if ( (FileAr.size() - 1) < fileSa.length )
+			    buildToolsSpinner.setValue((String)fileSa[FileAr.size() - 1]);
 			
 			gbc.gridx = 1;
 			gbc.gridy = iGridY;
@@ -13750,7 +13884,8 @@ public class ADev
 			buildToolsSpinner = new JSpinner(buildToolsModel);
 			
 			// Default to latest..
-			buildToolsSpinner.setValue((String)fileSa[FileAr.size() - 1]);
+			if ( (FileAr.size() - 1) < fileSa.length )
+			    buildToolsSpinner.setValue((String)fileSa[FileAr.size() - 1]);
 			
 			gbc.gridx = 1;
 			gbc.gridy = iGridY;
@@ -14145,7 +14280,7 @@ public class ADev
 			int iCount = st.countTokens();
 			int iLoc;
 			String sTok;
-			String sTitle;
+			String sTitle = "";
 			for ( int iG = 0; iG < iCount; iG++ )
 			{
 				sTok = st.nextToken();
@@ -14155,6 +14290,7 @@ public class ADev
 					iLoc = sTok.lastIndexOf('/');
 					if ( iLoc != -1 )
 					{
+					    if ( (iLoc + 1) < sTok.length() )
 						sTitle = sTok.substring(iLoc + 1);
 						//System.out.println("sTitle: '"+sTitle+"'");
 						subMenuItem = new JMenuItem(sTitle);
@@ -14847,7 +14983,7 @@ public class ADev
 	{
 		public void run()
 		{
-			//System.out.println("InitWirelessBgThread run()");
+			//System.out.println("\nInitWirelessBgThread run()");
 
 			StringBuffer internalSb = new StringBuffer();
 			StringBuffer wIdSb = new StringBuffer();
@@ -14866,7 +15002,25 @@ public class ADev
 
 			boolean bOK = false;
 			
+/*			
 			// Check devices..
+            completeLatch = new CountDownLatch(1);
+            
+            getDevicesBgThread = new GetDevicesBgThread();
+            getDevicesBgThread.start();
+            
+            try
+            {
+                completeLatch.await();
+            }
+            catch (InterruptedException ie)
+            {
+            }
+/**/			
+            // Exiting this it only has 'DevicesAr'..			
+			
+			
+			
 			bOK = false;
 			internalSb = new StringBuffer();
 			
@@ -14908,17 +15062,17 @@ public class ADev
 				if ( bInternalFinished )
 					break;
 			}
-
+			
 			// Mix:
 			// YT910A2GPY      device
 			// emulator-5554   device
-/*
+/*			
 			if ( commandResultS == null )
-				System.out.println("commandResultS null");
+				System.out.println("(Devices)commandResultS null");
 			else
-				System.out.println("commandResultS: '"+commandResultS+"'");
+				System.out.println("(Devices)commandResultS: '"+commandResultS+"'");
 /**/
-			
+
 			if ( (commandResultS != null) && (commandResultS.length() > 0) )
 			{
 				iIndex = 0;
@@ -14937,8 +15091,11 @@ public class ADev
 							
 							for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3-- );
 							iStart = iLoc3 + 1;
-							sDevName = commandResultS.substring(iStart, iEnd);
-							sDevName = sDevName.trim();
+							if ( (iStart >= 0) && (iEnd < commandResultS.length()) )
+							{
+                                sDevName = commandResultS.substring(iStart, iEnd);
+                                sDevName = sDevName.trim();
+                            }
 							//System.out.println("sDevName: '"+sDevName+"'");
 							
 							if ( sDevName.startsWith("emulator") )
@@ -14977,6 +15134,13 @@ public class ADev
 			if ( bOK )
 			{
 				bOK = false;
+/*				
+				if ( DevicesAr != null )
+				{
+				    for ( int iX = 0; iX < DevicesAr.size(); iX++ )
+				        System.out.println("(DevicesAr)["+iX+"]: "+(String)DevicesAr.get(iX));
+				}
+/**/				
 				
 				if ( (ConnectDevicesAr != null) && (ConnectDevicesAr.size() > 0) )
 				{
@@ -15042,6 +15206,7 @@ public class ADev
 						}
 /**/						
 					}
+					
 /*					
 					if ( sDeviceName == null )
 						System.out.println("(Selected device)sDeviceName null");
@@ -15053,6 +15218,7 @@ public class ADev
 				
 				// Get IP address..
 				// Check if we have it..
+				
 				if ( (sDeviceIPAddress != null) && (sDeviceIPAddress.length() > 0) )
 				{
 					// Construct Wireless Id..
@@ -15160,7 +15326,8 @@ public class ADev
 										{
 											iEnd = iLoc2;
 											iStart = iLoc2 - 3;
-											sT = commandResultS.substring(iStart, iEnd);
+											if ( (iStart >= 0) && (iEnd < commandResultS.length()) )
+											    sT = commandResultS.substring(iStart, iEnd);
 											//System.out.println("sT: '"+sT+"'");
 											if ( sT.equals("127") )
 												;
@@ -15171,7 +15338,8 @@ public class ADev
 												
 												// Construct Wireless Id..
 												wIdSb = new StringBuffer();
-												wIdSb.append(commandResultS.substring(iStart, iEnd));
+												if ( (iStart >= 0) && (iEnd < commandResultS.length()) )
+												    wIdSb.append(commandResultS.substring(iStart, iEnd));
 												wIdSb.append(":5555");
 												sWirelessID = wIdSb.toString();
 												//System.out.println("sWirelessID: '"+sWirelessID+"'");
@@ -15272,11 +15440,12 @@ public class ADev
 					if ( bInternalFinished )
 						break;
 				}
-/*
+
+/*				
 				if ( commandResultS == null )
-					System.out.println("commandResultS null");
+					System.out.println("(adb tcpip)commandResultS null");
 				else
-					System.out.println("commandResultS: '"+commandResultS+"'");
+					System.out.println("(adb tcpip)commandResultS: '"+commandResultS+"'");
 /**/
 
 /*
@@ -15312,7 +15481,7 @@ public class ADev
 				iWirelessErrorCode = 1;
 				sWirelessMessage = "Error: No device found.";
 			}
-			
+
 			bInitWirelessFinished = true;
 			
 			//System.out.println("Exiting InitWirelessBgThread run()");
@@ -15324,6 +15493,7 @@ public class ADev
 	{
 		public void run()
 		{
+		    //System.out.println("");
 			//System.out.println("ConnectWirelessBgThread run()");
 			StringBuffer internalSb = new StringBuffer();
 			StringBuffer wIdSb;
@@ -15333,10 +15503,16 @@ public class ADev
 			int iLoc2;
 			boolean bOK;
 			iWirelessErrorCode = 0;
-			
+
 			// Check if it was connected..
-            if ( bWirelessConnected )
+			SingletonClass sc = SingletonClass.getInstance();
+			
+            //System.out.println("sc.s_WirelessConnected: "+sc.s_WirelessConnected);			
+			if ( sc.s_WirelessConnected )
+            //if ( bWirelessConnected )
             {
+                //System.out.println("\nTrying to Disconnect");
+                // Try to disconnect..
 				bDisconnectWirelessFinished = false;
 				disconnectWirelessBgThread = new DisconnectWirelessBgThread();
 				disconnectWirelessBgThread.start();
@@ -15345,7 +15521,7 @@ public class ADev
 				{
 					try
 					{
-						Thread.sleep(20);
+						Thread.sleep(333);
 					}
 					catch (InterruptedException ie)
 					{
@@ -15354,10 +15530,61 @@ public class ADev
 					if ( bDisconnectWirelessFinished )
 						break;
 				}
+				
+				sWirelessID = "";
+				
+				// After the Disconnect the 'sWirelessID' should
+				// be invalid..
+				
+				
+				
+/*				
+				// Since the 'sWirelessID' is invalid
+				// we need to re-set everything up..
+                bInitWirelessFinished = false;
+                initWirelessBgThread = new InitWirelessBgThread();
+                initWirelessBgThread.start();
+
+                while ( true )
+                {
+                    try
+                    {
+                        Thread.sleep(333);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                
+                    if ( bInitWirelessFinished )
+                        break;
+                }
+/**/				
             }
-			
-			
-/*			
+
+            // Note:
+            // After Disconnect the sWirelessID shouldn't be valid..
+
+/*
+            bInitWirelessFinished = false;
+            initWirelessBgThread = new InitWirelessBgThread();
+            initWirelessBgThread.start();
+
+            while ( true )
+            {
+                try
+                {
+                    Thread.sleep(333);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+            
+                if ( bInitWirelessFinished )
+                    break;
+            }
+/**/ 
+ 
+/*
 			if ( sWirelessID == null )
 				System.out.println("sWirelessID null");
 			else
@@ -15419,7 +15646,7 @@ public class ADev
 					internalSb.append(mSb.toString());
 				}
 		
-				//System.out.println("internalSb: '"+internalSb.toString()+"'");
+				//System.out.println("(Connect command)internalSb: '"+internalSb.toString()+"'");
 				
 				bInternalFinished = false;		
 				internalCommandS = internalSb.toString();
@@ -15442,15 +15669,17 @@ public class ADev
 				}
 				
 				bOK = false;
+				
 /*				
 				if ( commandResultS == null )
-					System.out.println("commandResultS null");
+					System.out.println("(Connect)commandResultS null");
 				else
-					System.out.println("commandResultS: '"+commandResultS+"'");
+					System.out.println("(Connect)commandResultS: '"+commandResultS+"'");
 /**/
 
 				if ( (commandResultS != null) && (commandResultS.length() > 0) )
 				{
+				    //System.out.println("Found connected to");
 					iLoc1 = commandResultS.indexOf("connected to");
 					if ( iLoc1 != -1 )
 					{
@@ -15465,15 +15694,19 @@ public class ADev
 							// Update status bar..
 							deviceLabel.setText(sDeviceName);
 						}
-/**/						
-						bWirelessConnected = true;	// Signal connected..
+/**/	
+
+						//bWirelessConnected = true;	// Signal connected..
 						bOK = true;
 					}
 					
+					//System.out.println("bOK: "+bOK);
 					if ( bOK )
 					{
 						// Success..
-						bWirelessConnected = true;
+						//bWirelessConnected = true;
+                        //SingletonClass sc = SingletonClass.getInstance();
+                        sc.s_WirelessConnected = true;
 					}
 					else
 					{
@@ -15484,11 +15717,12 @@ public class ADev
 					}
 				}
 			}
+			
 /*			
 			if ( sDeviceName == null )
-				System.out.println("sDeviceName null");
+				System.out.println("(A)sDeviceName null");
 			else
-				System.out.println("sDeviceName: '"+sDeviceName+"'");
+				System.out.println("(A)sDeviceName: '"+sDeviceName+"'");
 /**/
 
 			if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
@@ -15507,9 +15741,12 @@ public class ADev
 	{
 		public void run()
 		{
+		    //System.out.println("\n");
 			//System.out.println("DisconnectWirelessBgThread run()");
 			StringBuffer internalSb = new StringBuffer();
 
+			//
+			// Do 'adb disconnect'..
 			if ( (sWirelessID != null) && (sWirelessID.length() > 0) )
 			{
 				if ( iOS == LINUX_MAC )
@@ -15520,7 +15757,7 @@ public class ADev
 
 					internalSb.append(";adb disconnect ");
 					internalSb.append(sWirelessID);
-					internalSb.append(";adb usb");	// No device/Id options for 'usb'..
+					//internalSb.append(";adb usb");	// No device/Id options for 'usb'..
 				}
 				else
 				{
@@ -15529,11 +15766,16 @@ public class ADev
 					internalSb.append("/platform-tools");
 					internalSb.append(";%PATH%");
 
+					// Note:
+					// We should wait some before
+					// we call 'adb usb'..
 					internalSb.append("&&adb disconnect ");
 					internalSb.append(sWirelessID);
-					internalSb.append("&&adb usb");	// No device/Id options for 'usb'..
+					//internalSb.append("&&adb usb");	// No device/Id options for 'usb'..
 					internalSb.append("\n");
 				}
+				
+				//System.out.println("(adb disconnect)internalSb: "+internalSb.toString());    // Very long output
 		
 				bInternalFinished = false;		
 				internalCommandS = internalSb.toString();
@@ -15545,7 +15787,8 @@ public class ADev
 				{
 					try
 					{
-						Thread.sleep(150);
+						//Thread.sleep(150);
+						Thread.sleep(333);
 					}
 					catch (InterruptedException ie)
 					{
@@ -15554,9 +15797,90 @@ public class ADev
 					if ( bInternalFinished )
 						break;
 				}
+				
+				//System.out.println("(commandBgThread): "+g_sT);
+
+				// Note:
+				// Since this is just to Disconnect,
+				// once it does we shouldn't need to do an 'adb usb'..
+				
+				
+/*				
+				// Wait a little in between..
+                for ( int iZ = 0; iZ < 4; iZ++ )
+                {
+                    System.out.println("--TOP-- iZ: "+iZ);
+                    //
+                    // Do 'adb usb'..				
+                    if ( iOS == LINUX_MAC )
+                    {
+                        internalSb.append("export PATH=${PATH}:");
+                        internalSb.append(androidSdkPathS);
+                        internalSb.append("/platform-tools");
+    
+                        //internalSb.append(";adb disconnect ");
+                        //internalSb.append(sWirelessID);
+                        internalSb.append(";adb usb");	// No device/Id options for 'usb'..
+                    }
+                    else
+                    {
+                        internalSb.append("SET PATH=");
+                        internalSb.append(androidSdkPathS);
+                        internalSb.append("/platform-tools");
+                        internalSb.append(";%PATH%");
+    
+                        // Note:
+                        // We should wait some before
+                        // we call 'adb usb'..
+                        //internalSb.append("&&adb disconnect ");
+                        //internalSb.append(sWirelessID);
+                        internalSb.append("&&adb usb");	// No device/Id options for 'usb'..
+                        internalSb.append("\n");
+                    }
+                    
+                    //System.out.println("(adb usb)internalSb: "+internalSb.toString());    // Very long output
+            
+                    bInternalFinished = false;		
+                    internalCommandS = internalSb.toString();
+                    commandBgThread = new CommandBgThread();
+                    commandBgThread.start();
+            
+                    // Wait for Thread to finish..
+                    while ( true )
+                    {
+                        try
+                        {
+                            Thread.sleep(333);
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+            
+                        if ( bInternalFinished )
+                            break;
+                    }
+                    
+                    System.out.println("(commandBgThread): "+g_sT);
+                    
+                    try
+                    {
+                        Thread.sleep(2000);
+                        //Thread.sleep(4000);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                }
+/**/
+
 			}
 
-			bWirelessConnected = false;	// Reset..
+			SingletonClass sc = SingletonClass.getInstance();
+			
+			// Disconnect reset..
+			//bWirelessConnected = false;	// Reset..
+			sc.s_WirelessConnected = false;
 			bDisconnectWirelessFinished = true;
 			
 		}
@@ -15630,7 +15954,8 @@ public class ADev
                     break;
             }
 /**/			
-			
+
+            
 			bInternalFinished = false;		
 			internalCommandS = internalSb.toString();
 			commandBgThread = new CommandBgThread();
@@ -15651,6 +15976,16 @@ public class ADev
 				if ( bInternalFinished )
 					break;
 			}
+
+			
+            // Give it some time..
+            try
+            {
+                Thread.sleep(2500);
+            }
+            catch (InterruptedException ie)
+            {
+            }
 
 /*			
             System.out.println();
@@ -15692,8 +16027,11 @@ public class ADev
 							for ( ; ! Character.isWhitespace(commandResultS.charAt(iG)); iG-- );
 							iStart = iG + 1;
 							
-							sDevice = commandResultS.substring(iStart, iEnd);
-							sDevice = sDevice.trim();
+							if ( (iStart >= 0) && (iEnd < commandResultS.length()) )
+							{
+                                sDevice = commandResultS.substring(iStart, iEnd);
+                                sDevice = sDevice.trim();
+							}
 							
 							//System.out.println("(ADD)sDevice: '"+sDevice+"'");
 							// Longest first..
@@ -15717,6 +16055,14 @@ public class ADev
 				}
 			}
 
+/*			
+			if ( DevicesAr == null )
+			    System.out.println("DevicesAr null");
+			else
+			    System.out.println("DevicesAr.size(): "+DevicesAr.size());
+/**/			
+			    
+			    
 			//for ( int iJ = 0; iJ < DevicesAr.size(); iJ++ )
 				//System.out.println("["+iJ+"]: '"+(String)DevicesAr.get(iJ)+"'");
 
@@ -15791,6 +16137,217 @@ public class ADev
 		}
 	}    //}}}
 
+	//{{{   WirelessDisconnect()    
+	private void WirelessDisconnect()
+	{
+	    //System.out.println("WirelessDisconnect()");
+        bWirelessEnabled = false;
+        
+        bDisconnectWirelessFinished = false;
+        disconnectWirelessBgThread = new DisconnectWirelessBgThread();
+        disconnectWirelessBgThread.start();
+
+        while ( true )
+        {
+            try
+            {
+                Thread.sleep(333);
+            }
+            catch (InterruptedException ie)
+            {
+            }
+        
+            if ( bDisconnectWirelessFinished )
+                break;
+        }
+        
+        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+        {
+            int iLoc = sDeviceName.indexOf(":");
+            if ( iLoc != -1 )
+            {
+                // Disconnected, so prevent it
+                // from using wireless Id with '-s'..
+                sDeviceName = "";
+            }
+        }
+
+        //bDevicesFinished = false;
+        completeLatch = new CountDownLatch(1);
+        
+        getDevicesBgThread = new GetDevicesBgThread();
+        getDevicesBgThread.start();
+        
+        try
+        {
+            completeLatch.await();
+        }
+        catch (InterruptedException ie)
+        {
+        }
+
+
+        if ( (DevicesAr != null) && (DevicesAr.size() > 1) )
+        {
+            // Open Dialog..
+            selectDeviceDialog();
+        }
+        else
+        {
+            // Clear status bar..
+            deviceLabel.setText(" ");
+        }
+
+        // Reset..        
+        SingletonClass sc = SingletonClass.getInstance();
+        sc.s_WirelessConnected = false;
+
+	    
+	    //System.out.println("Exiting WirelessDisconnect()");
+	}    //}}}
+
+	//{{{   WirelessConnect()
+    private void WirelessConnect()
+    {
+        //System.out.println("WirelessConnect()");
+        bWirelessEnabled = true;
+
+        //System.out.println("bWirelessConnected: "+bWirelessConnected);
+        SingletonClass sc = SingletonClass.getInstance();
+        
+        //System.out.println("sc.s_WirelessConnected: "+sc.s_WirelessConnected);
+        //if ( sc.s_WirelessConnected )
+            //;
+        //else
+        if ( false )
+        {
+            // Redo..
+
+            // Disconnect previous connection..            
+            WirelessDisconnect();
+            
+            // Wait some..
+            try
+            {
+                Thread.sleep(2500);  
+            }
+            catch (InterruptedException ie)
+            {
+            }
+/*				    
+            completeLatch = new CountDownLatch(1);
+            
+            getDevicesBgThread = new GetDevicesBgThread();
+            getDevicesBgThread.start();
+    
+            try
+            {
+                completeLatch.await();
+            }
+            catch (InterruptedException ie)
+            {
+            }
+/**/
+
+
+/*
+            bInitWirelessFinished = false;
+            initWirelessBgThread = new InitWirelessBgThread();
+            initWirelessBgThread.start();
+
+            while ( true )
+            {
+                try
+                {
+                    Thread.sleep(20);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+            
+                if ( bInitWirelessFinished )
+                    break;
+            }
+/**/
+
+        }
+        
+        // Check success..
+        
+        //System.out.println("\niWirelessErrorCode: "+iWirelessErrorCode);
+        //System.out.println("sc.s_WirelessConnected: "+sc.s_WirelessConnected);
+        
+        //SingletonClass sc = SingletonClass.getInstance();
+        //if ( (iWirelessErrorCode == 0) || bWirelessConnected )
+        if ( (iWirelessErrorCode == 0) || sc.s_WirelessConnected )
+        {
+            if ( sc.s_WirelessConnected )
+            {
+                //System.out.println("sc.s_WirelessConnected true so don't need Dialog");
+                ;
+            }
+            else
+            {
+                // When the selection is changed, setValue is invoked, which generates a PropertyChangeEvent.
+                
+                // Success, put up dialog for Connect..
+                JOptionPane.showMessageDialog(
+                    null,				// parentComponent 
+                    "Hit OK when USB is disconnected.",	// message
+                    "Wireless Connect",			// title
+                    JOptionPane.INFORMATION_MESSAGE);	// messageType
+            }
+            
+            // We should use a PropertyChangeListener,
+            // but for now we'll let it wait..
+            
+            //bConnectWirelessFinished = false;
+            completeLatch = new CountDownLatch(1);
+            
+            connectWirelessBgThread = new ConnectWirelessBgThread();
+            connectWirelessBgThread.start();
+
+            try
+            {
+                completeLatch.await();
+            }
+            catch (InterruptedException ie)
+            {
+            }
+
+/*
+            while ( true )
+            {
+                try
+                {
+                    Thread.sleep(200);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+            
+                if ( bConnectWirelessFinished )
+                    break;
+            }
+/**/
+        }
+
+        int iMessageType;
+        if ( iWirelessErrorCode != 0 )
+        {
+            iMessageType = JOptionPane.ERROR_MESSAGE;
+
+            JOptionPane.showMessageDialog(
+                null,				// parentComponent 
+                sWirelessMessage,	// message
+                "Wireless",			// title
+                iMessageType);	// messageType
+        }
+        
+        //System.out.println("Exiting WirelessConnect()");
+        
+    }   //}}}
+    
 	//{{{	getTypeId()
 	private long getTypeId(byte bTypeTag)
 	{
@@ -15920,9 +16477,13 @@ public class ADev
 			commandPhrase = "pull";
 		}
 		
-		//System.out.println("commandSb: '"+commandSb.toString()+"'");
+		//System.out.println("(pullFile())commandSb: '"+commandSb.toString()+"'");
+		//System.out.println("(_A)commandSb: "+commandSb.toString());
 		
-		commandS = commandSb.toString();
+		//commandS = commandSb.toString();
+		
+		SingletonClass sc = SingletonClass.getInstance();
+		sc.s_sCommand = commandSb.toString();
 
 		ioBgThread = new IOBgThread();
 		ioBgThread.start();
@@ -16335,14 +16896,15 @@ public class ADev
 		// Like:  'com.example.bottomnavas'
 		//System.out.println("sPackageName: '"+sPackageName+"'");
 		int iLoc3 = packageNameS.lastIndexOf(".");
-		if ( iLoc3 != -1 )
+		if ( (iLoc3 != -1) && ((iLoc3 + 1) < packageNameS.length()) )
 		    sRoot = packageNameS.substring(iLoc3 + 1);
 		
 		//System.out.println("sRoot: '"+sRoot+"'");
         iLoc3 = sSourcePath.indexOf(sRoot);
         if ( iLoc3 != -1 )
         {
-            sRootPath = sSourcePath.substring(0, iLoc3);
+            if ( iLoc3 < sSourcePath.length() )
+                sRootPath = sSourcePath.substring(0, iLoc3);
             //System.out.println("sRootPath: '"+sRootPath+"'");
         }
 
@@ -16608,7 +17170,8 @@ public class ADev
                                             iLoc3 = sPath.lastIndexOf((int)0x5c);
                                             if ( iLoc3 != -1 )
                                             {
-                                                sFNm = sPath.substring(iLoc3 + 1);
+                                                if ( (iLoc3 + 1) < sPath.length() )
+                                                    sFNm = sPath.substring(iLoc3 + 1);
                                                 //System.out.println("sFNm: '"+sFNm+"'");
                                                 break;
                                             }
@@ -17908,7 +18471,8 @@ While_Break:
                         iLoc3 = sKeyPath.lastIndexOf("/");
                         if ( iLoc3 != -1 )
                         {
-                            sSource = sKeyPath.substring(iLoc3 + 1);    // Current tab..
+                            if ( (iLoc3 + 1) < sKeyPath.length() )
+                                sSource = sKeyPath.substring(iLoc3 + 1);    // Current tab..
                             //System.out.println("sSource: '"+sSource+"'");
                             if ( (sValue != null) && (sValue.equals(sSource)) )
                                 ;   // In correct tab..
@@ -17933,7 +18497,8 @@ While_Break:
                             iLoc3 = sKeyPath.lastIndexOf("/");
                             if ( iLoc3 != -1 )
                             {
-                                sSource = sKeyPath.substring(iLoc3 + 1);
+                                if ( (iLoc3 + 1) < sKeyPath.length() )
+                                    sSource = sKeyPath.substring(iLoc3 + 1);
                                 //System.out.println("sSource: '"+sSource+"'");
                                 if ( (sValue != null) && (sValue.equals(sSource)) )
                                 {
@@ -18430,7 +18995,7 @@ While_Break:
 				boolean bMatched;
 				//String sScriptId;
 				String sPath;
-				String sName;
+				String sName = "";
 				//String sTScript;
 				
 /*				
@@ -18460,7 +19025,8 @@ While_Break:
 						iLoc3 = sPath.lastIndexOf((int)0x5c);	// '\'
 						if ( iLoc3 != -1 )
 						{
-							sName = sPath.substring(iLoc3 + 1);
+						    if ( (iLoc3 + 1) < sPath.length() )
+						        sName = sPath.substring(iLoc3 + 1);
 							//System.out.println("sName: '"+sName+"'");
 							iLoc3 = sTScript.indexOf(sName);
 							if ( iLoc3 != -1 )
@@ -19218,8 +19784,9 @@ While_Break:
 			}
 			
 			commandResultS = new String(baos.toByteArray());
+			g_sT = commandResultS;
 
-/*
+/*			
 			if ( commandResultS != null )
 			{
 				System.out.println();
@@ -20226,6 +20793,9 @@ While_Break:
                             
                         }
                     }
+
+                    SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
                     
                     SwingWorker swingWorker = new SwingWorker()
                     {
@@ -20245,7 +20815,7 @@ While_Break:
                             tProgressJFrame.setVisible(true);
                             tProgressJFrame.setLocationRelativeTo(mainJFrame);
                             tProgressJFrame.setAlwaysOnTop(true);
-    
+
                             bIOBgThreadFinished = false;
                             ioBgThread = new IOBgThread();
                             ioBgThread.start();
@@ -20826,6 +21396,8 @@ While_Break:
 					commandSb.append("\n");
 
 				//System.out.println("\ncommandSb: '"+commandSb.toString()+"'");
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
 				
                 SwingWorker swingWorker = new SwingWorker()
                 {
@@ -20950,6 +21522,8 @@ While_Break:
                     // When the above drops out, 'sKeyAlias', 'sKeystorePath', 'sKeyAliasPassword'
                     // and 'sKeystorePassword' should be set and valid..
                 //}
+                
+                //System.out.println("Exiting PRE_RELEASE");
 				
 			}
 			else if ( RELEASE.equals(actionCommandS) )
@@ -21500,10 +22074,13 @@ While_Break:
 				if ( iOS == WINDOWS )
 					commandSb.append("\n");
 
-				//System.out.println("\ncommandSb: '"+commandSb.toString()+"'");
+				//System.out.println("(Release)commandSb: '"+commandSb.toString()+"'");
 				
 				//SingletonClass sc = SingletonClass.getInstance();
 				//sc.s_Command = commandSb.toString();
+				
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
 
 				//System.out.println("bConstructKeyProperties: "+bConstructKeyProperties);
                 if ( bConstructKeyProperties )
@@ -21545,7 +22122,7 @@ While_Break:
                         tProgressJFrame.setVisible(true);
                         tProgressJFrame.setLocationRelativeTo(mainJFrame);
                         tProgressJFrame.setAlwaysOnTop(true);
-
+                        
                         //bFinished = false;
                         bIOBgThreadFinished = false;
                         ioBgThread = new IOBgThread();
@@ -21658,7 +22235,7 @@ While_Break:
 			}
 			else if ( RUN.equals(actionCommandS) )
 			{
-			    //System.out.println("\n***************************");
+			    //System.out.println("***************************");
 				//System.out.println("RUN");
 				iDebugMode = DEBUG_RUN;
 				bBlockDebug = true;
@@ -21685,7 +22262,8 @@ While_Break:
 				catch (InterruptedException ie)
 				{
 				}
-/*
+
+/*				
 				if ( DevicesAr == null )
 					System.out.println("DevicesAr null");
 				else
@@ -21703,7 +22281,9 @@ While_Break:
                         sDeviceName = sDeviceName.trim();
                     }
                 }
-/**/
+ 
+                //System.out.println("sDeviceName: '"+sDeviceName+"'");
+                
 				init();
 				RefreshProperties();
 
@@ -21788,7 +22368,7 @@ While_Break:
                     
                     if ( (sDebugUri != null) && (sDebugUri.length() > 0) )
                     {
-                        //System.out.println("\nGot sDebugUri, breaking..");
+                        //System.out.println("Got sDebugUri, breaking..");
                         break;
                     }
                 }
@@ -22278,8 +22858,13 @@ While_Break:
 					sc.s_ShowProgressBar = false;
 /**/
 
-					commandS = commandSb.toString();
+					//commandS = commandSb.toString();
 					//System.out.println("commandS: '"+commandS+"'");
+					//System.out.println("(A)commandSb: "+commandSb.toString());
+					
+                    SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
+					
 					
 					ioBgThread = new IOBgThread();
 					ioBgThread.start();
@@ -22346,7 +22931,10 @@ While_Break:
 					
 					commandSb.append(";adb kill-server");
 					
-					if ( bWirelessConnected )
+					SingletonClass sc = SingletonClass.getInstance();
+					
+					//if ( bWirelessConnected )
+					if ( sc.s_WirelessConnected )
 					{
 						mSb = new StringBuffer();
 						if ( (ConnectDevicesAr != null) && (ConnectDevicesAr.size() > 1) )
@@ -22380,7 +22968,10 @@ While_Break:
 
 					commandSb.append("&&adb kill-server");
 					
-					if ( bWirelessConnected )
+					SingletonClass sc = SingletonClass.getInstance();
+					
+					//if ( bWirelessConnected )
+					if ( sc.s_WirelessConnected )
 					{
 						mSb = new StringBuffer();
 						if ( (ConnectDevicesAr != null) && (ConnectDevicesAr.size() > 1) )
@@ -22405,7 +22996,11 @@ While_Break:
 					commandSb.append("\n");
 				}
 				
-				commandS = commandSb.toString();
+				//commandS = commandSb.toString();
+				//System.out.println("(B)commandSb: "+commandSb.toString());
+
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
 				
 				ioBgThread = new IOBgThread();
 				ioBgThread.start();
@@ -22463,7 +23058,11 @@ While_Break:
 					commandSb.append("\n");
 				}
 				
-				commandS = commandSb.toString();
+				//System.out.println("(C)commandSb: "+commandSb.toString());
+				
+				//commandS = commandSb.toString();
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
 				
 				ioBgThread = new IOBgThread();
 				ioBgThread.start();
@@ -22701,6 +23300,9 @@ While_Break:
                 
 				if ( iOS == WINDOWS )
 					commandSb.append("\n");
+				
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
                 
                 SwingWorker swingWorker = new SwingWorker()
                 {
@@ -22720,7 +23322,7 @@ While_Break:
                         tProgressJFrame.setVisible(true);
                         tProgressJFrame.setLocationRelativeTo(mainJFrame);
                         tProgressJFrame.setAlwaysOnTop(true);
-
+                        
                         bIOBgThreadFinished = false;
                         ioBgThread = new IOBgThread();
                         ioBgThread.start();
@@ -22754,7 +23356,11 @@ While_Break:
                     }
                 };
                 
-                commandS = commandSb.toString();
+                //commandS = commandSb.toString();
+                //SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
+                
+                
                 swingWorker.execute();
 
 /*				
@@ -23032,10 +23638,9 @@ While_Break:
 				        commandSb.append("\n");
 				    
 				    //System.out.println("\ncommandSb: '"+commandSb.toString()+"'");
+                    SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
 				        
-                    //commandS = commandSb.toString();
-                    //System.out.println("commandS: '"+commandS+"'");
-                    
 					SwingWorker swingWorker = new SwingWorker()
 					{
 					    JFrame tProgressJFrame = null;
@@ -23056,7 +23661,7 @@ While_Break:
 							tProgressJFrame.setVisible(true);
 							tProgressJFrame.setLocationRelativeTo(mainJFrame);
 							tProgressJFrame.setAlwaysOnTop(true);
-
+							
 							bIOBgThreadFinished = false;
 							ioBgThread = new IOBgThread();
 							ioBgThread.start();
@@ -23103,7 +23708,11 @@ While_Break:
 						}
 					};
 					
-					commandS = commandSb.toString();
+					//commandS = commandSb.toString();
+                    //SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
+					
+					
 					swingWorker.execute();
 /**/                    
 
@@ -23229,7 +23838,8 @@ While_Break:
                             commandSb.append("\n");
                         
                         //System.out.println("\ncommandSb: '"+commandSb.toString()+"'");
-                        //commandS = commandSb.toString();
+                        //SingletonClass sc = SingletonClass.getInstance();
+                        sc.s_sCommand = commandSb.toString();
                         
                         //SwingWorker swingWorker = new SwingWorker()
                         swingWorker = new SwingWorker()
@@ -23250,7 +23860,7 @@ While_Break:
                                 tProgressJFrame.setVisible(true);
                                 tProgressJFrame.setLocationRelativeTo(mainJFrame);
                                 tProgressJFrame.setAlwaysOnTop(true);
-    
+                                
                                 bIOBgThreadFinished = false;
                                 ioBgThread = new IOBgThread();
                                 ioBgThread.start();
@@ -23288,7 +23898,11 @@ While_Break:
                             }
                         };
                         
-                        commandS = commandSb.toString();
+                        //commandS = commandSb.toString();
+                        //SingletonClass sc = SingletonClass.getInstance();
+                        sc.s_sCommand = commandSb.toString();
+                        
+                        
                         swingWorker.execute();
                     }
 				}
@@ -23527,6 +24141,7 @@ While_Break:
                     if ( iOS == WINDOWS )
                         commandSb.append("\n");
                     
+                    //System.out.println("commandSb: "+commandSb.toString());
 /*
                     if ( bWirelessConnected == false )
                     {
@@ -23534,7 +24149,9 @@ While_Break:
                         bKillLogcat = true;
                     }
 /**/
-                    //commandS = commandSb.toString();
+
+                    SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
                     
 					SwingWorker swingWorker = new SwingWorker()
 					{
@@ -23590,8 +24207,12 @@ While_Break:
 						    }
 						}
 					};
+
+                    //System.out.println("(D)commandSb: "+commandSb.toString());
 					
-					commandS = commandSb.toString();
+					//commandS = commandSb.toString();
+                    //SingletonClass sc = SingletonClass.getInstance();
+					
 					swingWorker.execute();
                     
 /*                    
@@ -24197,6 +24818,7 @@ While_Break:
                 //System.out.println("bKotlinSelected: "+bKotlinSelected);
                 //System.out.println("bNDKSelected: "+bNDKSelected);
                 //System.out.println("bGradleSelected: "+bGradleSelected);
+                
 /*                
                 if ( sProjectPathLead == null )
                     System.out.println("sProjectPathLead null");
@@ -24251,7 +24873,8 @@ While_Break:
                     {
                         sProjectLevelPath = sRet;
                     }
-					
+
+                    // Check for /app..					
 					tSb = new StringBuffer(projectHomeS);
 					tSb.append("/app");
 					//System.out.println("(Path)tSb: '"+tSb.toString()+"'");
@@ -24296,9 +24919,7 @@ While_Break:
                         }
                     }
 						
-					//StringBuffer tSb = new StringBuffer(projectHomeS);
 					tSb = new StringBuffer(projectHomeS);
-					//tSb.append("/android");
 					tSb.append("/android/app");
                     sRet = FindBuildGradle(tSb.toString());
                     if (! sRet.equals("") )
@@ -24318,7 +24939,30 @@ While_Break:
                             sModuleLevelPath = sRet;
                         }
                     }
-                    
+/*
+                    // Check for /android for LibGdx..
+					tSb = new StringBuffer(projectHomeS);
+					tSb.append("/android");
+                    sRet = FindBuildGradle(tSb.toString());
+                    if (! sRet.equals("") )
+                    {
+                        // Found build.gradle..
+                        buffer = readFile(2048, sRet);
+                        String tS = new String(buffer);
+                        iLoc2 = tS.indexOf("flutter");
+                        if ( iLoc2 != -1 )
+                        {
+                            // Flutter..
+                            //System.out.println("==Found flutter==");
+                            sType = "FLUTTER";
+                            if ( uFlutterMenuItem != null )
+                                uFlutterMenuItem.setState(true);
+                            
+                            sModuleLevelPath = sRet;
+                        }
+                    }
+/**/
+
                     if ( sType.equals("") )
                     {
                         sType = "ANT";
@@ -24417,7 +25061,8 @@ While_Break:
 					iLoc3 = projectHomeS.lastIndexOf("/");
 					if ( iLoc3 != -1 )
 					{
-						sTitle = projectHomeS.substring(iLoc3 + 1);
+					    if ( (iLoc3 + 1) < projectHomeS.length() )
+					        sTitle = projectHomeS.substring(iLoc3 + 1);
 					}
 					
 					subMenuItem = new JMenuItem(sTitle);
@@ -24796,7 +25441,11 @@ While_Break:
                     }
                     
                     //System.out.println("commandSb: '"+commandSb.toString()+"'");
-                    commandS = commandSb.toString();
+                    //System.out.println("(F)commandSb: "+commandSb.toString());
+                    
+                    //commandS = commandSb.toString();
+                    SingletonClass sc = SingletonClass.getInstance();
+                    sc.s_sCommand = commandSb.toString();
                     
                     ioBgThread = new IOBgThread();
                     ioBgThread.start();
@@ -24837,6 +25486,11 @@ While_Break:
 				int iLoc;
 				int iLoc2;
 				int iLoc3;
+				
+				SingletonClass sc = SingletonClass.getInstance();
+				sc.s_sCommand = "";
+				
+				
 				bRunIOBgThread = false;
 				String sMinSpinnerValue = "";
 				String sTargetSpinnerValue = "";
@@ -24895,7 +25549,7 @@ While_Break:
 						}
 					}
 				}
-
+				
 /*
 				if ( targetSdkSpinner == null )
 					System.out.println("targetSdkSpinner null");
@@ -24951,7 +25605,7 @@ While_Break:
 
 				//System.out.println("(getCanonicalPath())createProjectHomeS: '"+createProjectHomeS+"'");
 				
-				
+				//System.out.println("bFlutterSelected: "+bFlutterSelected);
 				if ( bFlutterSelected )
 				{
 					//bDoIOBgThread = true;
@@ -25068,12 +25722,14 @@ While_Break:
 					if ( iOS == WINDOWS )
 						commandSb.append("\n");
 					
-					//System.out.println("commandSb: '"+commandSb.toString()+"'");
-					commandS = commandSb.toString();
+					//System.out.println("(Create)commandSb: '"+commandSb.toString()+"'");
+					//commandS = commandSb.toString();
+					sc.s_sCommand = commandSb.toString();
 
 				}
 				else
 				{
+				    
 					// Ant, Gradle or Kotlin..
 					if ( (bGradleSelected == false) && (bKotlinSelected == false) )
 					{
@@ -25111,7 +25767,7 @@ While_Break:
 						// Like: 'Android 8.0.0 (API level 26)  Id: 4'
 						String sT = (String)targetSdkSpinner.getValue();
 						//System.out.println("(targetSdkSpinner.getValue())sT: '"+sT+"'");
-						String sId;
+						String sId = "";
 						int iTargetId = 0;
 						if ( (sT != null) && (sT.length() > 0) )
 						{
@@ -25129,8 +25785,11 @@ While_Break:
 							iLoc2 = sT.indexOf("Id:");
 							if ( iLoc2 != -1 )
 							{
-								sId = sT.substring(iLoc2 + 3);
-								sId = sId.trim();
+							    if ( (iLoc2 + 3) < sT.length() )
+							    {
+                                    sId = sT.substring(iLoc2 + 3);
+                                    sId = sId.trim();
+                                }
 								
 								try
 								{
@@ -25245,8 +25904,19 @@ While_Break:
 					
 						if ( iOS == WINDOWS )
 							commandSb.append("\n");
+/*						
+						if ( commandSb == null )
+						    System.out.println("(Gradle)commandSb null");
+						else
+						    System.out.println("(Gradle)commandSb: "+commandSb.toString());
+/**/
+
+                        // Set
+						sc.s_sCommand = commandSb.toString(); 
+						
+						//System.out.println("sc.s_sCommand: "+sc.s_sCommand);
 		
-						commandS = commandSb.toString();
+						//commandS = commandSb.toString();
 						//System.out.println("commandS: '"+commandS+"'");
 					
 					}
@@ -25273,7 +25943,7 @@ While_Break:
 							if ( bCreateGradleProjectFinished )
 								break;
 						}
-
+						
 						// Create Project and Module level build.gradles..
 						bCreateBuildGradleFinished = false;
 						createBuildGradleBgThread = new CreateBuildGradleBgThread();
@@ -25293,8 +25963,17 @@ While_Break:
 							if ( bCreateBuildGradleFinished )
 								break;
 						}
+						
 					}
 				}
+
+/*				
+				if ( sc.s_sCommand == null )
+				    System.out.println("(Final)sc.s_sCommand null");
+				else
+				    System.out.println("(Final)sc.s_sCommand: "+sc.s_sCommand);
+/**/				    
+				    
 
 				//if ( bDoIOBgThread )
 				//{
@@ -25305,21 +25984,26 @@ While_Break:
 						@Override
 						public Void doInBackground() throws Exception
 						{
+						    //System.out.println("doInBackground()");
+						    
 							jProgressBar = new JProgressBar();
+							
 							jProgressBar.setIndeterminate(true);
 							jProgressBar.setPreferredSize(new Dimension(200, 30));
 							
 							tProgressJFrame = new JFrame();
+							
 							tProgressJFrame.setUndecorated(true);
 							tProgressJFrame.add(jProgressBar);
 							tProgressJFrame.pack();
 							tProgressJFrame.setVisible(true);
 							tProgressJFrame.setLocationRelativeTo(mainJFrame);
 							tProgressJFrame.setAlwaysOnTop(true);
-	
+							
 							//bFinished = false;
 							bIOBgThreadFinished = false;
 							ioBgThread = new IOBgThread();
+							
 							ioBgThread.start();
 
 							// Wait for Thread to finish..
@@ -25343,6 +26027,7 @@ While_Break:
 						@Override
 						public void done()
 						{
+						    //System.out.println("SwingWorker done()");
 						    if ( tProgressJFrame != null )
 						    {
 						        tProgressJFrame.dispose();
@@ -25374,6 +26059,7 @@ While_Break:
 				
 				init();		// Reset..
 
+				
 				if ( bUsesSdk &&
 					((bGradleSelected == false) &&
 					(bKotlinSelected == false) &&
@@ -25574,6 +26260,7 @@ While_Break:
 
 				uSdkMenuItem.setSelected(false);
 				bDoBuildGradleUpdate = false;
+				
 				//System.out.println("Exiting CREATE_SUBMIT");
 			}
 			else if ( UPDATE_SUBMIT.equals(actionCommandS) )
@@ -25673,8 +26360,13 @@ While_Break:
 				
 				if ( iOS == WINDOWS )
 					commandSb.append("\n");
+				
+				//System.out.println("(G)commandSb: "+commandSb.toString());
 
-				commandS = commandSb.toString();
+				//commandS = commandSb.toString();
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
+				
 				//System.out.println("commandS: '"+commandS+"'");
 
 				ioBgThread = new IOBgThread();
@@ -26357,6 +27049,9 @@ While_Break:
 				iCaretPosition = textPane.getCaretPosition();
 				//System.out.println("iCaretPosition: "+iCaretPosition);
 
+				//if ( searchField == null )
+				    //System.out.println("searchField null");
+				
 				// Get Search text..
 				if ( searchField != null )
 				{
@@ -26364,7 +27059,7 @@ While_Break:
 				    sSearchText = searchField.getText();
 				}
 				
-				sSearchText = sSearchText.trim();
+				//sSearchText = sSearchText.trim();
 				//System.out.println("sSearchText: '"+sSearchText+"'");
 				iSearchLength = sSearchText.length();
 
@@ -26384,12 +27079,15 @@ While_Break:
 				//System.out.println("iSearchIndex: "+iSearchIndex);
 				if ( iSearchIndex != -1 )
 				{
+				    //System.out.println("Found");
 					iPreviousIndex = iSearchIndex;	// Save..
 					iStartOffset = iSearchIndex;
 				}
 				else
 				{
 					// Didn't find..
+					Toolkit.getDefaultToolkit().beep();
+					
 					//System.out.println("Didn't find");
 					//System.out.println("bIsNext: "+bIsNext);
 					if ( bIsNext )
@@ -26893,14 +27591,47 @@ While_Break:
 			else if ( WIRELESS_CONNECT.equals(actionCommandS) )
 			{
 				//System.out.println("WIRELESS_CONNECT");
+				
+				//WirelessConnect();
+				
 				bWirelessEnabled = true;
 
 				//System.out.println("bWirelessConnected: "+bWirelessConnected);
-				if ( bWirelessConnected )
-					;
-				else
-				{
+				SingletonClass sc = SingletonClass.getInstance();
 				
+				//System.out.println("sc.s_WirelessConnected: "+sc.s_WirelessConnected);
+				if ( sc.s_WirelessConnected )
+				{
+				    // There was a previous connection, disconnect..
+				    WirelessDisconnect();
+				    
+				    try
+				    {
+				         Thread.sleep(2500);   
+				    }
+				    catch (InterruptedException ie)
+				    {
+				    }
+				}
+				
+				
+				//else
+				{
+                    // Redo..
+                    
+                    //completeLatch = new CountDownLatch(1);
+                    
+                    //getDevicesBgThread = new GetDevicesBgThread();
+                    //getDevicesBgThread.start();
+            
+                    //try
+                    //{
+                        //completeLatch.await();
+                    //}
+                    //catch (InterruptedException ie)
+                    //{
+                    //}
+                    
 					bInitWirelessFinished = false;
 					initWirelessBgThread = new InitWirelessBgThread();
 					initWirelessBgThread.start();
@@ -26921,12 +27652,23 @@ While_Break:
 				}
 				
 				// Check success..
-				if ( (iWirelessErrorCode == 0) || bWirelessConnected )
+				
+				//System.out.println("\niWirelessErrorCode: "+iWirelessErrorCode);
+				//System.out.println("sc.s_WirelessConnected: "+sc.s_WirelessConnected);
+				
+				//SingletonClass sc = SingletonClass.getInstance();
+				//if ( (iWirelessErrorCode == 0) || bWirelessConnected )
+				if ( (iWirelessErrorCode == 0) || sc.s_WirelessConnected )
 				{
-					if ( bWirelessConnected )
+					if ( sc.s_WirelessConnected )
+					{
+					    //System.out.println("sc.s_WirelessConnected true so don't need Dialog");
 						;
+					}
 					else
 					{
+					    // When the selection is changed, setValue is invoked, which generates a PropertyChangeEvent.
+					    
 						// Success, put up dialog for Connect..
 						JOptionPane.showMessageDialog(
 							null,				// parentComponent 
@@ -26934,6 +27676,9 @@ While_Break:
 							"Wireless Connect",			// title
 							JOptionPane.INFORMATION_MESSAGE);	// messageType
 					}
+					
+					// We should use a PropertyChangeListener,
+					// but for now we'll let it wait..
 					
 					//bConnectWirelessFinished = false;
 					completeLatch = new CountDownLatch(1);
@@ -26949,21 +27694,21 @@ While_Break:
 					{
 					}
 
-/*
-					while ( true )
-					{
-						try
-						{
-							Thread.sleep(200);
-						}
-						catch (InterruptedException ie)
-						{
-						}
 					
-						if ( bConnectWirelessFinished )
-							break;
-					}
-/**/
+					//while ( true )
+					//{
+						//try
+						//{
+							//Thread.sleep(200);
+						//}
+						//catch (InterruptedException ie)
+						//{
+						//}
+					
+						//if ( bConnectWirelessFinished )
+							//break;
+					//}
+
 				}
 
 				int iMessageType;
@@ -26977,13 +27722,18 @@ While_Break:
 						"Wireless",			// title
 						iMessageType);	// messageType
 				}
-				
+/**/
+
 				//System.out.println("Exiting WIRELESS_CONNECT");
 						
 			}
 			else if ( WIRELESS_DISCONNECT.equals(actionCommandS) )
 			{
 				//System.out.println("WIRELESS_DISCONNECT");
+				
+				WirelessDisconnect();
+				
+/*				
 				bWirelessEnabled = false;
 				
 				bDisconnectWirelessFinished = false;
@@ -26994,7 +27744,8 @@ While_Break:
 				{
 					try
 					{
-						Thread.sleep(20);
+						//Thread.sleep(20);
+						Thread.sleep(333);
 					}
 					catch (InterruptedException ie)
 					{
@@ -27040,6 +27791,9 @@ While_Break:
 					// Clear status bar..
 					deviceLabel.setText(" ");
 				}
+/**/
+
+				//System.out.println("Exiting WIRELESS_DISCONNECT");
 				
 			}
 			else if ( VARIABLE_SUBMIT.equals(actionCommandS) )
@@ -27335,8 +28089,11 @@ While_Break:
 					commandSb.append("\n");
 				}
 
+				//System.out.println("(H)commandSb: "+commandSb.toString());
 				
-				commandS = commandSb.toString();
+				//commandS = commandSb.toString();
+                SingletonClass sc = SingletonClass.getInstance();
+                sc.s_sCommand = commandSb.toString();
 
 				ioBgThread = new IOBgThread();
 				ioBgThread.start();
@@ -27664,6 +28421,9 @@ While_Break:
                                         
                                         if ( iOS == WINDOWS )
                                             commandSb.append("\n");
+                                        
+                                        SingletonClass sc = SingletonClass.getInstance();
+                                        sc.s_sCommand = commandSb.toString();
 
                                         SwingWorker swingWorker = new SwingWorker()
                                         {
@@ -27683,7 +28443,9 @@ While_Break:
                                                 tProgressJFrame.setVisible(true);
                                                 tProgressJFrame.setLocationRelativeTo(mainJFrame);
                                                 tProgressJFrame.setAlwaysOnTop(true);
-
+                                                
+                                                //System.out.println("(I)Calling ioBgThread.start()");
+                                                
                                                 //bFinished = false;
                                                 bIOBgThreadFinished = false;
                                                 ioBgThread = new IOBgThread();
@@ -27722,7 +28484,11 @@ While_Break:
                                             }
                                         };
                                         
-                                        commandS = commandSb.toString();
+                                        //commandS = commandSb.toString();
+                                        //SingletonClass sc = SingletonClass.getInstance();
+                                        sc.s_sCommand = commandSb.toString();
+                                        
+                                        
                                         swingWorker.execute();
                                         
 							        }
@@ -27914,8 +28680,10 @@ While_Break:
 			}
 
 			// If using wireless try to
-			// re-connect..			
-			if ( bWirelessConnected )
+			// re-connect..	
+			SingletonClass sc = SingletonClass.getInstance();
+			//if ( bWirelessConnected )
+			if ( sc.s_WirelessConnected )
 			{
 				while ( true )
 				{
@@ -28262,6 +29030,7 @@ While_Break:
             {
                 file = listOfFiles[g];
                 sFName = file.getName();
+                //System.out.println("sFName: '"+sFName+"'");
                 if ( sFName.startsWith("build.gradle") )
                 {
                     sRet = file.getAbsolutePath();      // Like:  'C:\Android\Dev\FancyShowCaseView-master\build.gradle'
@@ -30577,6 +31346,22 @@ Break_Out:
 			}
 		}
 	};	//}}}
+
+/*	
+class FormattedTextFieldListener implements PropertyChangeListener {
+// class FormattedTextFieldListener implements PropertyChangeListener {
+
+    FormattedTextFieldListener implements PropertyChangeListener {
+    public void propertyChanged(PropertyChangeEvent e) {
+        Object source = e.getSource();
+        if (source == amountField) {
+            amount = ((Number)amountField.getValue()).doubleValue();
+            ...
+        }
+        ...//re-compute payment and update field...
+    }
+}
+/**/
 
 	//{{{	ComponentListener
 	ComponentListener componentListener = new ComponentAdapter()

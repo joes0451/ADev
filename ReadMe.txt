@@ -86,16 +86,17 @@ Select Device:
 Search: Search Dialog for searching through long Logcat or other output
 		in the console window.  'Reset Next' starts the search from the top.
 		
-		You can select part of a line where you want to start the
-		search and use 'Reset Next'.
+		At any point you can select part of a line and when you hit "Reset Next"
+		in the Search Dialog it will begin searching from there.
+		This is useful for skipping large parts of the output.
 		
 Refresh Properties:
         Refreshes the settings in config.properties.
 		
 Select All:
 		Allows you to select all the logcat or other console window text.
-		
 
+		
 Gradle builds:
 		Make sure that you have 'android_sdk_path', 'gradle_path' and 'java_path' paths
 		defined	in 'config.properties'.
@@ -162,10 +163,10 @@ Gradlew:
         download from GitHub.        
 
 Gradle clean, Unable to delete file '...\build'
-        If you have problems with Gradle not being able to delete the build directory
-        one option is to set the 'use_stop_gradle' option in config.properties,
-        which will use 'gradle clean --stop', which usually works. 
+        If you have problems with Gradle not being able to delete the build directory.
+        There are other optional ways to do a "Clean" in config.properties.
 
+        
 App Bundle:
 		For best results it is recommended to use Gradlew by setting "use_gradlew" to "true"
 		in config.properties.
@@ -199,32 +200,22 @@ App Bundle Install:
         where you can point to it.  Also works with Emulator.
         There is usually a delay before you see all the output.
 
+        
 Use Flutter:
-		Install, Android Studio not required:
-		https://flutter.dev/docs/development/tools/sdk/releases
-		
-		Select the version of Flutter from the desired Channel on your platform.
-		The latest version on the Stable channel is recommended.
-		
-		Download into, or create, a directory with no embedded spaces in the path,
-		like C:/Dev
+        Flutter can have issues with the latest changes, so
+        to insure it has the best chance of working:
 
-		Configure Flutter:
-		CD into your  flutter/bin  and run:
-		
-		flutter doctor
-		
-		This will check your environment and let you know
-		if it needs anything.
-		
-		You can make changes using:
-		
-		flutter config
-		
-		Like:
-		
-		flutter config --android-sdk [path to Android SDK]
-		
+        Many things in Flutter depend on Android Studio.       
+        If you have Android Studio, make sure it is up to date with the latest
+        version and has the latest Android SDK and Java versions.
+        
+        If you don't have Android Studio make sure Flutter is up to date
+        with it's latest version and has the latest Dart SDK and you are using the latest Android SDK and
+        have a new enough Java OpenJDK.
+        
+        Run this to check things:
+        flutter doctor -v
+        
 		Support for creating and building Flutter projects.
 		It relies on using Gradle for the builds, so the 'Use Gradle'
 		checkbox is automatically selected.
@@ -420,12 +411,6 @@ BlueStacks Emulator:
 		
 
 Release notes:
-	
-ADev-3.2.8:
-    Fixed and improved 'Generate Key Store'.
-    New option for signingConfigs, Gradle and Kotlin no longer need a key.properties file for the
-    keystore password information.
-    Other improvements.
     
 ADev-3.3.0:
     New Clean option to safely delete module-level and project level 'build' directories.
@@ -437,6 +422,11 @@ ADev-3.3.0:
 ADev-3.3.1:
     Removed the Gradle 'clean --stop' option as it wasn't working.
     Improved the running of commands in Linux.
+    
+ADev-3.3.2:
+    Greatly improved wireless connect and disconnect.
+    Some Flutter improvements.
+    Other improvements. 
     
 
 I use it for all of my own development, and try to fix what issues I see,

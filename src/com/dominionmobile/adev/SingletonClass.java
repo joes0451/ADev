@@ -5,7 +5,7 @@
 /**
  *	  ADev is a lightweight Android development tool
  *
- *	  Copyright (c) 2023 Joseph Siebenmann
+ *	  Copyright (c) 2024 Joseph Siebenmann
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General  Public License as published by
@@ -27,6 +27,8 @@ public class SingletonClass
     private static SingletonClass single_instance = null;
     
     public boolean s_FoundAppStarted;
+    public boolean s_WirelessConnected;
+    public String s_sCommand;
     
     private SingletonClass()
     {
