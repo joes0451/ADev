@@ -286,9 +286,8 @@ Wireless debugging:
 		You can check if your device is still connected by hitting the 'Devices' button
 		and see if it's listed, or its status.
 
-Connect:		
-		If you had a previous wireless debugging session going, it's a good
-		idea to select Wireless->Disconnect before you start.
+Connect:
+        It will now automatically do a Disconnect if there was a previous connection.
 
 		- Attach your Android device to your computer with USB cable.
 		
@@ -412,13 +411,6 @@ BlueStacks Emulator:
 
 Release notes:
     
-ADev-3.3.0:
-    New Clean option to safely delete module-level and project level 'build' directories.
-    Flutter Run and Attach have been fixed and improved.
-    New WebSocket code for Flutter debugger.
-    More use of SwingWorker and the progress bar for better output.
-    Other improvements.
-
 ADev-3.3.1:
     Removed the Gradle 'clean --stop' option as it wasn't working.
     Improved the running of commands in Linux.
@@ -427,6 +419,9 @@ ADev-3.3.2:
     Greatly improved wireless connect and disconnect.
     Some Flutter improvements.
     Other improvements. 
+    
+ADev-3.3.3:
+    Fixed issue with Release and Debug builds.
     
 
 I use it for all of my own development, and try to fix what issues I see,

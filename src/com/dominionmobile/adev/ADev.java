@@ -3927,9 +3927,7 @@ public class ADev
 				else
 				{
 					proc = rt.exec("cmd.exe");
-					
-					
-					
+                    
 					//writeBuf = commandS.getBytes();
 					writeBuf = sc.s_sCommand.getBytes();
 					
@@ -4037,7 +4035,6 @@ public class ADev
                                 iTotalBytes += iBytesRead;
                             }
 
-                            
                             
 /*                            
                             // Debbuging..					
@@ -4558,7 +4555,7 @@ public class ADev
                             // so we need an end test..
                             if ( iBytesRead > 0 )
                             {
-                                if ( ! bLogcatOn )
+                                if ( bLogcatOn == false )
                                 {
                                     if ( (commandPhrase != null) && (commandPhrase.length() > 0) )
                                     {
@@ -4591,8 +4588,8 @@ public class ADev
                                             
                                             //System.out.println("bFoundPhrase: "+bFoundPhrase);
                                             //System.out.println("sTest: '"+sTest+"'");
-                                            //if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
-                                            if ( (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                            if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                            //if ( (sTest.endsWith(">") || sTest.endsWith("$")) )
                                             {
                                                 //System.out.println("\nHit end");
                                                 bEndBreakOut = true;
@@ -4883,7 +4880,7 @@ public class ADev
 
 				bIOBgThreadBreak = false;    // Reset..
 				
-				//System.out.println("\n====IOBgThread dropped out====");
+				//System.out.println("====IOBgThread dropped out====");
 			}
 			catch (Exception e)
 			{
@@ -9035,7 +9032,7 @@ public class ADev
 	{
 		public void run()
 		{
-		    //System.out.println("\nReleaseCheckBgThread run()");
+		    //System.out.println("ReleaseCheckBgThread run()");
 			while ( true )
 			{
 				if ( bReleaseCheckFinished )
@@ -9084,7 +9081,7 @@ public class ADev
 	//{{{	CheckKeystorePasswords
 	public void CheckKeystorePasswords()
 	{
-		//System.out.println("\nCheckKeystorePasswords");
+		//System.out.println("CheckKeystorePasswords");
 		
 		// Finish signaled in SUBMIT..
 
@@ -9199,6 +9196,13 @@ public class ADev
             }
             else
             {
+/*                
+                if ( sUseKeyProperties == null )
+                    System.out.println("sUseKeyProperties null");
+                else
+                    System.out.println("sUseKeyProperties: '"+sUseKeyProperties+"'");
+/**/                
+                
                 // Gradle or Kotlin..
                 if ( (sUseKeyProperties != null) && (sUseKeyProperties.equals("true")) )
                 {
@@ -9578,7 +9582,7 @@ public class ADev
 		
 		bCheckPasswordsFinished = true;
 		
-		//System.out.println("\nExiting CheckKeystorePasswords()");
+		//System.out.println("Exiting CheckKeystorePasswords()");
 		
 	}	//}}}
 	
@@ -21545,6 +21549,8 @@ While_Break:
 			    // do this RELEASE..
 				//System.out.println("RELEASE");
 				boolean bRegularBuild;
+				
+				//System.out.println("bLogcatOn: "+bLogcatOn);
 				if ( bLogcatOn )
 				{
 					// Reset..
@@ -22111,6 +22117,7 @@ While_Break:
                     @Override
                     public Void doInBackground() throws Exception
                     {
+                        //System.out.println("doInBackground()");
                         jProgressBar = new JProgressBar();
                         jProgressBar.setIndeterminate(true);
                         jProgressBar.setPreferredSize(new Dimension(200, 30));
@@ -23409,6 +23416,7 @@ While_Break:
 					// Restore..
 					actionCommandS = INSTALL;
 				}
+
 /*				
 				if ( projectHomeS == null )
 					System.out.println("projectHomeS null");
@@ -24142,6 +24150,7 @@ While_Break:
                         commandSb.append("\n");
                     
                     //System.out.println("commandSb: "+commandSb.toString());
+                    
 /*
                     if ( bWirelessConnected == false )
                     {
