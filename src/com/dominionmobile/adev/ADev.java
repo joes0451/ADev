@@ -247,7 +247,7 @@ public class ADev
 	Icon debug24Icon;
 	static SwingWorker swingWorker;
 	
-	static CountDownLatch completeLatch;
+	//static CountDownLatch completeLatch;
 	static CountDownLatch requestLatch;
 	static CountDownLatch progressLatch;
 	//static Object messageObject;
@@ -487,6 +487,10 @@ public class ADev
 	static volatile boolean bFoundAppStarted;
 	//static volatile boolean bKillVMService;
 	volatile boolean bKeyBreakOut;
+	static volatile boolean bLoadSourceFinished;
+	static volatile boolean bDevicesFinished;
+	static volatile boolean bSDKDataFinished;
+	static volatile boolean bConnectWirelessFinished;
 	
 	volatile boolean bHaveSource;
 	volatile boolean bCreateFinished;
@@ -1282,11 +1286,27 @@ public class ADev
 		// Don't show the Progress Bar,
 		// so just run it directly..   
 		//bDevicesFinished = false;
-		completeLatch = new CountDownLatch(1);
+		//completeLatch = new CountDownLatch(1);
 		
+		bDevicesFinished = false;
 		getDevicesBgThread = new GetDevicesBgThread();
 		getDevicesBgThread.start();
 
+		while ( true )
+		{
+		    try
+		    {
+		         Thread.sleep(333);   
+		    }
+		    catch (InterruptedException ie)
+		    {
+		    }
+		    
+		    if ( bDevicesFinished )
+		        break;
+		}
+
+/*		
 		try
 		{
 			completeLatch.await();
@@ -1294,7 +1314,8 @@ public class ADev
 		catch (InterruptedException ie)
 		{
 		}
-		
+/**/
+
 		if ( (DevicesAr	!= null) && (DevicesAr.size() > 0) )
 		{
 			if ( DevicesAr.size() > 1 )
@@ -1474,7 +1495,8 @@ public class ADev
 			else
 			    System.out.println("sKeyAlias: '"+sKeyAlias+"'");
 /**/			
-			
+
+            //System.out.println("gradlePathS: '"+gradlePathS+"'");
 			sAppBundleKeystorePath = Utils.processPath(prop.getProperty("app_bundle_keystore_path"));
 			sAppBundleKeyAlias = Utils.processPath(prop.getProperty("app_bundle_key_alias"));
 			sAppBundleKeystorePassword = Utils.processPath(prop.getProperty("app_bundle_key_store_password"));
@@ -2256,6 +2278,7 @@ public class ADev
 						{
 							int j = iLoc;
 							for ( ; sBuf.charAt(j) != (char)0x0a; j++ );
+							
 							if ( ((iLoc + 17) >= 0) && (j < sBuf.length()) )
 							{
 							    sT = sBuf.substring((iLoc + 17), j);
@@ -2320,8 +2343,8 @@ public class ADev
 				}
 			}
 
-			//bSDKDataFinished = true;
-			completeLatch.countDown();
+			bSDKDataFinished = true;
+			//completeLatch.countDown();
 			
 		}
 	}	//}}}
@@ -3739,7 +3762,7 @@ public class ADev
                     statusPathSb.append("/");
                     
                     iLoc2 = sFullSourcePath.lastIndexOf((int)0x5c);     // '\'
-                    if ( (iLoc2 != -1) && ((iLoc2 + 1) < statusPathSb.length()) )
+                    if ( (iLoc2 != -1) && ((iLoc2 + 1) < sFullSourcePath.length()) )
                     {
                         statusPathSb.append(sFullSourcePath.substring(iLoc2 + 1));
                         //System.out.println("statusPathSb: '"+statusPathSb.toString()+"'");
@@ -3759,7 +3782,8 @@ public class ADev
 				
 			}
 
-			completeLatch.countDown();
+			bLoadSourceFinished = true;
+			//completeLatch.countDown();
 		}
 	}	//}}}
 	
@@ -3799,6 +3823,8 @@ public class ADev
 			int iG;
 			int iLoc;
 			int iLoc3 = 0;
+			
+			
 			int iLen;
 			int iExitCount = 0;
 			int iLEnd = -1;
@@ -3937,6 +3963,15 @@ public class ADev
 					os.flush();
 				}
 
+                // Give time to execute..				
+				try
+				{
+				    Thread.sleep(750);
+				}
+				catch (InterruptedException ie)
+				{
+				}
+
 				error_is = proc.getErrorStream();
 				out_is = proc.getInputStream();
 				
@@ -3959,7 +3994,9 @@ public class ADev
 				int iSplitBlockCount;
 				int iChrLoc = 0;
 				int iBreakLength = DISPLAY_WIDTH / 2;
+				int iLoopCount = 0;
 				boolean bInWord;
+				String sPrevEnd = "";
 				
 				//String sT = "";
 				long lCTM1;
@@ -3971,6 +4008,8 @@ public class ADev
                         while ( ! isInterrupted() )
                         {
                             //System.out.println("--TOP--");
+                            iLoopCount++;
+                            
 /*                            
                             if ( sc.s_KillIOBgThread )
                                 break;
@@ -3989,6 +4028,8 @@ public class ADev
                                 //System.out.println("bIOBgThreadBreak breaking");
                                 break;
                             }
+                            
+                            lineSb = new StringBuffer();
                             
                             if ( out_bis.available() > 0 )	// Check Output Stream..
                             {
@@ -4035,7 +4076,6 @@ public class ADev
                                 iTotalBytes += iBytesRead;
                             }
 
-                            
 /*                            
                             // Debbuging..					
                             if ( (lineSb != null) && (iBytesRead > 0) )
@@ -4115,6 +4155,8 @@ public class ADev
 /**/                                
                                 // Start of new block..
                                 //System.out.println("=== NEW BLOCK ===");
+                                //System.out.println("lineSb.length(): "+lineSb.length());
+                                
                                 bInWord = false;
                                 iWordStart = 0;
                                 boolean bFirst2;
@@ -4127,9 +4169,10 @@ public class ADev
                                 StringBuffer endSb;
                                 StringBuffer sB;
                                 //StringBuffer sb;
-                                String sPrevEnd = "";
+                                //String sPrevEnd = "";
                                 String sT = "";
                                 String sT2 = "";
+                                String sBlockEnd = "";
                                 
                                 // TESTING
                                 //sPid = "";
@@ -4140,6 +4183,7 @@ public class ADev
                                 //System.out.println("lineSb.length(): "+lineSb.length());
                                 //System.out.println("sPid: '"+sPid+"'");
                                 
+                                //System.out.println("At F");
                                 if ( (bLogcatOn) && (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
                                 {
                                     if ( sUsePidLogcat.equals("true") )
@@ -4192,7 +4236,9 @@ public class ADev
                                                 {
                                                     try
                                                     {
-                                                        Thread.sleep(20);
+                                                        //Thread.sleep(20);
+                                                        //Thread.sleep(333);
+                                                        Thread.sleep(100);
                                                     }
                                                     catch (InterruptedException ie)
                                                     {
@@ -4201,7 +4247,19 @@ public class ADev
                                                     if ( bInternalFinished )
                                                         break;
                                                 }
-        
+                                                
+                                                //System.out.println("Dropped out of getting PID");
+                                                
+/*                                                
+                                                if ( commandResultS == null )
+                                                    System.out.println("commandResultS null");
+                                                else
+                                                {
+                                                    System.out.println("commandResultS.length(): "+commandResultS.length());
+                                                    //System.out.println("commandResultS: "+commandResultS);
+                                                }
+/**/                                                    
+                                                
                                                 if ( (commandResultS != null) && (commandResultS.length() > 0) )
                                                 {
                                                     iLoc3 = commandResultS.indexOf(packageNameS);
@@ -4216,8 +4274,11 @@ public class ADev
                                                         iStart = iLoc3;
                                                         for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
                                                         
-                                                        if ( (iStart >= 0) && (iLoc3 < commandResultS.length()) )
+                                                        if ( (iStart >= 0) && (iLoc3 >= 0) && (iLoc3 < commandResultS.length()) )
+                                                        {
                                                             sPid = commandResultS.substring(iStart, iLoc3);
+                                                        }
+                                                        
                                                         //System.out.println("sPid: '"+sPid+"'");
                                                         
                                                         // Try changing to use PID command..
@@ -4231,124 +4292,301 @@ public class ADev
                                             }
                                         }
 
+                                        //System.out.println("lineSb.length(): "+lineSb.length());
+                                        //System.out.println("lineSb: "+lineSb.toString());
+
+/*                                        
+                                        // Debuging..	
+                                            if ( lineSb != null )
+                                            {
+                                                System.out.println();
+                                                char cTChr;
+                        
+                                                //if ( lineSb.length() > 500 )
+                                                //{
+                                                    for ( int g = 0; g < lineSb.length(); g++ )
+                                                    //for ( int g = 0; g < 500; g++ )
+                                                    {
+                                                        cTChr = (char)lineSb.charAt(g);
+                                                        if ( (cTChr < 0x20) || (cTChr > 0x7e) )
+                                                            System.out.print("["+Integer.toHexString((int)cTChr)+"]");
+                                                        else
+                                                            System.out.print(cTChr);
+                                                    }
+                                                //}
+                                                System.out.println();
+                                            }
+                                            
+                                            System.out.println("\n\n");
+/**/
+                                        
 /*                                        
                                         if ( sPid == null )
-                                            System.out.println("sPid null");
+                                            System.out.println("(Final)sPid null");
                                         else
-                                            System.out.println("sPid: '"+sPid+"'");
+                                            System.out.println("(Final)sPid: '"+sPid+"'");
 /**/                                
-        
+                                        
                                         if ( (sPid != null) && (sPid.length() > 0) )
                                         {
                                             sB = new StringBuffer();
                                             
+                                            StringBuffer pidLineSb;
+                                            StringBuffer partialLineSb;
+                                            boolean bInPidLine = false;
+                                            int iLoc9 = 0;
+                                            int iLoc8 = 0;
+                                            int iLoc10 = 0;
+                                            int iLoc11 = 0;
+                                            int iLoc12 = 0;
+                                            
+                                            int iLoc14 = 0;
+                                            int iLoc15 = 0;
+                                            int iLoc16 = 0;
+                                            int iLoc19 = 0;
+                                            int iLoc20 = 0;
+                                            
+                                            String sId = "";
+                                            
                                             iLoc3 = 0;
                                             bFirst2 = true;
+                                            //sPrevEnd = "";
                                             
+                                            // Get block end..
+                                            iLoc8 = lineSb.lastIndexOf(sZeroA);
+                                            if ( iLoc8 != -1 )
+                                            {
+                                                sBlockEnd = lineSb.substring(iLoc8 + 1);
+                                                //System.out.println("sBlockEnd: '"+sBlockEnd+"'");
+                                            }
+
+                                            // Loop through block..                                            
                                             while ( true )
                                             {
+                                                //System.out.println("--TOP--");
                                                 if ( iLoc3 < lineSb.length() )
                                                     ;
                                                 else
                                                 {
-                                                    //System.out.println("Breaking");
+                                                    //System.out.println("End of block, breaking");
                                                     break;
                                                 }
+ 
+                                                // Most of the time, when you are here,
+                                                // you're in the middle of a line..
                                                 
-                                                if ( iLoc3 < lineSb.length() ) 
-                                                    iLoc2 = lineSb.indexOf(sZeroA, iLoc3);
-                                                if ( iLoc2 != -1 )
+                                                //  [d][a]I/ViewRo..
+                                                //      ^
+
+/*                                                
+                                                // Skip to last 0x0a of line..
+                                                while ( true )
                                                 {
-                                                    iLastZeroA = iLoc2;
+                                                    iLoc9 = lineSb.indexOf(sZeroA, iLoc3);      // Next 0x0a
+                                                    if ( iLoc9 != -1 )
+                                                    {
+                                                        iLastZeroA = iLoc9;
+                                                        
+                                                        if ( (iLoc3 + 2) < lineSb.length() )
+                                                        {
+                                                            if ( lineSb.charAt(iLoc3 + 2) == '/' )
+                                                            {
+                                                                if ( (lineSb.charAt(iLoc3 + 1) == 'D') ||
+                                                                    (lineSb.charAt(iLoc3 + 1) == 'I') ||
+                                                                    (lineSb.charAt(iLoc3 + 1) == 'V') ||
+                                                                    (lineSb.charAt(iLoc3 + 1) == 'E') ||
+                                                                    (lineSb.charAt(iLoc3 + 1) == 'W') ||
+                                                                    (lineSb.charAt(iLoc3 + 1) == 'S') )
+                                                                {
+                                                                    // At valid end..
+                                                                    iLoc3 = iLoc9 + 1;      // Update iLoc3..
+                                                                    break;
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                // Not the end..
+                                                                iLoc3 = iLoc9 + 1;
+                                                                continue;
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        // No 0x0a, end of block..
+                                                        System.out.println("(Lead test)No end, breaking");
+                                                        sPrevEnd = lineSb.substring(iLastZeroA);
+                                                        break;
+                                                    }
+                                                }   // End while..
+/**/
+
+
+                                                bInPidLine = false;
+                                                
+                                                //iLoc2 = lineSb.indexOf(sZeroA, iLoc3);
+                                                iLoc9 = lineSb.indexOf(sZeroA, iLoc3);      // 0x0a
+/**/                                                    
+                                                
+                                                //  [d][a]I/ViewRo..
+                                                //      ^
+                                                
+                                                //System.out.println("(sZeroA)iLoc9: "+iLoc9);
+                                                //if ( iLoc2 != -1 )
+                                                if ( iLoc9 != -1 )
+                                                {
+                                                    //iLastZeroA = iLoc2;
+                                                    iLastZeroA = iLoc9;
                                                     
+                                                    //System.out.println("bFirst2: "+bFirst2);
                                                     if ( bFirst2 )
                                                     {
+                                                        //System.out.println("Hit first 0x0a");
+                                                        // Hit first 0x0a..
                                                         bFirst2 = false;
-                                                        endSb = new StringBuffer();
-                                                        endSb.append(sPrevEnd);
+                                                        partialLineSb = new StringBuffer();
                                                         
-                                                        //if ( (iLoc2 + 1) > 0 )
-                                                        if ( (iLoc2 + 1) < endSb.length() )
+/* 
+                                                        if ( sPrevEnd == null )
+                                                            System.out.println("sPrevEnd null");
+                                                        else
+                                                            System.out.println("sPrevEnd: '"+sPrevEnd+"'");
+                                                        System.out.println("");
+/**/                                                        
+                                                                
+                                                                
+                                                        // Construct partial line..
+                                                        // Add previous end..
+                                                        if ( (sPrevEnd != null) && (sPrevEnd.length() > 0) )
                                                         {
-                                                            endSb.append(lineSb.substring(0, iLoc2 + 1));
+                                                            //System.out.println("sPrevEnd: '"+sPrevEnd+"'");
+                                                            partialLineSb.append(sPrevEnd);
                                                         }
-                                                        
+
+                                                        // Capture lead line..
+                                                        if ( ((iLoc9 + 1) >= 0) && ((iLoc9 + 1) < lineSb.length()) )
+                                                        {
+                                                            //System.out.println("(Lead): '"+lineSb.substring(0, iLoc9 + 1)+"'");
+                                                            
+                                                            partialLineSb.append(lineSb.substring(0, iLoc9 + 1));
+                                                        }
+/**/   
+
+                                                        //System.out.println("partialLineSb: '"+partialLineSb.toString()+"'");
                                                         //System.out.println("endSb: '"+endSb.toString()+"'");
-                                                        // Like:  'I/InputDispatcher(  746): Delivering touch to (874): action: 0x4, toolType: 1[d][d][a]
-                                                        iLoc4 = endSb.indexOf(")");
+                                                        
+                                                        iLoc19 = partialLineSb.indexOf("(");
+                                                        if ( iLoc19 != -1 )
+                                                        {
+                                                            iLoc20 = partialLineSb.indexOf(")", (iLoc19 + 1));
+                                                            if ( iLoc20 != -1 )
+                                                            {
+                                                                sT = partialLineSb.substring((iLoc19 + 1), iLoc20);
+                                                                sT = sT.trim();
+                                                                //System.out.println("(PID)sT: '"+sT+"'");
+                                                                
+                                                                if ( sPid.equals(sT) )
+                                                                {
+                                                                    bInPidLine = true;
+                                                                    
+                                                                    //System.out.println("(A)--Matches PID--");
+                                                                    sB.append(partialLineSb.toString());
+                                                                }
+                                                                //else
+                                                                    //System.out.println("Didn't match");
+                                                            }
+                                                        }
+
+
+                                                        //iLoc3 = iLoc2 + 1;  // Next..
+                                                        iLoc3 = iLoc9 + 1;  // Next..
+                                                        continue;                                    
+                                                    }
+                                                    else
+                                                    {
+                                                        //System.out.println("first else");
+
+                                                        //
+                                                        // Not first..
+                                                        //
+                                                        
+                                                        //  [d][a]I/ViewRo..
+                                                        //      ^
+                                                        
+                                                        iLoc4 = lineSb.indexOf("(", iLoc9);
                                                         if ( iLoc4 != -1 )
                                                         {
-                                                            iLoc5 = endSb.indexOf("(");
+                                                            iLoc5 = lineSb.indexOf(")", (iLoc4 + 1));
                                                             if ( iLoc5 != -1 )
                                                             {
-                                                                // ' 1499): Scheduling ... ( ...
-                                                                if ( (iLoc4 > 0) && (iLoc5 < iLoc4) )
+                                                                if ( ((iLoc4 + 1) >= 0) && (iLoc5 < lineSb.length()) )
                                                                 {
-                                                                    //System.out.println("endSb.length(): "+endSb.length());
-                                                                    // Statement's PID..
-                                                                    if ( ((iLoc5 + 1) >= 0) && (iLoc4 < endSb.length()) )
-                                                                        sT = endSb.substring(iLoc5 + 1, iLoc4);
-                                                                    //System.out.println("sT: '"+sT+"'");
-                                                                
+                                                                    sT = lineSb.substring((iLoc4 + 1), iLoc5);
                                                                     sT = sT.trim();
-                                                                    if ( sPid.equals(sT) )
+                                                                }
+                                                                
+                                                                if ( sPid.equals(sT) )
+                                                                {
+                                                                    //System.out.println("(B)--PID Matched--");
+                                                                    bInPidLine = true;
+                                                                    
+                                                                    if ( (iLoc9 + 1) < lineSb.length() )
+                                                                        //iLoc6 = lineSb.indexOf(sZeroA, iLoc2 + 1);
+                                                                        iLoc6 = lineSb.indexOf(sZeroA, iLoc9 + 1);
+                                                                        
+                                                                    if ( iLoc6 != -1 )
                                                                     {
-                                                                        //System.out.println("--Matches PID--");
-                                                                        sB.append(endSb.toString());
+                                                                            // Append to output..
+                                                                            
+                                                                            // This was causing an Exception from (iLoc6 + 1) being '0'..
+                                                                            
+                                                                            if ( (iLoc6 + 1) < lineSb.length() )
+                                                                            {
+                                                                                //sT2 = lineSb.substring((iLoc2 + 1), (iLoc6 + 1));
+                                                                                sT2 = lineSb.substring((iLoc9 + 1), (iLoc6 + 1));
+                                                                                //System.out.println("(PID matched) Adding sT2: '"+sT2+"'");
+                                                                                //System.out.println("sT2: '"+sT2+"'");
+                                                                                sB.append(sT2);
+                                                                            }
                                                                     }
                                                                 }
                                                             }
-                                                        }
-                                                        
-                                                        iLoc3 = iLoc2 + 1;  // Next..
-                                                        continue;                                    
-                                                    }
-                                                    
-                                                    iLoc4 = lineSb.indexOf(")", iLoc2);
-                                                    if ( iLoc4 != -1 )
-                                                    {
-                                                        iLoc5 = lineSb.indexOf("(", iLoc2);
-                                                        if ( iLoc5 != -1 )
-                                                        {
-                                                            if ( ((iLoc5 + 1) >= 0) && (iLoc4 < lineSb.length()) )
-                                                            {
-                                                                sT = lineSb.substring(iLoc5 + 1, iLoc4);
-                                                                sT = sT.trim();
-                                                            }
-                                                            
-                                                            if ( sPid.equals(sT) )
-                                                            {
-                                                                //System.out.println("--PID Matched--");
-                                                                iLoc6 = lineSb.indexOf(sZeroA, iLoc2 + 1);
-                                                                
-                                                                if ( ((iLoc2 + 1) >= 0) && ((iLoc6 + 1) < lineSb.length()) )
-                                                                {
-                                                                    // Append to output..
-                                                                    sT2 = lineSb.substring(iLoc2 + 1, iLoc6 + 1);
-                                                                    //System.out.println("sT2: '"+sT2+"'");
-                                                                    sB.append(sT2);
-                                                                    
-                                                                }
-                                                            }
+                                                            else
+                                                                break;
                                                         }
                                                         else
                                                             break;
                                                     }
-                                                    else
-                                                        break;
+/**/
+
                                                 }
                                                 else
+                                                {
+                                                    // Didn't find ending 0x0a, so end of block..
                                                     break;
+                                                }
                                                 
-                                                iLoc3 = iLoc2 + 1;  // Next..
+                                                iLoc3 = iLoc9 + 1;  // Next..
                                                 
                                             }   // End while..
                                             
-                                           //System.out.println("Dropped out");
+                                           //System.out.println("--Dropped out--\n");
                                            //System.out.println("lineSb.length(): "+lineSb.length());
+/*
+                                           if ( sBlockEnd == null )
+                                               System.out.println("(Set sPrevEnd)sBlockEnd null");
+                                           else
+                                               System.out.println("(Set sPrevEnd)sBlockEnd: '"+sBlockEnd+"'");
+/**/                                           
                                            
-                                           if ( (iLastZeroA + 1) < lineSb.length() )
+                                           sPrevEnd = sBlockEnd;  
+                                           
+/*                                           
+                                           if ( ((iLastZeroA + 1) >= 0) && ((iLastZeroA + 1) < lineSb.length()) )
+                                           {
                                                sPrevEnd = lineSb.substring(iLastZeroA + 1);
+                                           }
+/**/                                           
                                             //System.out.println("(End of block)sPrevEnd: '"+sPrevEnd+"'");
                                             
                                             //bFinishEnd = true;
@@ -4401,7 +4639,7 @@ public class ADev
                                     }
                                 }
 /**/
- 
+
                                 iIdx = 0;
                                 bDoBreak = false;
                                 bSplit = false;
@@ -4577,13 +4815,12 @@ public class ADev
                                     
                                     //System.out.println("lineSb.length(): "+lineSb.length());
                                     
-                                    if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
-                                    {
+                                    //if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
+                                    //{
                                         lineS = lineSb.substring(0, lineSb.length());
     
                                         if ( lineS.length() > 5 )
                                         {
-                                            if ( (lineS.length() - 5) < lineS.length() )
                                                 sTest = lineS.substring(lineS.length() - 5);
                                             
                                             //System.out.println("bFoundPhrase: "+bFoundPhrase);
@@ -4595,7 +4832,7 @@ public class ADev
                                                 bEndBreakOut = true;
                                             }
                                         }
-                                    }
+                                    //}
                                     
 /*
                                     if ( sGradlewCommand == null )
@@ -4675,8 +4912,10 @@ public class ADev
                                                     bSaveLen = false;	// Reset..
                                                     
                                                 iType = iCurrentType;
-                                                if ( (iStart >= 0) && (iIndex < lineSb.length()) )
+                                                if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
+                                                {
                                                     outLineS = lineSb.substring(iStart, iIndex);
+                                                }
                                             }
                                             else
                                             {
@@ -4729,8 +4968,10 @@ public class ADev
                                                 if ( bOver )
                                                 {
                                                     // Set up to draw what we have..
-                                                    if ( iStart < lineSb.length() )
+                                                    if ( (iStart >= 0) && (iStart < lineSb.length()) )
+                                                    {
                                                         outLineS = lineSb.substring(iStart);
+                                                    }
                                                     
                                                     iCurrentType = iType;	// Save for next draw..
                                                     
@@ -4745,8 +4986,10 @@ public class ADev
                                                 }
                                                 else
                                                 {
-                                                    if ( (iStart >= 0) && (iIndex < lineSb.length()) )
+                                                    if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
+                                                    {
                                                         outLineS = lineSb.substring(iStart, iIndex);
+                                                    }
                                                 }
                                             }
                                             
@@ -5925,7 +6168,9 @@ public class ADev
                                                     if ( iLoc4 != -1 )
                                                     {
                                                         if ( ((iLoc3 + 8) >= 0) && (iLoc4 < sT.length()) )
+                                                        {
                                                             sAppId = sT.substring((iLoc3 + 8), iLoc4);
+                                                        }
                                                         //System.out.println("sAppId: '"+sAppId+"'");
                                                         bAppIdFound = true;
                                                     }
@@ -5939,7 +6184,10 @@ public class ADev
                                                 if ( iLoc4 != -1 )
                                                 {
                                                     if ( ((iLoc3 + 10) >= 0) && (iLoc4 < sT.length()) )
+                                                    {
                                                         sMessage = sT.substring((iLoc3 + 10), iLoc4);
+                                                    }
+                                                    
                                                     iLoc5 = sMessage.indexOf("Syncing files");
                                                     if ( iLoc5 != -1 )
                                                     {
@@ -5974,7 +6222,7 @@ public class ADev
                                                 {
                                                     bError = true;
                                                     if ( ((iLoc3 + 9) >= 0) && (iLoc4 < sT.length()) )
-                                                    sErrorMessage = sT.substring((iLoc3 + 9), iLoc4);
+                                                        sErrorMessage = sT.substring((iLoc3 + 9), iLoc4);
                                                     //System.out.println("sErrorMessage: '"+sErrorMessage+"'");
                                                     sT2 = sErrorMessage;
                                                 }
@@ -10595,10 +10843,14 @@ public class ADev
      */
 	public void searchDialog()
 	{
+	    int iTokCount;
+	    String[] tSa;
+	    
 		searchFrame = new JFrame();
 		searchFrame.setLayout(new BorderLayout());		
 		searchFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		searchFrame.setTitle("Search");
+		
 		
 		JPanel panel = new JPanel(new GridBagLayout());
 		
@@ -10777,8 +11029,7 @@ public class ADev
 						int iLoc = sSignature.lastIndexOf((int)'/');
 						if ( iLoc != -1 )
 						{
-						    if ( ((iLoc + 1) >= 0) && ((sSignature.length() - 1) < sSignature.length()) )
-						        sClassName = sSignature.substring((iLoc + 1), (sSignature.length() - 1));
+					        sClassName = sSignature.substring((iLoc + 1), (sSignature.length() - 1));
 							//System.out.println("sClassName: '"+sClassName+"'");
 						}
 					}
@@ -15735,8 +15986,8 @@ public class ADev
 				deviceLabel.setText(" ");
 				
 				
-			//bConnectWirelessFinished = true;
-			completeLatch.countDown();
+			bConnectWirelessFinished = true;
+			//completeLatch.countDown();
 		}
 	}	//}}}
 			
@@ -16070,8 +16321,8 @@ public class ADev
 			//for ( int iJ = 0; iJ < DevicesAr.size(); iJ++ )
 				//System.out.println("["+iJ+"]: '"+(String)DevicesAr.get(iJ)+"'");
 
-			//bDevicesFinished = true;
-			completeLatch.countDown();
+			bDevicesFinished = true;
+			//completeLatch.countDown();
 			
 			//System.out.println("\nExiting GetDevicesBgThread");
 			
@@ -16177,11 +16428,27 @@ public class ADev
         }
 
         //bDevicesFinished = false;
-        completeLatch = new CountDownLatch(1);
-        
+        //completeLatch = new CountDownLatch(1);
+ 
+        bDevicesFinished = false;
         getDevicesBgThread = new GetDevicesBgThread();
         getDevicesBgThread.start();
-        
+
+		while ( true )
+		{
+		    try
+		    {
+		         Thread.sleep(333);   
+		    }
+		    catch (InterruptedException ie)
+		    {
+		    }
+		    
+		    if ( bDevicesFinished )
+		        break;
+		}
+
+/*        
         try
         {
             completeLatch.await();
@@ -16189,7 +16456,7 @@ public class ADev
         catch (InterruptedException ie)
         {
         }
-
+/**/
 
         if ( (DevicesAr != null) && (DevicesAr.size() > 1) )
         {
@@ -16306,11 +16573,27 @@ public class ADev
             // but for now we'll let it wait..
             
             //bConnectWirelessFinished = false;
-            completeLatch = new CountDownLatch(1);
+            //completeLatch = new CountDownLatch(1);
             
+            bConnectWirelessFinished = false;
             connectWirelessBgThread = new ConnectWirelessBgThread();
             connectWirelessBgThread.start();
 
+            while ( true )
+            {
+                try
+                {
+                     Thread.sleep(333);   
+                }
+                catch (InterruptedException ie)
+                {
+                }
+                
+                if ( bConnectWirelessFinished )
+                    break;
+            }
+
+/*            
             try
             {
                 completeLatch.await();
@@ -16318,6 +16601,7 @@ public class ADev
             catch (InterruptedException ie)
             {
             }
+/**/
 
 /*
             while ( true )
@@ -17029,9 +17313,15 @@ public class ADev
 				
 				// Like:  com/dp/logcatapp/fragments/logcatlive/LogcatLiveFragment
 				if ( iLoc3 != -1 )
-				    sPath = sSignature.substring(1, iLoc3);    
+				{
+				    if ( iLoc3 < sSignature.length() )
+				        sPath = sSignature.substring(1, iLoc3);  
+				}
 				else
-				    sPath = sSignature.substring(1, iLoc4);
+				{
+				    if ( iLoc4 < sSignature.length() )
+				        sPath = sSignature.substring(1, iLoc4);
+				}
 				
 				//System.out.println("sPath: "+sPath+"'");
 				
@@ -17039,16 +17329,21 @@ public class ADev
 				iLoc5 = sPath.lastIndexOf("/");
 				if ( iLoc5 != -1 )
 				{
-				    sEnd = sPath.substring(iLoc5 + 1);
+				    if ( (iLoc5 + 1) < sPath.length() )
+				    {
+				        sEnd = sPath.substring(iLoc5 + 1);
 				    //System.out.println("sEnd: '"+sEnd+"'");
 				    
-				    sT = sPath.substring(iLoc5 + 1);
+				        sT = sPath.substring(iLoc5 + 1);
+				    }
+				    
 				    if ( sT.equals("R") )
 				        continue;
 				}
 				
 				iLoc5 = sPath.indexOf("/");
-				if ( iLoc5 != -1 )
+				//if ( iLoc5 != -1 )
+				if ( (iLoc5 != -1) && ((iLoc5 + 1) < sPath.length()) )
 				    sPackageNameLead = sPath.substring(0, iLoc5 + 1);    // Like: 'com/' 
 
 				// Get Methods..
@@ -17133,7 +17428,8 @@ public class ADev
                             if ( iLoc2 == iLastSlash )
                             {
                                 //System.out.println("At end");
-                                sFileNm = sKeyPath.substring(iLastSlash + 1);   // 'StringExtKt'
+                                if ( (iLastSlash + 1) < sKeyPath.length() )
+                                    sFileNm = sKeyPath.substring(iLastSlash + 1);   // 'StringExtKt'
                                 //System.out.println("sFileNm: '"+sFileNm+"'");
                                 
                                 // At end, add source file name..
@@ -17163,7 +17459,7 @@ public class ADev
                                         tSb = new StringBuffer(sPackageNameLead);
                                         tSb.setCharAt(tSb.length() - 1, (char)0x5c);
                                         iLoc4 = sPath.indexOf(tSb.toString()); 
-                                        if ( iLoc4 != -1 )
+                                        if ( (iLoc4 != -1) && (iLoc4 < sPath.length()) )
                                             sPackagePath = sPath.substring(iLoc4);
                                         
                                         //System.out.println("sPackagePath: '"+sPackagePath+"'");
@@ -17207,9 +17503,13 @@ public class ADev
                                 iLoc2++;    // Get past '/'..
                                 iStart = iLoc2;
                                 for ( ; sKeyPath.charAt(iLoc2) != '/'; iLoc2++ );
-                                sDir = sKeyPath.substring(iStart, iLoc2);
+                                
+                                if ( (iStart >= 0) && (iLoc2 < sKeyPath.length()) )
+                                    sDir = sKeyPath.substring(iStart, iLoc2);
                                 //System.out.println("sDir: '"+sDir+"'");
-                                sSubPath = sKeyPath.substring(iRootLoc, iLoc2);
+                                
+                                if ( (iRootLoc >= 0) && (iLoc2 < sKeyPath.length()) )
+                                    sSubPath = sKeyPath.substring(iRootLoc, iLoc2);
                                 //System.out.println("sSubPath: '"+sSubPath+"'");
                                 
                                 //System.out.println("containsKey(): "+PathHm.containsKey((String)sSubPath));
@@ -17296,7 +17596,7 @@ public class ADev
 		
 		String sEnd = "";
 		int iLoc2 = sDir.lastIndexOf("/");
-		if ( iLoc2 != -1 )
+		if ( (iLoc2 != -1) && ((iLoc2 + 1) < sDir.length()) )
 		{
 		    sEnd = sDir.substring(iLoc2 + 1);
 		}
@@ -17355,7 +17655,7 @@ public class ADev
 		// Grab first part of package name..
 		String sPackageStart = "";
 		int iLoc = sPackageName.indexOf(".");
-		if ( iLoc != -1 )
+		if ( (iLoc != -1) && (iLoc < sPackageName.length()) )
 		{
 			sPackageStart = sPackageName.substring(0, iLoc);
 		}
@@ -17538,7 +17838,7 @@ While_Break:
 					if ( iLoc != -1 )
 					{
 						// Kill leading Tag byte and trailing ';'..
-						sb.append(sIn.substring(1, sIn.length() - 1));
+					    sb.append(sIn.substring(1, sIn.length() - 1));
 					}
 				}
 			}
@@ -17560,7 +17860,7 @@ While_Break:
 		String sBStr = new String(bStr);
 		
 		StringBuffer sB = new StringBuffer(sIn);
-		String sT;
+		String sT = "";
 		int iLoc2;
 		
 		// Remove all '\'..
@@ -17580,7 +17880,8 @@ While_Break:
 			iLoc2 = sB.indexOf("%", iLoc2);	
 			if ( iLoc2 != -1 )
 			{
-				sT = sB.substring((iLoc2 + 1), (iLoc2 + 3));
+			    if ( ((iLoc2 + 1) >= 0) && ((iLoc2 + 3) < sB.length()) )
+			        sT = sB.substring((iLoc2 + 1), (iLoc2 + 3));
 				if ( sT.equals("2F") )
 				{
 					//sB.replace(iLoc2, (iLoc2 + 3), "/");
@@ -17700,7 +18001,8 @@ While_Break:
                 if ( iLoc2 != -1 )
                 {
                     // Like: 'clock_hands.dart'
-                    sScriptsSearchName = sSourceFile.substring(iLoc2 + 1);
+                    if ( (iLoc2 + 1) < sSourceFile.length() )
+                        sScriptsSearchName = sSourceFile.substring(iLoc2 + 1);
                     //System.out.println("sScriptsSearchName: '"+sScriptsSearchName+"'");
                     
                     // Note:
@@ -17802,7 +18104,9 @@ While_Break:
                             iStart = iLoc2 + 1;
                             for ( iX = iStart; g_sMessage.charAt(iX) != ']'; iX++ );
                             //System.out.println("(tokenPosTable): '"+sResultMessage.substring(iStart, iX)+"'");
-                            tAr.add((String)g_sMessage.substring(iStart, iX));
+                            
+                            if ( (iStart >= 0) && (iX < g_sMessage.length()) )
+                                tAr.add((String)g_sMessage.substring(iStart, iX));
                             if ( g_sMessage.charAt(iX + 1) == ']' )
                                 break;
                             
@@ -17838,16 +18142,32 @@ While_Break:
             sFullSourcePath = sSourceFile;
             
             iLoc2 = sSourceFile.lastIndexOf((int)0x5c);     // '\'
-            if ( iLoc2 != -1 )
+            if ( (iLoc2 != -1) && ((iLoc2 + 1) < sSourceFile.length()) )
                 sScriptsSearchName = sSourceFile.substring(iLoc2 + 1);  // Tab name..
                 
             //System.out.println("sScriptsSearchName: '"+sScriptsSearchName+"'");
         }
 		
-        completeLatch = new CountDownLatch(1);
+        //completeLatch = new CountDownLatch(1);
+        bLoadSourceFinished = false;
 		loadSourceBgThread = new LoadSourceBgThread();
 		loadSourceBgThread.start();
 
+		while ( true )
+		{
+		    try
+		    {
+		         Thread.sleep(333);   
+		    }
+		    catch (InterruptedException ie)
+		    {
+		    }
+		    
+		    if ( bLoadSourceFinished )
+		        break;
+		}
+
+/*		
 		try
 		{
 			completeLatch.await();
@@ -17855,7 +18175,7 @@ While_Break:
 		catch (InterruptedException ie)
 		{
 		}
-
+/**/
 		// Source in 'sourceBuf'..
 		sSourceText = new String(sourceBuf);
 		
@@ -18065,7 +18385,8 @@ While_Break:
                             if ( iLoc6 != -1 )
                             {
                                 // Like: 'com/example/bottomnavas/ui/home/HomeFragment'
-                                sConvertedKey = sFlipped.substring(iLoc5, iLoc6);
+                                if ( (iLoc5 >= 0) && (iLoc6 < sFlipped.length()) )
+                                    sConvertedKey = sFlipped.substring(iLoc5, iLoc6);
                                 //System.out.println("sConvertedKey: '"+sConvertedKey+"'");
                                 
                                 // Set Key..
@@ -18203,7 +18524,7 @@ While_Break:
 					iLoc2 = sSignature.lastIndexOf((int)0x2f);	// '/'
 					if ( iLoc2 != -1 )
 					{
-						sClass = sSignature.substring(iLoc2 + 1, sSignature.length() - 1);
+				        sClass = sSignature.substring(iLoc2 + 1, sSignature.length() - 1);
 						//System.out.println("sClass: '"+sClass+"'");
 					}
 				}
@@ -19241,7 +19562,7 @@ While_Break:
                             statusLabel.setText(projectHomeS);
                         
                         iLoc = projectHomeS.lastIndexOf('/');
-                        if ( iLoc != -1 )
+                        if ( (iLoc != -1) && (iLoc < projectHomeS.length()) )
                             sProjectPathLead = projectHomeS.substring(0, iLoc);
                     }
                     else if ( iG == 1 )
@@ -22256,12 +22577,27 @@ While_Break:
                 // anets-master/"}}]				
 
 				// Check for a device..				
-				//bDevicesFinished = false;
-				completeLatch = new CountDownLatch(1);
+				bDevicesFinished = false;
+				//completeLatch = new CountDownLatch(1);
 				
 				getDevicesBgThread = new GetDevicesBgThread();
 				getDevicesBgThread.start();
-				
+
+                while ( true )
+                {
+                    try
+                    {
+                         Thread.sleep(333);   
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( bDevicesFinished )
+                        break;
+                }
+
+/*				
 				try
 				{
 					completeLatch.await();
@@ -22269,6 +22605,7 @@ While_Break:
 				catch (InterruptedException ie)
 				{
 				}
+/**/
 
 /*				
 				if ( DevicesAr == null )
@@ -22400,10 +22737,27 @@ While_Break:
 				// Check for a device..	
 				// Sometimes 'sDeviceName' will be empty
 				// eventhough we did a Select Device..
-				completeLatch = new CountDownLatch(1);
+				
+				//completeLatch = new CountDownLatch(1);
+				bDevicesFinished = false;
 				getDevicesBgThread = new GetDevicesBgThread();
 				getDevicesBgThread.start();
-				
+
+                while ( true )
+                {
+                    try
+                    {
+                         Thread.sleep(333);   
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( bDevicesFinished )
+                        break;
+                }
+                
+/*				
 				try
 				{
 					completeLatch.await();
@@ -22411,6 +22765,7 @@ While_Break:
 				catch (InterruptedException ie)
 				{
 				}
+/**/
 
 /*				
 				if ( DevicesAr == null )
@@ -22629,8 +22984,10 @@ While_Break:
 			else if ( LOGCAT.equals(actionCommandS) )
 			{
 				// Logcat..
-				//System.out.println("\nLOGCAT");
+				//System.out.println("LOGCAT");
 				//SingletonClass sc = SingletonClass.getInstance();
+				
+				// DOS clear screen:  'cls'
 				
 				StringBuffer sb;
 				StringBuffer internalSb;
@@ -22694,7 +23051,8 @@ While_Break:
                         {
                             try
                             {
-                                Thread.sleep(200);
+                                //Thread.sleep(200);
+                                Thread.sleep(500);
                             }
                             catch (InterruptedException ie)
                             {
@@ -22703,6 +23061,7 @@ While_Break:
                             if ( bInternalFinished )
                                 break;
                         }
+ 
 /*                        
                         if ( commandResultS == null )
                             System.out.println("commandResultS null");
@@ -22743,7 +23102,7 @@ While_Break:
                         }
                     }   // End while..
 				    
-                    //System.out.println("\n=== DROPPED OUT ===");
+                    //System.out.println("=== DROPPED OUT ===");
                     
                     // Clear the buffer..
 					bLogcatOn = true;
@@ -23076,7 +23435,7 @@ While_Break:
 			}
 			else if ( UNINSTALL.equals(actionCommandS) )
 			{
-				//System.out.println("\nUNINSTALL");
+				//System.out.println("UNINSTALL");
 				// Uninstall..
 				if ( bLogcatOn )
 				{
@@ -23298,6 +23657,7 @@ While_Break:
                             commandSb.append(" ");
                         }
                         
+                        System.out.println("packageNameS: '"+packageNameS+"'");
                         commandSb.append("uninstall ");
                         commandSb.append(packageNameS);
                         //commandSb.append("\n");
@@ -25170,12 +25530,27 @@ While_Break:
 				
 				//System.out.println("(Selected)androidSdkPathS: '"+androidSdkPathS+"'");
 
-				//bSDKDataFinished = false;
-				completeLatch = new CountDownLatch(1);
+				bSDKDataFinished = false;
+				//completeLatch = new CountDownLatch(1);
 				
 				getSDKDataBgThread = new GetSDKDataBgThread();
 				getSDKDataBgThread.start();
 
+                while ( true )
+                {
+                    try
+                    {
+                         Thread.sleep(333);   
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( bSDKDataFinished )
+                        break;
+                }
+                
+/*
 				try
 				{
 					completeLatch.await();
@@ -25183,7 +25558,8 @@ While_Break:
 				catch (InterruptedException ie)
 				{
 				}
-				
+/**/
+
 /*
 				while ( true )
 				{
@@ -25239,12 +25615,27 @@ While_Break:
 /**/				
 				if ( targetDescAr == null )
 				{
-					//bSDKDataFinished = false;
-					completeLatch = new CountDownLatch(1);
+					bSDKDataFinished = false;
+					//completeLatch = new CountDownLatch(1);
 					
 					getSDKDataBgThread = new GetSDKDataBgThread();
 					getSDKDataBgThread.start();
 
+                    while ( true )
+                    {
+                        try
+                        {
+                             Thread.sleep(333);   
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+                        
+                        if ( bSDKDataFinished )
+                            break;
+                    }
+
+/*					
 					try
 					{
 						completeLatch.await();
@@ -25252,7 +25643,8 @@ While_Break:
 					catch (InterruptedException ie)
 					{
 					}
-					
+/**/
+
 /*					
 					while ( true )
 					{
@@ -25388,7 +25780,8 @@ While_Break:
                         iLoc2 = sSelValue.indexOf(")");
                         if ( iLoc2 != -1 )
                         {
-                            sCountryCode = sSelValue.substring(iLoc + 1, iLoc2);
+                            if ( ((iLoc + 1) >= 0) && (iLoc2 < sSelValue.length()) )
+                                sCountryCode = sSelValue.substring(iLoc + 1, iLoc2);
                         }
                     }
                     
@@ -25551,7 +25944,8 @@ While_Break:
 							iLoc3 = sMinSpinnerValue.indexOf(")", iLoc2);
 							if ( iLoc3 != -1 )
 							{
-								sMinSdk = sMinSpinnerValue.substring((iLoc2 + 5), iLoc3);
+							    if ( ((iLoc2 + 5) >= 0) && (iLoc3 < sMinSpinnerValue.length()) )
+							        sMinSdk = sMinSpinnerValue.substring((iLoc2 + 5), iLoc3);
 								sMinSdk = sMinSdk.trim();
 								//System.out.println("sMinSdk: '"+sMinSdk+"'");
 							}
@@ -25586,7 +25980,8 @@ While_Break:
 							iLoc3 = sTargetSpinnerValue.indexOf(")", iLoc2);
 							if ( iLoc3 != -1 )
 							{
-								sTargetSdk = sTargetSpinnerValue.substring((iLoc2 + 5), iLoc3);
+							    if ( ((iLoc2 + 5) >= 0) && (iLoc3 < sTargetSpinnerValue.length()) )
+							        sTargetSdk = sTargetSpinnerValue.substring((iLoc2 + 5), iLoc3);
 								sTargetSdk = sTargetSdk.trim();
 							}
 						}
@@ -25771,7 +26166,7 @@ While_Break:
 		
 						commandSb.append(" --target ");
 		
-						String sMin;
+						String sMin = "";
 	
 						// Like: 'Android 8.0.0 (API level 26)  Id: 4'
 						String sT = (String)targetSdkSpinner.getValue();
@@ -25786,7 +26181,8 @@ While_Break:
 								iLoc3 = sT.indexOf(")", iLoc2);
 								if ( iLoc3 != -1 )
 								{
-									sTargetSdk = sT.substring((iLoc2 + 5), iLoc3);
+								    if ( ((iLoc2 + 5) >= 0) && (iLoc3 < sT.length()) )
+								        sTargetSdk = sT.substring((iLoc2 + 5), iLoc3);
 									sTargetSdk = sTargetSdk.trim();
 								}
 							}
@@ -25826,7 +26222,8 @@ While_Break:
 							iLoc = sT.indexOf("level");
 							if ( iLoc != -1 )
 							{
-								sMin = sT.substring((iLoc + 5), (sT.length() - 1));
+							    if ( (iLoc + 5) >= 0 )
+							        sMin = sT.substring((iLoc + 5), (sT.length() - 1));
 								sMin = sMin.trim();
 								
 								try
@@ -25876,7 +26273,7 @@ While_Break:
 						commandSb.append("\"");
 						
 						iLoc = createProjectHomeS.lastIndexOf('/');
-						if ( iLoc != -1 )
+						if ( (iLoc != -1) && (iLoc < createProjectHomeS.length()) )
 							sProjectPathLead = createProjectHomeS.substring(0, iLoc);
 		
 						if ( bProjectSelected )
@@ -27341,7 +27738,8 @@ While_Break:
 								iLoc4 = g_sMessage.indexOf((int)0x22, iLoc3 + 7);
 								if ( iLoc4 != -1 )
 								{
-									sT = g_sMessage.substring(iLoc3 + 7, iLoc4);
+								    if ( ((iLoc3 + 7) >= 0) && (iLoc4 < g_sMessage.length()) )
+								        sT = g_sMessage.substring(iLoc3 + 7, iLoc4);
 									if ( sT.startsWith("package:") )
 									{
 										sUri = sT;
@@ -27361,7 +27759,8 @@ While_Break:
 									iLoc5 = g_sMessage.indexOf((int)0x22, iLoc4 + 8);
 									if ( iLoc5 != -1 )
 									{
-										sName = g_sMessage.substring(iLoc4 + 8, iLoc5);
+									    if ( ((iLoc4 + 8) >= 0) && (iLoc5 < g_sMessage.length()) )
+									        sName = g_sMessage.substring(iLoc4 + 8, iLoc5);
 										//System.out.println("sName: '"+sName+"'");
 										if ( sName.startsWith("_Widgets") )
 										{
@@ -27624,41 +28023,24 @@ While_Break:
 				}
 				
 				
-				//else
-				{
-                    // Redo..
                     
-                    //completeLatch = new CountDownLatch(1);
-                    
-                    //getDevicesBgThread = new GetDevicesBgThread();
-                    //getDevicesBgThread.start();
-            
-                    //try
-                    //{
-                        //completeLatch.await();
-                    //}
-                    //catch (InterruptedException ie)
-                    //{
-                    //}
-                    
-					bInitWirelessFinished = false;
-					initWirelessBgThread = new InitWirelessBgThread();
-					initWirelessBgThread.start();
-	
-					while ( true )
-					{
-						try
-						{
-							Thread.sleep(20);
-						}
-						catch (InterruptedException ie)
-						{
-						}
-					
-						if ( bInitWirelessFinished )
-							break;
-					}
-				}
+                bInitWirelessFinished = false;
+                initWirelessBgThread = new InitWirelessBgThread();
+                initWirelessBgThread.start();
+
+                while ( true )
+                {
+                    try
+                    {
+                        Thread.sleep(20);
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                
+                    if ( bInitWirelessFinished )
+                        break;
+                }
 				
 				// Check success..
 				
@@ -27689,12 +28071,27 @@ While_Break:
 					// We should use a PropertyChangeListener,
 					// but for now we'll let it wait..
 					
-					//bConnectWirelessFinished = false;
-					completeLatch = new CountDownLatch(1);
+					bConnectWirelessFinished = false;
+					//completeLatch = new CountDownLatch(1);
 					
 					connectWirelessBgThread = new ConnectWirelessBgThread();
 					connectWirelessBgThread.start();
 
+                    while ( true )
+                    {
+                        try
+                        {
+                             Thread.sleep(333);   
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+                        
+                        if ( bConnectWirelessFinished )
+                            break;
+                    }
+					
+/*					
 					try
 					{
 						completeLatch.await();
@@ -27702,22 +28099,7 @@ While_Break:
 					catch (InterruptedException ie)
 					{
 					}
-
-					
-					//while ( true )
-					//{
-						//try
-						//{
-							//Thread.sleep(200);
-						//}
-						//catch (InterruptedException ie)
-						//{
-						//}
-					
-						//if ( bConnectWirelessFinished )
-							//break;
-					//}
-
+/**/					
 				}
 
 				int iMessageType;
@@ -27910,7 +28292,8 @@ While_Break:
 						{
 							iRadix = 16;
 							sFieldValue = sFieldValue.toLowerCase();
-							sFieldValue = sFieldValue.substring(2);
+							if ( 2 < sFieldValue.length() )
+							    sFieldValue = sFieldValue.substring(2);
 						}
 
 						try
@@ -27980,12 +28363,28 @@ While_Break:
 				// Show the Progress Bar..
 				DevicesAr = new ArrayList();				
 				bGetDevices = true;
-				//bDevicesFinished = false;
-				completeLatch = new CountDownLatch(1);
+				
+				bDevicesFinished = false;
+				//completeLatch = new CountDownLatch(1);
 				
 				getDevicesBgThread = new GetDevicesBgThread();
 				getDevicesBgThread.start();
 
+                while ( true )
+                {
+                    try
+                    {
+                         Thread.sleep(333);   
+                    }
+                    catch (InterruptedException ie)
+                    {
+                    }
+                    
+                    if ( bDevicesFinished )
+                        break;
+                }
+
+/*                
 				try
 				{
 					completeLatch.await();
@@ -27993,7 +28392,7 @@ While_Break:
 				catch (InterruptedException ie)
 				{
 				}
-
+/**/
 						
 /*						
 				if ( DevicesAr == null )
@@ -28016,6 +28415,9 @@ While_Break:
                     {
                         // Single device, show it..
                         deviceLabel.setText((String)DevicesAr.get(0));
+                        
+                        // Update 'sDeviceName'..
+                        sDeviceName = (String)DevicesAr.get(0);
                     }
                 }
 				
@@ -28168,7 +28570,9 @@ While_Break:
 				if ( (projectHomeS != null) && (projectHomeS.length() > 0) )
 				{
 					int iLoc = projectHomeS.lastIndexOf('/');
-					String sIn = projectHomeS.substring(iLoc + 1);
+					String sIn = "";
+					if ( (iLoc + 1) < projectHomeS.length() )
+					    sIn = projectHomeS.substring(iLoc + 1);
 					
 					//System.out.println("sIn: '"+sIn+"'");
 					if ( sIn.equals(actionCommandS) )
@@ -28189,7 +28593,7 @@ While_Break:
 							StringTokenizer st = new StringTokenizer(sOut, "~");
 							int iCount = st.countTokens();
 							String sTok;
-							String sTitle;
+							String sTitle = "";
 							bMatch = false;
 							
 							for ( int iG = 0; iG < iCount; iG++ )
@@ -28202,7 +28606,8 @@ While_Break:
 									iLoc = sTok.lastIndexOf('/');
 									if ( iLoc != -1 )
 									{
-										sTitle = sTok.substring(iLoc + 1);
+									    if ( (iLoc + 1) < sTok.length() )
+									        sTitle = sTok.substring(iLoc + 1);
 										//System.out.println("sTitle: '"+sTitle+"'");
 										if ( sTitle.equals(actionCommandS) )
 										{
@@ -28545,7 +28950,7 @@ While_Break:
                 if ( (sModuleLevelPath != null) && (sModuleLevelPath.length() > 0) )
                 {
                     int iLoc = sModuleLevelPath.lastIndexOf((int)0x5c);     // '\'
-                    if ( iLoc != -1 )
+                    if ( (iLoc != -1) && (iLoc < sModuleLevelPath.length()) )
                     {
                         sPath = sModuleLevelPath.substring(0, iLoc);
                         //System.out.println("(Module-level)sPath: '"+sPath+"'");
@@ -28580,7 +28985,7 @@ While_Break:
                 if ( (sProjectLevelPath != null) && (sProjectLevelPath.length() > 0) )
                 {
                     int iLoc = sProjectLevelPath.lastIndexOf((int)0x5c);    // '\'
-                    if ( iLoc != -1 )
+                    if ( (iLoc != -1) && (iLoc < sProjectLevelPath.length()) )
                     {
                         sPath = sProjectLevelPath.substring(0, iLoc);
                         //System.out.println("(Project level)sPath: '"+sPath+"'");
@@ -28802,13 +29207,20 @@ While_Break:
 	private void getPackageName()
 	{
 		//System.out.println("getPackageName()");
+		
 /*		
 		if ( projectHomeS == null )
 			System.out.println("projectHomeS null");
 		else
 			System.out.println("projectHomeS: '"+projectHomeS+"'");
 /**/				
-				
+/*
+        if ( sPropertiesPackageName == null )
+            System.out.println("sPropertiesPackageName null");
+        else
+            System.out.println("sPropertiesPackageName: '"+sPropertiesPackageName+"'");
+/**/        
+        
 		// Check if we have it..
 		if ( (sPropertiesPackageName != null) && (! sPropertiesPackageName.equals("null")) &&
 		    (sPropertiesPackageName.length() > 0) )
@@ -28820,6 +29232,8 @@ While_Break:
             int iLoc;
             int iLoc2;
             int iLoc3;
+            int iLoc5;
+            int iLoc6;
             String sIn = "";
             StringBuffer tSb;		
             File fileT3;
@@ -28933,6 +29347,13 @@ While_Break:
                     break;
                 }
 
+/*
+                if ( sModuleLevelPath == null )
+                    System.out.println("sModuleLevelPath null");
+                else
+                    System.out.println("sModuleLevelPath: '"+sModuleLevelPath+"'");
+/**/                        
+                        
                 // Try to get from namespace..               
                 if ( (sModuleLevelPath != null) && (sModuleLevelPath.length() > 0) )
                 {
@@ -28952,18 +29373,33 @@ While_Break:
                                     iLoc3 = sIn.indexOf("'", iLoc2 + 1);
                                     if ( iLoc3 != -1 )
                                     {
-                                        packageNameS = sIn.substring(iLoc2 + 1, iLoc3);
+                                        if ( ((iLoc2 + 1) >= 0) && (iLoc3 < sIn.length()) )
+                                            packageNameS = sIn.substring(iLoc2 + 1, iLoc3);
+                                        packageNameS = packageNameS.trim();
+                                    }
+                                }
+                                
+                                iLoc5 = sIn.indexOf((char)0x22, iLoc);
+                                if ( iLoc5 != -1 )
+                                {
+                                    iLoc6 = sIn.indexOf((char)0x22, iLoc5 + 1);
+                                    if ( iLoc6 != -1 )
+                                    {
+                                        if ( ((iLoc5 + 1) >= 0) && (iLoc6 < sIn.length()) )
+                                            packageNameS = sIn.substring(iLoc5 + 1, iLoc6);
                                         packageNameS = packageNameS.trim();
                                     }
                                 }
                             }
-                            
+
                             buf = null;
                         }
                     }
                 }
 
-                if ( packageNameS.equals("") )
+                if ( (packageNameS != null) && (packageNameS.length() > 0) )
+                    ;
+                else
                 {
                    //System.out.println("sb: '"+sb.toString()+"'");
                         
@@ -28986,7 +29422,7 @@ While_Break:
                             if ( iLoc != -1 )
                             {
                                 iLoc2 = sIn.indexOf((int)0x22, (iLoc + 9));		// '"'
-                                if ( iLoc2 != -1 )
+                                if ( ((iLoc + 9) >= 0) && (iLoc2 < sIn.length()) )
                                     packageNameS = sIn.substring((iLoc + 9), iLoc2);
                             }
                         }
@@ -29006,12 +29442,12 @@ While_Break:
 
 /*        
 		if ( packageNameS == null )
-			System.out.println("packageNameS null");
+			System.out.println("(Final)packageNameS null");
 		else
-			System.out.println("packageNameS: '"+packageNameS+"'");
+			System.out.println("(Final)packageNameS: '"+packageNameS+"'");
 /**/	
 
-        //System.out.println("\nExiting getPackageName()");
+        //System.out.println("Exiting getPackageName()");
         
 	}	//}}}
 
@@ -29461,7 +29897,10 @@ While_Break:
 				if ( bHitEnd )
 					sVariableName = stringValue;
 				else
-					sVariableName = stringValue.substring(0, iX);
+				{
+				    if ( iX < stringValue.length() )
+				        sVariableName = stringValue.substring(0, iX);
+				}
 				
 				//System.out.println("sVariableName: '"+sVariableName+"'");
 				//System.out.println("iEndIndex: "+iEndIndex);
@@ -29776,7 +30215,8 @@ While_Break:
 							iLoc2 = sT.indexOf(",");
 							if ( iLoc2 != -1 )
 							{
-								sT = sT.substring(0, iLoc2);
+							    if ( iLoc2 < sT.length() )
+							        sT = sT.substring(0, iLoc2);
 								
 								try
 								{
@@ -29914,7 +30354,8 @@ Break_Out:
 										iLoc2 = sT.indexOf(",");
 										if ( iLoc2 != -1 )
 										{
-											sT = sT.substring(0, iLoc2);
+										    if ( iLoc2 < sT.length() )
+										        sT = sT.substring(0, iLoc2);
 											
 											try
 											{
@@ -30166,9 +30607,15 @@ Break_Out:
 					//       ^
 					
 					if ( sT.charAt(0) == '[' )
-						sParentClassName = sT.substring(iLoc2 + 1);
+					{
+					    if ( (iLoc2 + 1) < sT.length() )
+					        sParentClassName = sT.substring(iLoc2 + 1);
+					}
 					else
-						sParentClassName = sT.substring(0, iLoc2);
+					{
+					    if ( iLoc2 < sT.length() )
+					        sParentClassName = sT.substring(0, iLoc2);
+					}
 						
 					sParentClassName = sParentClassName.trim();
 					//System.out.println("sParentClassName: '"+sParentClassName+"'");
@@ -31207,7 +31654,7 @@ Break_Out:
                             //System.out.println("(statusPath)sSourcePath: '"+sSourcePath+"'");	
                             
                             int iLoc2 = sSourcePath.indexOf(sLib);
-                            if ( iLoc2 != -1 )
+                            if ( (iLoc2 != -1) && (iLoc2 < sSourcePath.length()) )
                                 sSourcePath = sSourcePath.substring(iLoc2);
                             
                             sSelectedScriptId = tabInfo.sScriptId;
@@ -31244,7 +31691,8 @@ Break_Out:
                                 iLoc4 = sSourcePath.lastIndexOf(".");
                                 if ( iLoc4 != -1 )
                                 {
-                                    sKeyPath = sSourcePath.substring(iLoc3 + 1, iLoc4);
+                                    if ( ((iLoc3 + 1) >= 0) && (iLoc4 < sSourcePath.length()) )
+                                        sKeyPath = sSourcePath.substring(iLoc3 + 1, iLoc4);
                                     tabInfo.sKeyPath = sKeyPath;
                                 }
                             }
@@ -31255,7 +31703,7 @@ Break_Out:
                             
                             sSourcePath = Utils.processPath(sSourcePath);
                             int iLoc2 = sSourcePath.lastIndexOf((int)0x2f);    // '/'
-                            if ( iLoc2 != -1 )
+                            if ( (iLoc2 != -1) && ((iLoc2 + 1) < sSourcePath.length()) )
                                 pathSb.append(sSourcePath.substring(iLoc2 + 1));
                             
                             //System.out.println("pathSb: '"+pathSb.toString()+"'");

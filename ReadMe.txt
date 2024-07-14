@@ -411,10 +411,6 @@ BlueStacks Emulator:
 
 Release notes:
     
-ADev-3.3.1:
-    Removed the Gradle 'clean --stop' option as it wasn't working.
-    Improved the running of commands in Linux.
-    
 ADev-3.3.2:
     Greatly improved wireless connect and disconnect.
     Some Flutter improvements.
@@ -422,6 +418,10 @@ ADev-3.3.2:
     
 ADev-3.3.3:
     Fixed issue with Release and Debug builds.
+
+ADev-3.3.4:
+    Improved getting package name, fixed 'namespace' issue.
+    Tried to improve PID logcat.
     
 
 I use it for all of my own development, and try to fix what issues I see,
