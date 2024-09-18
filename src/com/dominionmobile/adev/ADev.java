@@ -1277,7 +1277,13 @@ public class ADev
 		bLogcatOn = false;
 		bReIssueRelease = false;
 		apkNameS = "";
+		
+        // Note:
+        // For finding paths to the apk, it's
+        // probably better to default to RELEASE_BUILD
+		
 		iBuildType = DEBUG_BUILD;
+		//iBuildType = RELEASE_BUILD;
 
 		/**
          * Get number of running Emulators or devices..
@@ -1742,25 +1748,6 @@ public class ADev
 			
 			//System.out.println("(Create)commandSb: '"+commandSb.toString()+"'");
 			
-			bInternalFinished = false;		
-			internalCommandS = commandSb.toString();
-			commandBgThread = new CommandBgThread();
-			commandBgThread.start();
-	
-			// Wait for Thread to finish..
-			while ( true )
-			{
-				try
-				{
-					Thread.sleep(100);
-				}
-				catch (InterruptedException ie)
-				{
-				}
-	
-				if ( bInternalFinished )
-					break;
-			}
 
 			//System.out.println("bLibrarySelected: "+bLibrarySelected);
 			
@@ -3907,7 +3894,7 @@ public class ADev
 
 			
 			SingletonClass sc = SingletonClass.getInstance();
-
+			
 /*			
 			if ( sc.s_sCommand == null )
 				System.out.println("sc.s_sCommand null");
@@ -3966,7 +3953,9 @@ public class ADev
                 // Give time to execute..				
 				try
 				{
-				    Thread.sleep(750);
+				    Thread.sleep(500);
+				    //Thread.sleep(750);
+				    //Thread.sleep(1000);
 				}
 				catch (InterruptedException ie)
 				{
@@ -4356,7 +4345,8 @@ public class ADev
                                             iLoc8 = lineSb.lastIndexOf(sZeroA);
                                             if ( iLoc8 != -1 )
                                             {
-                                                sBlockEnd = lineSb.substring(iLoc8 + 1);
+                                                if ( (iLoc8 + 1) < lineSb.length() )
+                                                    sBlockEnd = lineSb.substring(iLoc8 + 1);
                                                 //System.out.println("sBlockEnd: '"+sBlockEnd+"'");
                                             }
 
@@ -4481,8 +4471,11 @@ public class ADev
                                                             iLoc20 = partialLineSb.indexOf(")", (iLoc19 + 1));
                                                             if ( iLoc20 != -1 )
                                                             {
-                                                                sT = partialLineSb.substring((iLoc19 + 1), iLoc20);
-                                                                sT = sT.trim();
+                                                                if ( ((iLoc19 + 1) >= 0) && (iLoc20 < partialLineSb.length()) )
+                                                                {
+                                                                    sT = partialLineSb.substring((iLoc19 + 1), iLoc20);
+                                                                    sT = sT.trim();
+                                                                }
                                                                 //System.out.println("(PID)sT: '"+sT+"'");
                                                                 
                                                                 if ( sPid.equals(sT) )
@@ -4602,8 +4595,8 @@ public class ADev
                                         
                                     }
                                 }
-                                
-/*
+
+/*                                
                                 if ( lineSb == null )
                                     System.out.println("(After)lineSb null");
                                 else
@@ -5283,7 +5276,7 @@ public class ADev
 		// in build.gradle..
 		public void run()
 		{
-			//System.out.println("DebugReleaseBgThread run()");
+			System.out.println("DebugReleaseBgThread run()");
 			byte[] buildBuf = null;
 			int iLoc = 0;
 /*
@@ -5418,9 +5411,6 @@ public class ADev
 			bDebugReleaseFinished = true;
 			//System.out.println("Exiting DebugReleaseBgThread");
 		}
-		
-		//System.out.println("Exiting DebugReleaseBgThread");
-		
 	}	//}}}
 
 	//{{{	UpdateAppNameBgThread
@@ -5599,7 +5589,8 @@ public class ADev
 		public void run()
 		{
 		    //System.out.println("======================================");
-			//System.out.println("FlutterDaemonBgThread run()");
+		    System.out.println("");
+			System.out.println("FlutterDaemonBgThread run()");
 			//InputStream out_is = null;
 			//InputStream error_is = null;
 
@@ -5651,7 +5642,7 @@ public class ADev
 			
 			if ( iDebugMode == DEBUG_RUN )
 			{
-			    //System.out.println("In iDebugMode == DEBUG_RUN");
+			    System.out.println("In iDebugMode == DEBUG_RUN");
                 // Set up build.gradle for debug or release..
                 if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
                 {
@@ -5693,7 +5684,7 @@ public class ADev
                     }
                 }
     
-                //System.out.println("DebugReleaseBgThread dropped out of wait");
+                System.out.println("DebugReleaseBgThread dropped out of wait");
             }
 			
 			// Construct command..
@@ -5714,20 +5705,15 @@ public class ADev
 				    cmdSb.append("run ");
 				else if ( iDebugMode == DEBUG_ATTACH )
 				    cmdSb.append("attach ");
+				
 /*
-				if ( sDeviceName == null )
-				    System.out.println("sDeviceName null");
-				else
-				    System.out.println("sDeviceName: '"+sDeviceName+"'");
-/**/				        
-
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					cmdSb.append("--device-id ");
 					cmdSb.append(sDeviceName);
 					cmdSb.append(" ");
 				}
-/**/
+				
                 if ( iDebugMode == DEBUG_RUN )
                 {
                     if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
@@ -5778,7 +5764,10 @@ public class ADev
                     }
                 }
 				
-				cmdSb.append(" --machine");
+				//cmdSb.append(" --machine");
+				cmdSb.append("--machine");
+/**/
+
 			}
 			else
 			{
@@ -5795,20 +5784,14 @@ public class ADev
 				else if ( iDebugMode == DEBUG_ATTACH )
 				    cmdSb.append("attach ");
 
-/*				
-				if ( sDeviceName == null )
-					System.out.println("sDeviceName null");
-				else
-					System.out.println("sDeviceName: '"+sDeviceName+"'");
-/**/				
-
+/*
 				if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
 				{
 					cmdSb.append("--device-id ");
 					cmdSb.append(sDeviceName);
 					cmdSb.append(" ");
 				}
-/**/
+				
                 if ( iDebugMode == DEBUG_RUN )
                 {
                     if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
@@ -5859,12 +5842,86 @@ public class ADev
                     }
                 }
                 
-				cmdSb.append(" --machine");
+				//cmdSb.append(" --machine");
+				cmdSb.append("--machine");
 				cmdSb.append("\n");
+/**/				
+				
 			}
 
-			//System.out.println("\n");
-			//System.out.println("(Final)cmdSb: '"+cmdSb.toString()+"'");
+/*				
+            if ( sDeviceName == null )
+                System.out.println("sDeviceName null");
+            else
+                System.out.println("sDeviceName: '"+sDeviceName+"'");
+/**/				
+
+            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+            {
+                cmdSb.append("--device-id ");
+                cmdSb.append(sDeviceName);
+                cmdSb.append(" ");
+            }
+            
+            if ( iDebugMode == DEBUG_RUN )
+            {
+                if ( (sRunBuildType != null) && (sRunBuildType.length() > 0) )
+                {
+                    if ( sRunBuildType.equals("release") )
+                        cmdSb.append("--release ");
+                }
+                    
+                if ( (sBuildTarget != null) && (sBuildTarget.length() > 0) )
+                {
+                    if ( sBuildTarget.equals("apk") )
+                    {
+                        if ( (sAndroidLanguage != null) && (sAndroidLanguage.length() > 0) )
+                        {
+                            if ( sAndroidLanguage.equals("java") )
+                                ;	// Default, don't use..
+                            else
+                            {
+                                cmdSb.append("-a ");
+                                cmdSb.append(sAndroidLanguage);
+                            }
+                        }
+                    }
+                    else if ( sBuildTarget.equals("ios") )
+                    {
+                        if ( (sIosLanguage != null) && (sIosLanguage.length() > 0) )
+                        {
+                            if ( sIosLanguage.equals("objc") )
+                                ;	// Default, don't use..
+                            else
+                            {
+                                cmdSb.append("-a ");
+                                cmdSb.append(sIosLanguage);
+                            }
+                        }
+                    }
+                }
+                
+                if ( (sEnableSoftwareRendering != null) && (sEnableSoftwareRendering.equals("true")) )
+                    cmdSb.append("--enable-software-rendering");
+            }
+            else
+            {
+                if ( packageNameS != null )
+                {
+                    cmdSb.append("--app-id ");
+                    cmdSb.append(packageNameS);     // Package name..
+                }
+            }
+            
+            cmdSb.append("--machine");
+            
+            if ( iOS == WINDOWS )
+                cmdSb.append("\n");
+			
+			
+			
+			System.out.println("");
+			System.out.println("(Final)cmdSb: '"+cmdSb.toString()+"'");
 			
 /*			
 			try
@@ -6028,12 +6085,11 @@ public class ADev
                                     //System.out.println("sT: "+sT);
 
                                     
-/*                                    
                                     // ------ Debugging from here ------
                                     if ( (sT != null) && (sT.length() > 0) && (bLookForEnd == false) )
                                     {
                                         //System.out.println("sT:");
-                                        //System.out.println();
+                                        System.out.println();
                                         char cTChr;
                                         
                                         for ( int g = 0; g < sT.length(); g++ )
@@ -6546,7 +6602,7 @@ public class ADev
 
 				swingWorker.execute();
 				
-            //System.out.println("Exiting FlutterDaemonBgThread");
+            System.out.println("Exiting FlutterDaemonBgThread");
 		}
 	}	//}}}
 
@@ -6951,6 +7007,7 @@ public class ADev
                 sb.append("/platform-tools");
                 sb.append(";adb ");
 
+/*                
                 if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
                 {
                     sb.append("-s ");
@@ -6962,6 +7019,7 @@ public class ADev
                 sb.append(Constants.PORT_NUMBER);
                 sb.append(" jdwp:");
                 sb.append(pidS);
+/**/                
             }
             else
             {
@@ -6971,7 +7029,8 @@ public class ADev
                 sb.append(";%PATH%");
                 
                 sb.append("&&adb ");
-
+                
+/*
                 if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
                 {
                     sb.append("-s ");
@@ -6985,8 +7044,26 @@ public class ADev
                 sb.append(" jdwp:");
                 sb.append(pidS);
                 sb.append("\n");
+/**/                
             }
 
+            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+            {
+                sb.append("-s ");
+                sb.append(sDeviceName);
+                sb.append(" ");
+            }
+            
+            sb.append("forward ");
+            sb.append("tcp:");
+            sb.append(Constants.PORT_NUMBER);
+            sb.append(" jdwp:");
+            sb.append(pidS);
+            
+            if ( iOS == WINDOWS )
+                sb.append("\n");
+            
+            
             //System.out.println("sb: '"+sb.toString()+"'");
             internalCommandS = sb.toString();
             commandBgThread = new CommandBgThread();
@@ -11818,7 +11895,9 @@ public class ADev
 					}
 					
 					outSb.append((char)0x22);
-					outSb.append(paramAr[iZ]);
+					if ( iZ < paramAr.length )
+					    outSb.append(paramAr[iZ]);
+					
 					outSb.append((char)0x22);
 					outSb.append(":");
 
@@ -11857,7 +11936,7 @@ public class ADev
 				iJ = iZ + 1;
 				//System.out.println("(Updated)iJ: "+iJ);
 			}
-			else if ( paramAr[iJ].equals("params{}") )
+			else if ( (iJ < paramAr.length) && (paramAr[iJ].equals("params{}")) )
 			{
 				outSb.append(",");
 				
@@ -11878,7 +11957,9 @@ public class ADev
 					outSb.append(",");
 					
 				outSb.append((char)0x22);
-				outSb.append(paramAr[iJ]);
+				if ( iJ < paramAr.length )
+				    outSb.append(paramAr[iJ]);
+				
 				outSb.append((char)0x22);
 				outSb.append(":");
 				
@@ -16043,7 +16124,8 @@ public class ADev
 					try
 					{
 						//Thread.sleep(150);
-						Thread.sleep(333);
+						//Thread.sleep(333);
+						Thread.sleep(500);
 					}
 					catch (InterruptedException ie)
 					{
@@ -16138,6 +16220,7 @@ public class ADev
 			sc.s_WirelessConnected = false;
 			bDisconnectWirelessFinished = true;
 			
+			//System.out.println("Exiting DisconnectWirelessBgThread");
 		}
 	}	//}}}
 	
@@ -17015,16 +17098,19 @@ public class ADev
 			// Note:
 			// Flutter either has an added 'release' or 'debug'
 			// directory inside of 'outputs/apk'..
+			
+			// Don't depend on 'iBuildType'..
 
 			if ( bFlutterSelected )
 			{
 				// Flutter..
 				sb.append("/build/app/outputs/apk");
-					
+/*					
 				if ( iBuildType == RELEASE_BUILD )
 					sb.append("/release");
 				else if ( iBuildType == DEBUG_BUILD )
 					sb.append("/debug");
+/**/				
 			}
 			else
 			{
@@ -17040,11 +17126,38 @@ public class ADev
 				    
 					sb.append("/build/outputs/apk");
 				}
-				
+
+                //System.out.println("iBuildType: "+iBuildType);
+                
+                //iBuildType = RELEASE_BUILD;     // Default..
+/*				
 				if ( iBuildType == RELEASE_BUILD )
 					sb.append("/release");
 				else if ( iBuildType == DEBUG_BUILD )
 					sb.append("/debug");
+/**/
+			}
+			
+			// Look to see what's actually there..
+
+            File tFile;			
+            StringBuffer tSb = new StringBuffer(sb.toString());
+            
+            tSb.append("/release");		
+			tFile = new File(tSb.toString());
+			if ( tFile.exists() )
+			{
+			    sb.append("/release");
+			}
+			else
+			{
+			    tSb = new StringBuffer(sb.toString());
+                tSb.append("/debug");		
+                tFile = new File(tSb.toString());
+                if ( tFile.exists() )
+                {
+                    sb.append("/debug");
+                }
 			}
 		}
 		else
@@ -17091,6 +17204,8 @@ public class ADev
 				file = listOfFiles[g];
 				fNameS = file.getName();
 				//System.out.println("fNameS: '"+fNameS+"'");
+				
+				//System.out.println("iBuildType: "+iBuildType);
 /*				
 				if ( ((iBuildType == RELEASE_BUILD) && (fNameS.endsWith("release.apk"))) ||
 				    ((iBuildType == RELEASE_BUILD) && (fNameS.endsWith("unsigned.apk"))) ||
@@ -17120,7 +17235,7 @@ public class ADev
 
 			//if ( apkNameS.equals("") )
 				//apkNameS = altS;
-/*
+/*				
 			if ( apkNameS == null )
 				System.out.println("(Final)apkNameS null");
 			else
@@ -18117,7 +18232,8 @@ While_Break:
                         tSAr = new String[tAr.size()];
                         for ( int iZ = 0; iZ < tAr.size(); iZ++ )
                         {
-                            tSAr[iZ] = (String)tAr.get(iZ);
+                            if ( iZ < tSAr.length )
+                                tSAr[iZ] = (String)tAr.get(iZ);
                             //System.out.println("["+iZ+"]: '"+tSAr[iZ]+"'");
                         }
                         
@@ -21210,10 +21326,11 @@ While_Break:
 			else if ( DEBUG.equals(actionCommandS) ||
 				BUILD.equals(actionCommandS) )
 			{
-				//System.out.println("\nDEBUG/BUILD");
+				System.out.println("DEBUG/BUILD");
 				// Debug..
 				boolean bRegularBuild;
 				iBuildType = DEBUG_BUILD;
+				//iBuildType = RELEASE_BUILD;
 				String saveS = actionCommandS;
 				
 				if ( bLogcatOn )
@@ -22563,8 +22680,8 @@ While_Break:
 			}
 			else if ( RUN.equals(actionCommandS) )
 			{
-			    //System.out.println("***************************");
-				//System.out.println("RUN");
+			    System.out.println("***************************");
+				System.out.println("RUN");
 				iDebugMode = DEBUG_RUN;
 				bBlockDebug = true;
 				
@@ -22607,7 +22724,6 @@ While_Break:
 				}
 /**/
 
-/*				
 				if ( DevicesAr == null )
 					System.out.println("DevicesAr null");
 				else
@@ -22626,7 +22742,7 @@ While_Break:
                     }
                 }
  
-                //System.out.println("sDeviceName: '"+sDeviceName+"'");
+                System.out.println("sDeviceName: '"+sDeviceName+"'");
                 
 				init();
 				RefreshProperties();
@@ -22652,6 +22768,7 @@ While_Break:
 					if ( killButton != null )
 						killButton.setVisible(false);
 
+					//System.out.println("Running FlutterDaemonBgThread()");
                     // Set up 'flutter run' and 'flutter attach'..					
 					bKillDaemonThread = false;
 					flutterDaemonBgThread = new FlutterDaemonBgThread();
@@ -22997,6 +23114,7 @@ While_Break:
 				int iStart = 0;
 				//boolean bDidReconnect = false;
 				boolean bDoReconnect = false;
+				boolean bNoDevice;
 				
 				RefreshProperties();
 				boolean bSelected = logcatToggleButton.isSelected();
@@ -23068,6 +23186,7 @@ While_Break:
                         else
                             System.out.println("commandResultS: '"+commandResultS+"'");
 /**/
+                        bNoDevice = false;
                         
                         if ( (commandResultS != null) && (commandResultS.length() > 0) )
                         {
@@ -23083,6 +23202,7 @@ While_Break:
                                 else
                                 {
                                     // No device
+                                    bNoDevice = true;
 /*                                    
                                     if ( sWirelessID == null )
                                         System.out.println("sWirelessID null");
@@ -23100,25 +23220,186 @@ While_Break:
                                 }
                             }
                         }
+                        else
+                        {
+                            // No result..
+                            
+                        }
                     }   // End while..
 				    
                     //System.out.println("=== DROPPED OUT ===");
-                    
-                    // Clear the buffer..
-					bLogcatOn = true;
-					commandSb = new StringBuffer();
 
-					if ( iOS == LINUX_MAC )
-					{
-						commandSb.append("export PATH=${PATH}:");
-						commandSb.append(androidSdkPathS);
-						commandSb.append("/platform-tools");
-						
-						commandSb.append(";");
-						
-						//commandSb.append("adb logcat -c");
-						commandSb.append("adb ");
+                    if ( bNoDevice == false )
+                    {
+                        // Clear the buffer..
+                        bLogcatOn = true;
+                        commandSb = new StringBuffer();
+    
+                        if ( iOS == LINUX_MAC )
+                        {
+                            commandSb.append("export PATH=${PATH}:");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            
+                            commandSb.append(";");
+                            
+                            //commandSb.append("adb logcat -c");
+                            commandSb.append("adb ");
+                            
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
+                            }
+                            
+                            commandSb.append("logcat -c");
+                            //commandSb.append("logcat");
+                                
+                            //commandSb.append(";");
+/**/                            
+                        }
+                        else
+                        {
+                            commandSb.append("SET PATH=");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            commandSb.append(";%PATH%");
+                            
+                            commandSb.append("&&");
+                            
+                            // Clear the buffer so that any slowdowns
+                            // will be gone..						
+                            //commandSb.append("adb logcat -c");
+                            commandSb.append("adb ");
+                            
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
+                            }
+                            
+                            commandSb.append("logcat -c");
+                            //commandSb.append("logcat");
+                            
+                            commandSb.append("\n");    
+                            //commandSb.append("&&");
+/**/                            
+                        }
                         
+                        bInternalFinished = false;		
+                        internalCommandS = commandSb.toString();
+                        commandBgThread = new CommandBgThread();
+                        commandBgThread.start();
+                
+                        // Wait for Thread to finish..
+                        while ( true )
+                        {
+                            try
+                            {
+                                Thread.sleep(100);
+                            }
+                            catch (InterruptedException ie)
+                            {
+                            }
+                
+                            if ( bInternalFinished )
+                                break;
+                        }
+                        
+/*                        
+                        if ( commandResultS == null )
+                            System.out.println("commandResultS null");
+                        else
+                            System.out.println("commandResultS: '"+commandResultS+"'");
+/**/
+ 
+
+
+                        commandSb = new StringBuffer();
+    
+                        if ( iOS == LINUX_MAC )
+                        {
+                            commandSb.append("export PATH=${PATH}:");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            
+                            commandSb.append(";");
+                            
+                            //commandSb.append("adb logcat -c");
+                            commandSb.append("adb ");
+                            
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
+                            }
+                            
+                            //commandSb.append("logcat -c");
+                            commandSb.append("logcat");
+                                
+                            //commandSb.append(";");
+/**/                            
+                        }
+                        else
+                        {
+                            commandSb.append("SET PATH=");
+                            commandSb.append(androidSdkPathS);
+                            commandSb.append("/platform-tools");
+                            commandSb.append(";%PATH%");
+                            
+                            commandSb.append("&&");
+                            
+                            // Clear the buffer so that any slowdowns
+                            // will be gone..						
+                            //commandSb.append("adb logcat -c");
+                            commandSb.append("adb ");
+                            
+                            if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
+                            {
+                                commandSb.append("-s ");
+                                commandSb.append(sDeviceName);
+                                commandSb.append(" ");
+                            }
+                            
+                            //commandSb.append("logcat -c");
+                            commandSb.append("logcat");
+                            
+                                
+                            //commandSb.append("&&");
+                            
+/**/                            
+                        }
+                       
+        
+                        String tS;
+                        StringTokenizer st = null;
+                        
+                        if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
+                        {
+                            // Construct Logcat command..
+                            st = new StringTokenizer(logcatFilterS, ",");
+                            int iTokCount = st.countTokens();
+                        }
+    
+    /*
+                        // The number of adb processes can build up
+                        // greatly affecting the speed of the app,
+                        // this helps to keep it under some control.				
+                        if ( iOS == LINUX_MAC )
+                        {
+                            commandSb.append(";adb kill-server");
+                            commandSb.append(";");
+                        }
+                        else
+                            commandSb.append("adb kill-server\n");
+    /**/
+
+/*    
+                        commandSb.append("adb ");
+    
                         if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
                         {
                             commandSb.append("-s ");
@@ -23126,115 +23407,44 @@ While_Break:
                             commandSb.append(" ");
                         }
                         
-                        commandSb.append("logcat -c");
-						    
-						commandSb.append(";");
-					}
-					else
-					{
-						commandSb.append("SET PATH=");
-						commandSb.append(androidSdkPathS);
-						commandSb.append("/platform-tools");
-						commandSb.append(";%PATH%");
-						
-						commandSb.append("&&");
-
-                        // Clear the buffer so that any slowdowns
-                        // will be gone..						
-						//commandSb.append("adb logcat -c");
-						commandSb.append("adb ");
-						
-                        if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-                        {
-                            commandSb.append("-s ");
-                            commandSb.append(sDeviceName);
-                            commandSb.append(" ");
-                        }
+                        commandSb.append("logcat");
+/**/                        
+                        // Note:
+                        // On newer devices it looks like it defaults to
+                        // something like -v threadtime
+                        // looking like:
+                        // 10-19 12:06:03.396  1438  1628 I GestureDetector: ...
                         
-                        commandSb.append("logcat -c");
-						
-						    
-						commandSb.append("&&");
-					}
-	
-					String tS;
-					StringTokenizer st = null;
-					
-					if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
-					{
-						// Construct Logcat command..
-						st = new StringTokenizer(logcatFilterS, ",");
-						int iTokCount = st.countTokens();
-					}
-
-/*
-					// The number of adb processes can build up
-					// greatly affecting the speed of the app,
-					// this helps to keep it under some control.				
-					if ( iOS == LINUX_MAC )
-					{
-						commandSb.append(";adb kill-server");
-						commandSb.append(";");
-					}
-					else
-						commandSb.append("adb kill-server\n");
-/**/
-
-					commandSb.append("adb ");
-
-					if ( (sDeviceName != null) && (sDeviceName.length() > 0) )
-					{
-						commandSb.append("-s ");
-						commandSb.append(sDeviceName);
-						commandSb.append(" ");
-					}
-					
-					commandSb.append("logcat");
-					
-					// Note:
-					// On newer devices it looks like it defaults to
-					// something like -v threadtime
-					// looking like:
-					// 10-19 12:06:03.396  1438  1628 I GestureDetector: ...
-					
-					// Try to default to a more compact version..
-					// Also ensures that highlighting will work..
-					commandSb.append(" -v brief");
-					
-					if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
-					{
-						while ( st.hasMoreTokens() )
-						{
-							tS = st.nextToken();
-							commandSb.append(" ");
-							commandSb.append(tS);
-							commandSb.append(":F");
-						}
-					}
-/**/
-					if ( iOS == WINDOWS )
-						commandSb.append("\n");
-					
-					textPane.setText("");
-/*					
-					//SingletonClass sc = SingletonClass.getInstance();
-					sc.s_Command = commandSb.toString();
-					sc.s_KillIOBgThread = false;
-					//sc.s_ShowProgressBar = true;
-					sc.s_ShowProgressBar = false;
-/**/
-
-					//commandS = commandSb.toString();
-					//System.out.println("commandS: '"+commandS+"'");
-					//System.out.println("(A)commandSb: "+commandSb.toString());
-					
-                    SingletonClass sc = SingletonClass.getInstance();
-                    sc.s_sCommand = commandSb.toString();
-					
-					
-					ioBgThread = new IOBgThread();
-					ioBgThread.start();
-				}
+                        // Try to default to a more compact version..
+                        // Also ensures that highlighting will work..
+                        commandSb.append(" -v brief");
+                        
+                        if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
+                        {
+                            while ( st.hasMoreTokens() )
+                            {
+                                tS = st.nextToken();
+                                commandSb.append(" ");
+                                commandSb.append(tS);
+                                commandSb.append(":F");
+                            }
+                        }
+    /**/
+                        if ( iOS == WINDOWS )
+                            commandSb.append("\n");
+                        
+                        textPane.setText("");
+                        
+                        //System.out.println("(A)commandSb: '"+commandSb.toString()+"'");
+                        
+                        SingletonClass sc = SingletonClass.getInstance();
+                        sc.s_sCommand = commandSb.toString();
+                        
+                        
+                        ioBgThread = new IOBgThread();
+                        ioBgThread.start();
+                    }
+				}        // end if bSelected
 				else
 				{
 				    // Logcat being turned off..
@@ -23657,7 +23867,7 @@ While_Break:
                             commandSb.append(" ");
                         }
                         
-                        System.out.println("packageNameS: '"+packageNameS+"'");
+                        //System.out.println("packageNameS: '"+packageNameS+"'");
                         commandSb.append("uninstall ");
                         commandSb.append(packageNameS);
                         //commandSb.append("\n");
@@ -23747,7 +23957,7 @@ While_Break:
 			}
 			else if ( INSTALL.equals(actionCommandS) )
 			{
-				//System.out.println("\nINSTALL");
+				//System.out.println("INSTALL");
 				//System.out.println("bLogcatOn: "+bLogcatOn);
 				// Install..
 				if ( bLogcatOn )
@@ -23811,7 +24021,7 @@ While_Break:
 				//bKillAdb = true;
 				commandSb = new StringBuffer();
 
-/*				
+/*
 				if ( sUseAppBundle == null )
 				    System.out.println("sUseAppBundle null");
 				else
@@ -24276,6 +24486,9 @@ While_Break:
 				}
 				else
 				{
+				    //System.out.println("Normal install");
+				    //System.out.println("sUseGradleUninstallInstall: '"+sUseGradleUninstallInstall+"'");
+				    
 				    // Normal Install..
                     if ( (sUseGradleUninstallInstall != null) && (sUseGradleUninstallInstall.equals("true")) )
                     {
@@ -24370,6 +24583,8 @@ While_Break:
                     }
                     else
                     {
+                        //System.out.println("Using adb");
+                        
                         // Use adb..
                         if ( iOS == LINUX_MAC )
                         {
@@ -24594,6 +24809,8 @@ While_Break:
                 sAppBundleKeyAlias = "";
                 sAppBundleKeystorePassword = "";
                 sAppBundleKeyAliasPassword = "";
+                
+                //System.out.println("Exiting INSTALL");
 				
 			}
 			else if ( (BREAKPOINT.equals(actionCommandS)) && (iCardShowing == DEBUG_CARD) )
@@ -25856,7 +26073,25 @@ While_Break:
 /*			    
                 bCommandFinished = false;
                 internalCommandS = commandSb.toString();
-                commandBgThread = new CommandBgThread();
+                commandBgThread = new bInternalFinished = false;		
+			internalCommandS = commandSb.toString();
+			commandBgThread = new CommandBgThread();
+			commandBgThread.start();
+	
+			// Wait for Thread to finish..
+			while ( true )
+			{
+				try
+				{
+					Thread.sleep(100);
+				}
+				catch (InterruptedException ie)
+				{
+				}
+	
+				if ( bInternalFinished )
+					break;
+			}();
                 commandBgThread.start();
     
                 // Wait for Thread to finish..

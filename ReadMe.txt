@@ -202,6 +202,10 @@ App Bundle Install:
 
         
 Use Flutter:
+
+        Some Flutter commands can take a long time to run,
+        so give it lots of time.
+        
         Flutter can have issues with the latest changes, so
         to insure it has the best chance of working:
 
@@ -215,6 +219,9 @@ Use Flutter:
         
         Run this to check things:
         flutter doctor -v
+        
+        To set the Android SDK location:
+        flutter config --android-sdk "<path-to-your-android-sdk>"
         
 		Support for creating and building Flutter projects.
 		It relies on using Gradle for the builds, so the 'Use Gradle'
@@ -411,17 +418,16 @@ BlueStacks Emulator:
 
 Release notes:
     
-ADev-3.3.2:
-    Greatly improved wireless connect and disconnect.
-    Some Flutter improvements.
-    Other improvements. 
-    
 ADev-3.3.3:
     Fixed issue with Release and Debug builds.
 
 ADev-3.3.4:
     Improved getting package name, fixed 'namespace' issue.
-    Tried to improve PID logcat.
+    Tried to improve PID Logcat.
+
+ADev-3.3.6:
+    Improved Logcat startup.
+    Improved Release builds.
     
 
 I use it for all of my own development, and try to fix what issues I see,
