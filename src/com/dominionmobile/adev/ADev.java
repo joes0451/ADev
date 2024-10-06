@@ -80,6 +80,10 @@ import javax.swing.event.CaretListener;
 import javax.swing.event.CaretEvent;
 import javax.swing.BoundedRangeModel;
 import javax.xml.bind.DatatypeConverter;
+import javax.swing.JFormattedTextField;
+import javax.swing.JSpinner.DefaultEditor;
+import javax.swing.JComboBox;
+import javax.swing.DefaultListCellRenderer;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -222,6 +226,8 @@ public class ADev
 	private static JTextArea jTextArea;
 	private JTree jTree;
 	private JTree variableJTree;
+	private JComboBox searchComboBox;
+	
 	private JProgressBar jProgressBar;
 	private static JList jList;
 	private static JList breakpointDialogJList;
@@ -291,6 +297,7 @@ public class ADev
 	private JTextField setBreakpoint;
 	private JTextField packageNameField;
 	private JSpinner targetSdkSpinner;
+	private JSpinner searchShortcutSpinner;
 	private JSpinner minSdkSpinner;
 	private JSpinner updateTargetSdkSpinner;
 	private JSpinner emulatorsSpinner;
@@ -663,6 +670,8 @@ public class ADev
 	static volatile String sBundletoolBuildApksMode;
 	static volatile String sEnableIgnoreDeprecation;
 	static volatile String g_sT;
+	static volatile String sSearchShortcuts;
+	static volatile String g_sSearchValue;
 	
 	//static volatile String sUseStopGradle;
 	//static volatile String sDeleteBuildDirectory;
@@ -1481,6 +1490,7 @@ public class ADev
 			sUseKeyProperties = Utils.processPath(prop.getProperty("use_key_properties"));
 			sEnableIgnoreDeprecation = Utils.processPath(prop.getProperty("enable_ignore_deprecation"));
 			
+			sSearchShortcuts = Utils.processPath(prop.getProperty("search_shortcuts")); 
 			sGradleWarningMode = Utils.processPath(prop.getProperty("gradle_warning_mode"));
 			sGPSLatitude = Utils.processPath(prop.getProperty("gps_latitude"));
 			sUseGradlew = Utils.processPath(prop.getProperty("use_gradlew"));
@@ -4173,7 +4183,8 @@ public class ADev
                                 //System.out.println("sPid: '"+sPid+"'");
                                 
                                 //System.out.println("At F");
-                                if ( (bLogcatOn) && (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
+                                //if ( (bLogcatOn) && (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
+                                if ( false )
                                 {
                                     if ( sUsePidLogcat.equals("true") )
                                     {
@@ -4268,7 +4279,7 @@ public class ADev
                                                             sPid = commandResultS.substring(iStart, iLoc3);
                                                         }
                                                         
-                                                        //System.out.println("sPid: '"+sPid+"'");
+                                                        System.out.println("sPid: '"+sPid+"'");
                                                         
                                                         // Try changing to use PID command..
                                                     }
@@ -10913,15 +10924,13 @@ public class ADev
 		pullFrame.setVisible(true);
 		
 	}	//}}}
+
 	
 	//{{{	searchDialog()
-	/**
-     * Construct Dialog for Search
-     */
 	public void searchDialog()
 	{
 	    int iTokCount;
-	    String[] tSa;
+	    String[] tSa = null;
 	    
 		searchFrame = new JFrame();
 		searchFrame.setLayout(new BorderLayout());		
@@ -10937,11 +10946,87 @@ public class ADev
 
 		gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.insets = new Insets(4, 4, 4, 4);	// bottom, left, right, top		
+		gbc.insets = new Insets(4, 4, 4, 4);	// bottom, left, right, top	
 		gbc.gridx = 0;
 		gbc.gridy = 2;
 		gbc.gridwidth = 1;
 		panel.add(searchLbl, gbc);
+
+		// Construct choices..
+/*		
+        if ( (sSearchShortcuts != null) && (sSearchShortcuts.length() > 0) )
+        {
+            StringTokenizer sTok = new StringTokenizer(sSearchShortcuts, ",");
+            int iTCount = sTok.countTokens();
+            tSa = new String[iTCount + 1];
+
+            for ( int iTokIndex = 0; sTok.hasMoreTokens(); iTokIndex++ )
+            {
+                if ( iTokIndex == 0 )
+                {
+                    tSa[0] = "                         ";
+                }
+                else
+                {
+                    //if ( iTokIndex < tSa.length )
+                    if ( (iTokIndex - 1) < tSa.length )
+                        tSa[iTokIndex] = sTok.nextToken();
+                }
+            }
+        }
+/**/		
+		
+		//String[] tSa;
+		//if ( (targetDescAr != null) && (targetDescAr.size() > 0) )
+		//{
+/*		
+			int iSz = targetDescAr.size();
+			tSa = new String[iSz + 1];
+			tSa = new String[iSz];
+			for ( int g = 0; g < tSa.length; g++ )
+			{
+				if ( g == 0 )
+					tSa[g] = "";
+				else
+				{
+				    if ( (g - 1) < targetDescAr.size() )
+				        tSa[g] = (String)targetDescAr.get(g - 1);
+				}
+			}
+/**/
+
+/*
+			SpinnerListModel searchModel = new SpinnerListModel(tSa);		
+			searchShortcutSpinner = new JSpinner(searchModel);
+			
+            JFormattedTextField textField = ((DefaultEditor) searchShortcutSpinner.getEditor()).getTextField();
+            textField.setHorizontalAlignment(JTextField.LEFT);			
+/**/
+
+/*
+            //DefaultListCellRenderer listRenderer;
+            
+            searchComboBox = new JComboBox(tSa);
+            searchComboBox.setEditable(true);
+            searchComboBox.addActionListener(comboBoxListener);
+            
+			gbc = new GridBagConstraints();
+			gbc.fill = GridBagConstraints.HORIZONTAL;
+			gbc.insets = new Insets(4, 4, 4, 4);	// bottom, left, right, top
+			gbc.gridx = 1;
+			gbc.gridy = 2;
+			gbc.gridwidth = 4;
+			
+			//panel.add(searchShortcutSpinner, gbc);
+			panel.add(searchComboBox, gbc);
+			
+            //istRenderer = new DefaultListCellRenderer();
+            //listRenderer.setHorizontalAlignment(DefaultListCellRenderer.LEFT);
+            //searchComboBox.setRenderer(listRenderer);			
+			
+		//}
+/**/		
+
 
 		searchField = new JTextField(30);
 
@@ -10952,6 +11037,7 @@ public class ADev
 		gbc.gridy = 2;
 		gbc.gridwidth = 2;
 		panel.add(searchField, gbc);
+/**/
 
 		panel.setBorder(new LineBorder(Color.GRAY));
 
@@ -13079,7 +13165,8 @@ public class ADev
 		gbc.gridy = 2;
 		gbc.gridwidth = 1;
 		panel.add(projectPathLbl, gbc);
-
+		
+/*
 		updateProjectPathField = new JTextField(30);
 
 		gbc = new GridBagConstraints();
@@ -13088,7 +13175,7 @@ public class ADev
 		gbc.gridx = 1;
 		gbc.gridy = 2;
 		gbc.gridwidth = 2;
-
+/**/
 		
 		// Try to load Project Home..
 		if ( (sProjectPathLead != null) && (! sProjectPathLead.equals("")) )
@@ -20726,6 +20813,16 @@ While_Break:
 		return (EventInfo)eventInfo;
 	}	//}}}
 	
+	private ActionListener comboBoxListener = new ActionListener()
+	{
+		public void actionPerformed(ActionEvent e)
+		{
+            JComboBox cb = (JComboBox)e.getSource();
+            g_sSearchValue = (String)cb.getSelectedItem();
+            System.out.println("g_sSearchValue: '"+g_sSearchValue+"'");
+        }
+    };
+		    
 	//{{{	ActionListener  Handle events
 	/**
      * Handle Events 
@@ -23126,6 +23223,134 @@ While_Break:
 				{
 				    // Logcat being turned on..
 				    //System.out.println("Logcat turned on");
+/*				    
+				    if ( sUsePidLogcat == null )
+				        System.out.println("sUsePidLogcat null");
+				    else
+				        System.out.println("sUsePidLogcat: "+sUsePidLogcat+"'");
+/**/				        
+				        
+                    if ( (sUsePidLogcat != null) && (sUsePidLogcat.length() > 0) )
+                    {
+                        if ( sUsePidLogcat.equals("true") )
+                        {
+                            //System.out.println("Using PID logcat");
+                            // Use PID Logcat..
+                            int iLoc3 = 0;
+                            iStart = 0; 
+                            
+                            //System.out.println("Using PID");
+/*                            
+                            if ( (sPid != null) && (! sPid.equals("null")) && (sPid.length() > 0) )
+                            {
+                                System.out.println("Have it");
+                                ;   // Have it..
+                            }
+                            else
+                            {
+/**/                                
+                                // We have to keep checking with this
+                                // until we get a PID..
+                                while ( true )
+                                {
+                                    if ( (packageNameS != null) && (packageNameS.length() > 0) )
+                                    {
+                                        // Check Process..
+                                        sb = new StringBuffer();
+                                        
+                                        if ( iOS == LINUX_MAC )
+                                        {
+                                            sb.append("export PATH=${PATH}:");
+                                            sb.append(androidSdkPathS);
+                                            sb.append("/platform-tools");
+                                            sb.append(";adb ");
+                                        }
+                                        else
+                                        {
+                                            sb.append("SET PATH=");
+                                            sb.append(androidSdkPathS);
+                                            sb.append("/platform-tools");
+                                            sb.append(";%PATH%");
+                                            sb.append("&&adb ");
+                                        }
+                                        
+                                        sb.append("shell ps");
+                                            
+                                        if ( iOS == WINDOWS )
+                                            sb.append("\n");
+                                        
+                                        //System.out.println("sb: '"+sb.toString()+"'");
+                                        
+                                        bInternalFinished = false;		
+                                        internalCommandS = sb.toString();
+                                        commandBgThread = new CommandBgThread();
+                                        commandBgThread.start();
+                                
+                                        // Wait for Thread to finish..
+                                        while ( true )
+                                        {
+                                            try
+                                            {
+                                                //Thread.sleep(20);
+                                                //Thread.sleep(333);
+                                                Thread.sleep(100);
+                                            }
+                                            catch (InterruptedException ie)
+                                            {
+                                            }
+                            
+                                            if ( bInternalFinished )
+                                                break;
+                                        }
+                                        
+                                        //System.out.println("Dropped out of getting PID");
+                                        
+        /*                                                
+                                        if ( commandResultS == null )
+                                            System.out.println("commandResultS null");
+                                        else
+                                        {
+                                            System.out.println("commandResultS.length(): "+commandResultS.length());
+                                            //System.out.println("commandResultS: "+commandResultS);
+                                        }
+        /**/                                                    
+                                        
+                                        if ( (commandResultS != null) && (commandResultS.length() > 0) )
+                                        {
+                                            iLoc3 = commandResultS.indexOf(packageNameS);
+                                            if ( iLoc3 != -1 )
+                                            {
+                                                // Grab PID..
+                                                for ( ; commandResultS.charAt(iLoc3) != (char)0x0a; iLoc3-- );
+                                
+                                                iLoc3++;
+                                                for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                for ( ; Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                iStart = iLoc3;
+                                                for ( ; ! Character.isWhitespace(commandResultS.charAt(iLoc3)); iLoc3++ );
+                                                
+                                                if ( (iStart >= 0) && (iLoc3 >= 0) && (iLoc3 < commandResultS.length()) )
+                                                {
+                                                    sPid = commandResultS.substring(iStart, iLoc3);
+                                                    //System.out.println("sPid: '"+sPid+"'");
+                                                    break;
+                                                }
+                                                
+                                                //System.out.println("sPid: '"+sPid+"'");
+                                                
+                                                // Try changing to use PID command..
+                                            }
+                                            else
+                                            {
+                                                sPid = "";
+                                                lineSb = new StringBuffer();
+                                            }
+                                        }
+                                    }
+                                }   // End while..
+                            //}
+                        }
+                    }
 				    
                     while ( true )
                     {
@@ -23298,7 +23523,7 @@ While_Break:
                         {
                             try
                             {
-                                Thread.sleep(100);
+                                Thread.sleep(333);
                             }
                             catch (InterruptedException ie)
                             {
@@ -23408,16 +23633,32 @@ While_Break:
                         }
                         
                         commandSb.append("logcat");
-/**/                        
+/**/  
+
+/*
+                        if ( sPid == null )
+                            System.out.println("sPid null");
+                        else
+                            System.out.println("sPid: '"+sPid+"'");
+/**/                                
+                            
+                        if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) && (sPid != null) && (sPid.length() > 0) )
+                        {
+                            commandSb.append(" --pid=");
+                            commandSb.append(sPid);
+                        }
+/**/
+
                         // Note:
                         // On newer devices it looks like it defaults to
                         // something like -v threadtime
                         // looking like:
                         // 10-19 12:06:03.396  1438  1628 I GestureDetector: ...
-                        
+
                         // Try to default to a more compact version..
                         // Also ensures that highlighting will work..
                         commandSb.append(" -v brief");
+                        
                         
                         if ( (logcatFilterS != null) && (! logcatFilterS.equals("")) )
                         {
@@ -23429,7 +23670,8 @@ While_Break:
                                 commandSb.append(":F");
                             }
                         }
-    /**/
+/**/
+
                         if ( iOS == WINDOWS )
                             commandSb.append("\n");
                         

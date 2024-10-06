@@ -139,6 +139,7 @@ Gradle builds:
 
 		
 Release builds:
+
 SingingConfigs:
         For Gradle and Kotlin, but not Flutter, you can use the option in config.properties:
         'use_key_properties' to use a key.properties file for the signingConfigs,
@@ -418,8 +419,6 @@ BlueStacks Emulator:
 
 Release notes:
     
-ADev-3.3.3:
-    Fixed issue with Release and Debug builds.
 
 ADev-3.3.4:
     Improved getting package name, fixed 'namespace' issue.
@@ -429,7 +428,10 @@ ADev-3.3.6:
     Improved Logcat startup.
     Improved Release builds.
     
-
+ADev-3.3.7:
+    Improved PID logcat.
+    
+    
 I use it for all of my own development, and try to fix what issues I see,
 but please let me know of any issues that you find so that I can fix them.
 
