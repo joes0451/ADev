@@ -83,8 +83,11 @@ Select Device:
 		lower status bar.
 		
 
-Search: Search Dialog for searching through long Logcat or other output
+Search:
+        Search Dialog for searching through long Logcat or other output
 		in the console window.  'Reset Next' starts the search from the top.
+		
+		Search can also use pre-defined search strings in config.properties.
 		
 		At any point you can select part of a line and when you hit "Reset Next"
 		in the Search Dialog it will begin searching from there.
@@ -420,16 +423,17 @@ BlueStacks Emulator:
 Release notes:
     
 
-ADev-3.3.4:
-    Improved getting package name, fixed 'namespace' issue.
-    Tried to improve PID Logcat.
-
 ADev-3.3.6:
     Improved Logcat startup.
     Improved Release builds.
     
 ADev-3.3.7:
     Improved PID logcat.
+    
+ADev-3.3.8:
+    Search can now use pre-defined strings.
+    Other improvements.
+    
     
     
 I use it for all of my own development, and try to fix what issues I see,
