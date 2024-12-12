@@ -423,10 +423,6 @@ BlueStacks Emulator:
 Release notes:
     
 
-ADev-3.3.6:
-    Improved Logcat startup.
-    Improved Release builds.
-    
 ADev-3.3.7:
     Improved PID logcat.
     
@@ -434,6 +430,9 @@ ADev-3.3.8:
     Search can now use pre-defined strings.
     Other improvements.
     
+ADev-3.3.9:
+    Greatly improved Logcat.
+    Improved Search.
     
     
 I use it for all of my own development, and try to fix what issues I see,

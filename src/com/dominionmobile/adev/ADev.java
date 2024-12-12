@@ -3829,7 +3829,7 @@ public class ADev
 		{
 		    //StringBuffer commandSb = null;
 		    
-			//System.out.println("IOBgThread run()");
+			//System.out.println("\nIOBgThread run()");
 			
             Process proc = null;
 			OutputStream os = null;
@@ -3856,6 +3856,7 @@ public class ADev
 			int iLoc;
 			int iLoc3 = 0;
 			int iGotZeroCount = 0;
+			int iLengthCount = 0;
 			
 			
 			int iLen;
@@ -3886,6 +3887,7 @@ public class ADev
 			int iArrayIndex = 0;
 			int iPartialLength = 0;
 			int iBlockCount = 0;	
+			int iGotDataCount = 0;
 			int[] iBlock = new int[128];
 
 			char cChr;
@@ -4015,11 +4017,11 @@ public class ADev
 				error_bis = new BufferedInputStream(error_is);
 				out_bis = new BufferedInputStream(out_is);
 				
-/*
+/*				
                 if ( actionCommandS == null )
-                    System.out.println("\nactionCommandS null");
+                    System.out.println("actionCommandS null");
                 else
-                    System.out.println("\nactionCommandS: '"+actionCommandS+"'");
+                    System.out.println("actionCommandS: '"+actionCommandS+"'");
 /**/
 
 				iTotalBytes = 0;
@@ -4044,373 +4046,385 @@ public class ADev
 				long lDif = 0;
 				
 				lCurrentTime = System.currentTimeMillis();
+
+                //System.out.println("Above while()");
 				
-                        while ( ! isInterrupted() )
+                while ( ! isInterrupted() )
+                {
+                    //System.out.println("--TOP--");
+                    iLoopCount++;
+                    
+/*                            
+                    if ( sc.s_KillIOBgThread )
+                        break;
+/**/  
+
+                    // Used internally
+                    // Kill for Logcat..					
+                    //if ( bBreakOut )
+                    if ( bEndBreakOut )
+                    {
+                        // End of line..
+                        //System.out.println("bEndBreakOut breaking");
+                        break;
+                    }
+/*
+
+                    if ( bIOBgThreadBreak )
+                    {
+                        System.out.println("bIOBgThreadBreak breaking");
+                        break;
+                    }
+                    
+                    if ( bBreakOut )
+                    {
+                         System.out.println("bBreakOut breaking");
+                        break;
+                    }
+/**/
+
+                    lineSb = new StringBuffer();
+                    
+                    if ( out_bis.available() > 0 )	// Check Output Stream..
+                    {
+                        lCTM1 = System.currentTimeMillis();
+                        iBytesRead = out_bis.read(tempBuf, 0, iTmpLength);
+                        //System.out.println("(Output Stream)iBytesRead: "+iBytesRead);
+                        if ( iBytesRead == -1 )
                         {
-                            //System.out.println("--TOP--");
-                            iLoopCount++;
-                            
-/*                            
-                            if ( sc.s_KillIOBgThread )
-                                break;
-/**/                            
-                            // Kill for Logcat..					
-                            //if ( bBreakOut )
-                            if ( bEndBreakOut )
-                            {
-                                // End of line..
-                                //System.out.println("bEndBreakOut breaking");
-                                break;
-                            }
-                            
-                            if ( bIOBgThreadBreak )
-                            {
-                                //System.out.println("bIOBgThreadBreak breaking");
-                                break;
-                            }
-                            
-                            if ( bBreakOut )
-                            {
-                                break;
-                            }
-                            
-                            lineSb = new StringBuffer();
-                            
-                            if ( out_bis.available() > 0 )	// Check Output Stream..
-                            {
-                                lCTM1 = System.currentTimeMillis();
-                                iBytesRead = out_bis.read(tempBuf, 0, iTmpLength);
-                                //System.out.println("(Output Stream)iBytesRead: "+iBytesRead);
-                                if ( iBytesRead == -1 )
-                                {
-                                    // Never gets this..
-                                    break;
-                                }
-        
-                                baos.write(tempBuf, 0, iBytesRead);
-        
-                                lineSb.insert(0, baos.toString());
-                                lineSb.setLength(iBytesRead);
-                                
-                                //System.out.println("\nlineSb: '"+lineSb.toString()+"'");
-                                
-                                baos.reset();
-                                
-                                iTotalBytes += iBytesRead;
-                                lCTM2 = System.currentTimeMillis();
-                                lDif = lCTM2 - lCTM1;       // Output stream, time to read()
-                                //System.out.println("Diff: "+lDif);
-                            }
-                            else if ( error_bis.available() > 0 )	// Check Error Stream..
-                            {
-                                iBytesRead = error_bis.read(tempBuf, 0, iTmpLength);
-                                //System.out.println("(Error Stream)iBytesRead: "+iBytesRead);
-                                if ( iBytesRead == -1 )
-                                {
-                                    // Never gets this..
-                                    break;
-                                }
-                                
-                                baos.write(tempBuf, 0, iBytesRead);
-        
-                                lineSb.insert(0, baos.toString());
-                                lineSb.setLength(iBytesRead);
-        
-                                baos.reset();						
-                                
-                                iTotalBytes += iBytesRead;
-                            }
+                            // Never gets this..
+                            break;
+                        }
+
+                        baos.write(tempBuf, 0, iBytesRead);
+
+                        lineSb.insert(0, baos.toString());
+                        lineSb.setLength(iBytesRead);
+                        
+                        //System.out.println("\nlineSb: '"+lineSb.toString()+"'");
+                        
+                        baos.reset();
+                        
+                        iTotalBytes += iBytesRead;
+                        lCTM2 = System.currentTimeMillis();
+                        lDif = lCTM2 - lCTM1;       // Output stream, time to read()
+                        //System.out.println("Diff: "+lDif);
+                    }
+                    else if ( error_bis.available() > 0 )	// Check Error Stream..
+                    {
+                        iBytesRead = error_bis.read(tempBuf, 0, iTmpLength);
+                        //System.out.println("(Error Stream)iBytesRead: "+iBytesRead);
+                        if ( iBytesRead == -1 )
+                        {
+                            // Never gets this..
+                            break;
+                        }
+                        
+                        baos.write(tempBuf, 0, iBytesRead);
+
+                        lineSb.insert(0, baos.toString());
+                        lineSb.setLength(iBytesRead);
+
+                        baos.reset();						
+                        
+                        iTotalBytes += iBytesRead;
+                    }
 
 /*                            
-                            // Debbuging..					
-                            if ( (lineSb != null) && (iBytesRead > 0) )
-                            {
-                                System.out.println();
-                                char cTChr;
-        
-                                //if ( lineSb.length() > 500 )
-                                //{
-                                    for ( int g = 0; g < lineSb.length(); g++ )
-                                    //for ( int g = 0; g < 500; g++ )
-                                    {
-                                        cTChr = (char)lineSb.charAt(g);
-                                        if ( (cTChr < 0x20) || (cTChr > 0x7e) )
-                                            System.out.print("["+Integer.toHexString((int)cTChr)+"]");
-                                        else
-                                            System.out.print(cTChr);
-                                    }
-                                //}
-                                System.out.println();
-                            }
-/**/
-        
-/*
-                            if ( lineSb == null )
-                                System.out.println("(Before)lineSb null");
-                            else
-                                System.out.println("(Before)lineSb.length(): "+lineSb.length());
-/**/
-        
-/*
-                            if ( sUsePidLogcat == null )
-                                System.out.println("sUsePidLogcat null");
-                            else    
-                                System.out.println("sUsePidLogcat: "+sUsePidLogcat);
-/**/
+                    // Debbuging..					
+                    if ( (lineSb != null) && (iBytesRead > 0) )
+                    {
+                        System.out.println();
+                        char cTChr;
 
-                            if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
+                        //if ( lineSb.length() > 500 )
+                        //{
+                            for ( int g = 0; g < lineSb.length(); g++ )
+                            //for ( int g = 0; g < 500; g++ )
                             {
-                                Thread.sleep(5);
-                            }
-                            else
-                            {
-                                // Without this, console output
-                                // can get really laggy and unresponsive..
-                                if ( lineSb.length() < 4096 )
-                                    Thread.sleep(10);
+                                cTChr = (char)lineSb.charAt(g);
+                                if ( (cTChr < 0x20) || (cTChr > 0x7e) )
+                                    System.out.print("["+Integer.toHexString((int)cTChr)+"]");
                                 else
-                                {
-                                    
-                                    //System.out.println("lDif: "+lDif);
-                                    
-                                    if ( lDif > 0 )     // Output stream, time to read()
-                                    {
-                                        lDifCount = 0;
-                                        Thread.sleep(40);   // Was using
-                                    }
-                                    else
-                                    {
-                                        lDifCount++;
-                                        Thread.sleep(20);     // Was using
-                                    }
-                                }
+                                    System.out.print(cTChr);
                             }
-                            
-                            //System.out.println("lDifCount: "+lDifCount);
+                        //}
+                        System.out.println();
+                    }
+/**/
 
-                            if ( (lineSb != null) && (iBytesRead > 0) )
+/*
+                    if ( lineSb == null )
+                        System.out.println("(Before)lineSb null");
+                    else
+                        System.out.println("(Before)lineSb.length(): "+lineSb.length());
+/**/
+
+/*
+                    if ( sUsePidLogcat == null )
+                        System.out.println("sUsePidLogcat null");
+                    else    
+                        System.out.println("sUsePidLogcat: "+sUsePidLogcat);
+/**/
+
+                    if ( (sUsePidLogcat != null) && (sUsePidLogcat.equals("true")) )
+                    {
+                        Thread.sleep(5);
+                    }
+                    else
+                    {
+                        // Without this, console output
+                        // can get really laggy and unresponsive..
+                        if ( lineSb.length() < 4096 )
+                            Thread.sleep(10);
+                        else
+                        {
+                            
+                            //System.out.println("lDif: "+lDif);
+                            
+                            if ( lDif > 0 )     // Output stream, time to read()
                             {
-                                // Got data, so reset..                                
-                                iLoopCount = 0;
-                                iGotZeroCount = 0;
+                                lDifCount = 0;
+                                Thread.sleep(40);   // Was using
+                            }
+                            else
+                            {
+                                lDifCount++;
+                                Thread.sleep(20);     // Was using
+                            }
+                        }
+                    }
+                    
+                    //System.out.println("lDifCount: "+lDifCount);
+                    //System.out.println("iBytesRead: "+iBytesRead);
+                    
+                    if ( (lineSb != null) && (iBytesRead > 0) )
+                    {
+                        // Got data, so reset..                                
+                        iLoopCount = 0;
+                        iGotZeroCount = 0;
+                        
+                        iGotDataCount++;
+                        //System.out.println("iGotDataCount: "+iGotDataCount);
 
 
 /*                                
-                                // Check for '"app.started"'..
-                                if ( lineSb.toString().contains(sAppStarted) )
-                                {
-                                    System.out.println("\nFound app.started");
-                                    bFoundAppStarted = true;
-                                    
-                                    if ( resumeButton == null )
-                                        System.out.println("resumeButton null");
-                                    
-                                    if ( resumeButton != null )
-                                    {
-                                        // Ghost Resume button..
-                                        resumeButton.setEnabled(false);
-                                    }
-                                }
+                        // Check for '"app.started"'..
+                        if ( lineSb.toString().contains(sAppStarted) )
+                        {
+                            System.out.println("\nFound app.started");
+                            bFoundAppStarted = true;
+                            
+                            if ( resumeButton == null )
+                                System.out.println("resumeButton null");
+                            
+                            if ( resumeButton != null )
+                            {
+                                // Ghost Resume button..
+                                resumeButton.setEnabled(false);
+                            }
+                        }
 /**/                                
-                                // Start of new block..
-                                //System.out.println("=== NEW BLOCK ===");
-                                //System.out.println("lineSb.length(): "+lineSb.length());
-                                
-                                bInWord = false;
-                                iWordStart = 0;
-                                boolean bFirst2;
-                                int iLastZeroA = 0;
-                                int iLoc2 = 0;
-                                //int iLoc3 = 0;
-                                int iLoc4 = 0;
-                                int iLoc5 = 0;
-                                int iLoc6 = 0;
-                                StringBuffer endSb;
-                                StringBuffer sB;
-                                //StringBuffer sb;
-                                //String sPrevEnd = "";
-                                String sT = "";
-                                String sT2 = "";
-                                String sBlockEnd = "";
-                                
-                                //System.out.println("bBlockSplit: "+bBlockSplit);
-                                if ( bBlockSplit )
+                        // Start of new block..
+                        //System.out.println("=== NEW BLOCK ===");
+                        //System.out.println("lineSb.length(): "+lineSb.length());
+                        
+                        bInWord = false;
+                        iWordStart = 0;
+                        boolean bFirst2;
+                        int iLastZeroA = 0;
+                        int iLoc2 = 0;
+                        //int iLoc3 = 0;
+                        int iLoc4 = 0;
+                        int iLoc5 = 0;
+                        int iLoc6 = 0;
+                        StringBuffer endSb;
+                        StringBuffer sB;
+                        //StringBuffer sb;
+                        //String sPrevEnd = "";
+                        String sT = "";
+                        String sT2 = "";
+                        String sBlockEnd = "";
+                        
+                        //System.out.println("bBlockSplit: "+bBlockSplit);
+                        if ( bBlockSplit )
+                        {
+                            // Continue processing from previous block..
+                        }
+                        else
+                        {
+                            // New block..
+                            iWordLength = 0;
+                        }
+
+                        // In Flutter there
+                        // were some bad lead characters
+                        // so kill any of those..
+                        if ( lineSb.length() > 0 )
+                        {
+                            while ( true )
+                            {
+                                if ( lineSb.charAt(0) > 0x7f )
                                 {
-                                    // Continue processing from previous block..
+                                    lineSb.deleteCharAt(0);
+                                    continue;
+                                }
+                                else
+                                    break;
+                            }
+                        }
+/**/
+
+                        iIdx = 0;
+                        bDoBreak = false;
+                        bSplit = false;
+                        iChunkLen = lineSb.length();
+                        //System.out.println("bBlockSplit: "+bBlockSplit);
+                        //System.out.println("iWordLength: "+iWordLength);
+                        //System.out.println("iWordStart: "+iWordStart);
+                        
+                        for ( ; ; iIdx++ ) 
+                        {
+                            //System.out.println("--TOP--  iIdx: "+iIdx);
+                            if ( bDoBreak )
+                            {
+                                //System.out.println("--Breaking--");
+                                break;
+                            }
+                            
+                            //System.out.println("iChunkLen: "+iChunkLen);
+                            if ( iIdx >= iChunkLen )
+                            {
+                                // Hit end of block..
+                                cChr = ' ';
+                                if ( ((lineSb.length() - 1) >= 0) && ((lineSb.length() - 1) < lineSb.length()) )
+                                {
+                                    cChr = lineSb.charAt(lineSb.length() - 1);
+                                }
+                                
+                                if ( (cChr == (char)0x0a) || (cChr == (char)0x0d) )
+                                    ;
+                                else
+                                {
+                                    bBlockSplit = true;
+                                }
+                                
+                                bDoBreak = true;
+                            }
+                            else
+                            {
+                                cChr = lineSb.charAt(iIdx);
+                                if ( Character.isWhitespace(cChr) )
+                                {
+                                    // Whitespace..
+                                    iWordLength = 0;	// Reset..
+                                    bInWord = false;	// Reset..
                                 }
                                 else
                                 {
-                                    // New block..
-                                    iWordLength = 0;
-                                }
-        
-                                // In Flutter there
-                                // were some bad lead characters
-                                // so kill any of those..
-                                if ( lineSb.length() > 0 )
-                                {
-                                    while ( true )
+                                    // Character..
+                                    if ( bInWord == false )
                                     {
-                                        if ( lineSb.charAt(0) > 0x7f )
-                                        {
-                                            lineSb.deleteCharAt(0);
-                                            continue;
-                                        }
-                                        else
-                                            break;
+                                        bInWord = true;
+                                        iWordStart = iIdx;
                                     }
-                                }
-/**/
-
-                                iIdx = 0;
-                                bDoBreak = false;
-                                bSplit = false;
-                                iChunkLen = lineSb.length();
-                                //System.out.println("bBlockSplit: "+bBlockSplit);
-                                //System.out.println("iWordLength: "+iWordLength);
-                                //System.out.println("iWordStart: "+iWordStart);
-                                
-                                for ( ; ; iIdx++ ) 
-                                {
-                                    //System.out.println("--TOP--  iIdx: "+iIdx);
-                                    if ( bDoBreak )
-                                    {
-                                        //System.out.println("--Breaking--");
-                                        break;
-                                    }
-                                    
-                                    //System.out.println("iChunkLen: "+iChunkLen);
-                                    if ( iIdx >= iChunkLen )
-                                    {
-                                        // Hit end of block..
-                                        cChr = ' ';
-                                        if ( ((lineSb.length() - 1) >= 0) && ((lineSb.length() - 1) < lineSb.length()) )
-                                        {
-                                            cChr = lineSb.charAt(lineSb.length() - 1);
-                                        }
                                         
+                                    iWordLength++;
+                                    if ( iWordLength >= DISPLAY_BREAK_WIDTH )
+                                    {
+                                        bSplit = true;
+                                    }
+                                }
+                            }
+                            
+                            //System.out.println("bSplit: "+bSplit);
+                            if ( bSplit )
+                            {
+                                // Split..
+                                //System.out.println("\n== SPLIT ==");
+                                bSplit = false;		// Reset..
+                                iSIdx = iWordStart;
+                                
+                                iSplitBlockCount = iWordLength;
+                                iWordLength = 0;	// Reset..
+                                
+                                //System.out.println("iSplitBlockCount: "+iSplitBlockCount);
+                                iChrLoc = 0;
+                                
+                                for ( ; ; iSIdx++, iSplitBlockCount++ )
+                                {
+                                    if ( iSIdx >= iChunkLen )
+                                    {
+                                        // Hit end..
+                                        cChr = lineSb.charAt(lineSb.length() - 1);
                                         if ( (cChr == (char)0x0a) || (cChr == (char)0x0d) )
                                             ;
                                         else
                                         {
-                                            bBlockSplit = true;
+                                            iWordLength = iSplitBlockCount;
                                         }
-                                        
+
                                         bDoBreak = true;
+                                        break;
                                     }
-                                    else
+                                    
+                                    cChr = lineSb.charAt(iSIdx);
+                                    if ( Character.isWhitespace(cChr) )
                                     {
-                                        cChr = lineSb.charAt(iIdx);
-                                        if ( Character.isWhitespace(cChr) )
+                                        // Done..
+                                        break;
+                                    }
+                                    
+                                    if ( ! Character.isLetterOrDigit(cChr) )
+                                    {
+                                        // Special character..
+                                        iChrLoc = iSIdx;
+                                        //System.out.println("(Special)iChrLoc: "+iChrLoc);
+                                    }
+                                    
+                                    if ( iSplitBlockCount > iBreakLength )
+                                    {
+                                        //System.out.println("iSplitBlockCount > iBreakLength");
+                                        if ( iChrLoc > (iSIdx - (iBreakLength / 2) ) )
                                         {
-                                            // Whitespace..
-                                            iWordLength = 0;	// Reset..
-                                            bInWord = false;	// Reset..
+                                            lineSb.insert((iChrLoc + 1), ' ');
                                         }
                                         else
                                         {
-                                            // Character..
-                                            if ( bInWord == false )
-                                            {
-                                                bInWord = true;
-                                                iWordStart = iIdx;
-                                            }
-                                                
-                                            iWordLength++;
-                                            if ( iWordLength >= DISPLAY_BREAK_WIDTH )
-                                            {
-                                                bSplit = true;
-                                            }
+                                            // No special characters found..
+                                            lineSb.insert((iSIdx + 1), ' ');
                                         }
-                                    }
-                                    
-                                    //System.out.println("bSplit: "+bSplit);
-                                    if ( bSplit )
-                                    {
-                                        // Split..
-                                        //System.out.println("\n== SPLIT ==");
-                                        bSplit = false;		// Reset..
-                                        iSIdx = iWordStart;
                                         
-                                        iSplitBlockCount = iWordLength;
-                                        iWordLength = 0;	// Reset..
+                                        iChunkLen++;	// Adjust for added space..
+                                        iSIdx += 1;		// Adjust past insert, plus loop increment..
+                                        iChrLoc = 0;	// Reset..
+                                        iSplitBlockCount = 0;
                                         
-                                        //System.out.println("iSplitBlockCount: "+iSplitBlockCount);
-                                        iChrLoc = 0;
-                                        
-                                        for ( ; ; iSIdx++, iSplitBlockCount++ )
-                                        {
-                                            if ( iSIdx >= iChunkLen )
-                                            {
-                                                // Hit end..
-                                                cChr = lineSb.charAt(lineSb.length() - 1);
-                                                if ( (cChr == (char)0x0a) || (cChr == (char)0x0d) )
-                                                    ;
-                                                else
-                                                {
-                                                    iWordLength = iSplitBlockCount;
-                                                }
-        
-                                                bDoBreak = true;
-                                                break;
-                                            }
-                                            
-                                            cChr = lineSb.charAt(iSIdx);
-                                            if ( Character.isWhitespace(cChr) )
-                                            {
-                                                // Done..
-                                                break;
-                                            }
-                                            
-                                            if ( ! Character.isLetterOrDigit(cChr) )
-                                            {
-                                                // Special character..
-                                                iChrLoc = iSIdx;
-                                                //System.out.println("(Special)iChrLoc: "+iChrLoc);
-                                            }
-                                            
-                                            if ( iSplitBlockCount > iBreakLength )
-                                            {
-                                                //System.out.println("iSplitBlockCount > iBreakLength");
-                                                if ( iChrLoc > (iSIdx - (iBreakLength / 2) ) )
-                                                {
-                                                    lineSb.insert((iChrLoc + 1), ' ');
-                                                }
-                                                else
-                                                {
-                                                    // No special characters found..
-                                                    lineSb.insert((iSIdx + 1), ' ');
-                                                }
-                                                
-                                                iChunkLen++;	// Adjust for added space..
-                                                iSIdx += 1;		// Adjust past insert, plus loop increment..
-                                                iChrLoc = 0;	// Reset..
-                                                iSplitBlockCount = 0;
-                                                
-                                            }
-                                        }	// End for..
-                                        
-                                        //System.out.println("Dropped out");
                                     }
                                 }	// End for..
                                 
-                                //System.out.println("(A)Dropped out");
-                                
-                            }   // End if ( (lineSb != null) && (iBytesRead > 0) )
-                            else
-                            {
-                                // Didn't get anything..
-                                //System.out.println("Didn't get anything");
-                                
-                                iGotZeroCount++;
-                                //System.out.println("(Nothing)iGotZeroCount: "+iGotZeroCount);
-                                //System.out.println("iLoopCount: "+iLoopCount);
-                                
-                                //if ( iLoopCount > 3000 )
-                                //{
-                                    //bBreakOut = true;
-                                //}
+                                //System.out.println("Dropped out");
                             }
+                        }	// End for..
+                        
+                        //System.out.println("(A)Dropped out");
+                        
+                    }   // End if ( (lineSb != null) && (iBytesRead > 0) )
+                    else
+                    {
+                        // Didn't get anything..
+                        //System.out.println("Didn't get anything");
+                        iGotDataCount = 0;
+                        
+                        iGotZeroCount++;
+                        //System.out.println("(Nothing)iGotZeroCount: "+iGotZeroCount);
+                        //System.out.println("iLoopCount: "+iLoopCount);
+                        
+                        //if ( iLoopCount > 3000 )
+                        //{
+                            //bBreakOut = true;
+                        //}
+                    }
 /**/	
 
 //--------------------------------------------------------------------------------
@@ -4418,352 +4432,351 @@ public class ADev
 //--------------------------------------------------------------------------------
 
 /*
-                            if ( commandPhrase == null )
-                                System.out.println("commandPhrase null");
-                            else
-                                System.out.println("commandPhrase: '"+commandPhrase+"'");
+                    if ( commandPhrase == null )
+                        System.out.println("commandPhrase null");
+                    else
+                        System.out.println("commandPhrase: '"+commandPhrase+"'");
 /**/                                    
-                                    
-                            // Note:
-                            //
-                            // Sometimes it can catch the end prompt early,
-                            // so we need an end test..
-                            if ( iBytesRead > 0 )
-                            {
-                                //iGotZeroCount = 0;  // Reset..
-                                
-                                if ( bLogcatOn == false )
-                                {
-                                    if ( (commandPhrase != null) && (commandPhrase.length() > 0) )
-                                    {
-                                        //System.out.println("commandPhrase: '"+commandPhrase+"'");
-                                        if ( lineSb.indexOf(commandPhrase) != -1 )
-                                        {
-                                            //System.out.println("--Found Phrase--");
-                                            bFoundPhrase = true;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Prevent early end..
-                                        if ( (lCurrentTime + 2000) < (long)System.currentTimeMillis() )
-                                            ;   // Too early..
-                                        else
-                                            bFoundPhrase = true;
-                                    }
-                                    
-                                    //System.out.println("lineSb.length(): "+lineSb.length());
-                                    
-                                    //if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
-                                    //{
-                                        lineS = lineSb.substring(0, lineSb.length());
-    
-                                        if ( lineS.length() > 5 )
-                                        {
-                                                sTest = lineS.substring(lineS.length() - 5);
-                                            
-                                            //System.out.println("bFoundPhrase: "+bFoundPhrase);
-                                            //System.out.println("sTest: '"+sTest+"'");
-                                            if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
-                                            //if ( (sTest.endsWith(">") || sTest.endsWith("$")) )
-                                            {
-                                                //System.out.println("\nHit end");
-                                                bEndBreakOut = true;
-                                            }
-                                        }
-                                    //}
-                                    
-/*
-                                    if ( sGradlewCommand == null )
-                                        System.out.println("sGradlewCommand null");
-                                    else
-                                        System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
-/**/                                
-                                    //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");
-                                    
-                                    //System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
-                                    if ( (sGradlewCommand != null) && (lineSb.indexOf(sGradlewCommand) != -1) )
-                                    {
-                                        // Finish Progress Bar early..
-                                        //System.out.println("--FOUND--");
-                                        bFinished = true;
-                                    }
-        
-                                    //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");	
-                                    //System.out.println("bFinished: "+bFinished);
-                                    if ( bGradleSelected && (! bFinished) )
-                                    {
-                                        if ( (lineSb.indexOf("preBuild") != -1) ||
-                                            (lineSb.indexOf(":clean") != -1) )
-                                        {
-                                            // Finish Progress Bar early..
-                                            bFinished = true;
-                                        }
-                                    }
-                                }
-        
-                                outLineS = "";	// Final line to be inserted..
-                                bContinued = false;
-                                iType = NORMAL;
-                                iLineLen = lineSb.length();
-                                
-                                try
-                                {
-                                    doc = textPane.getStyledDocument();
-        
-                                    if ( bLogcatOn )
-                                    {
-                                        // Logcat output..
-                                        bLineBreakOut = false;
-                                        iIndex = 0;
-                                        
-                                        while ( true )
-                                        {
-                                            if ( bCompletePartialLine )
-                                            {
-                                                // Reset..
-                                                bCompletePartialLine = false;
-                                                
-                                                // Capture rest of line..
-                                                iStart = iIndex;
-                                                bHitTrailing = false;
-                                                
-                                                for ( ;; iIndex++ )
-                                                {
-                                                    if ( iIndex >= iLineLen )
-                                                        break;
-                                                    
-                                                    if ( bHitTrailing )
-                                                    {
-                                                        if ( Character.isWhitespace(lineSb.charAt(iIndex)) )
-                                                            ;
-                                                        else
-                                                            break;
-                                                    }
-                        
-                                                    if ( (lineSb.charAt(iIndex) == 0x0d) ||
-                                                            (lineSb.charAt(iIndex) == 0x0a) )
-                                                        bHitTrailing = true;
-                                                }
-        
-                                                // Set up for output..
-                                                if ( bHitTrailing )
-                                                    bSaveLen = false;	// Reset..
-                                                    
-                                                iType = iCurrentType;
-                                                if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
-                                                {
-                                                    outLineS = lineSb.substring(iStart, iIndex);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                // Process line from Start..
-                                                iLenSave = 0;	// Reset..
-                                                
-                                                // Set Type..
-                                                if ( ((iIndex + 1) < iLineLen) &&
-                                                    (lineSb.charAt(iIndex + 1) == '/') )
-                                                {
-                                                    // Start Characters, X/..
-                                                    if ( lineSb.charAt(iIndex) == 'E' )
-                                                        iType = ERROR;												
-                                                    else if ( lineSb.charAt(iIndex) == 'W' )
-                                                        iType = WARNING;
-                                                    else
-                                                        iType = NORMAL;
-                                                }
-                                                else
-                                                {
-                                                    // Not a "Start"..
-                                                    iType = NORMAL;
-                                                }
-                                                
-                                                iStart = iIndex;
-                                                bOver = false;
-                                                bHitTrailing = false;
-                                                
-                                                for ( ;; iIndex++ )
-                                                {
-                                                    if ( iIndex >= iLineLen )
-                                                    {
-                                                        bOver = true;
-                                                        break;
-                                                    }
-                                                    
-                                                    if ( bHitTrailing )
-                                                    {
-                                                        if ( Character.isWhitespace(lineSb.charAt(iIndex)) )
-                                                            ;
-                                                        else
-                                                            break;	// Start of next line..
-                                                    }
-        
-                                                    if ( (lineSb.charAt(iIndex) == 0x0d) ||
-                                                            (lineSb.charAt(iIndex) == 0x0a) )
-                                                        bHitTrailing = true;
-                                                }
-                                                
-                                                if ( bOver )
-                                                {
-                                                    // Set up to draw what we have..
-                                                    if ( (iStart >= 0) && (iStart < lineSb.length()) )
-                                                    {
-                                                        outLineS = lineSb.substring(iStart);
-                                                    }
-                                                    
-                                                    iCurrentType = iType;	// Save for next draw..
-                                                    
-                                                    if ( ! bHitTrailing )
-                                                    {
-                                                        bCompletePartialLine = true;
-                                                        bSaveLen = true;
-                                                    }
-                                                    
-                                                    // Signal to break..
-                                                    bLineBreakOut = true;
-                                                }
-                                                else
-                                                {
-                                                    if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
-                                                    {
-                                                        outLineS = lineSb.substring(iStart, iIndex);
-                                                    }
-                                                }
-                                            }
-                                            
-                                            // We should now have the full line
-                                            // including any trailing 0x0d 0x0a
-                                            iLen = doc.getLength();
-        
-                                            // Try to back up over any trailing 0x0d 0x0a
-                                            // to append the partial string..									
-                                            if ( (iLenSave > 0) && (iLen > 0) )
-                                            {
-                                                int iJ;
-                                                String xS = "";
-                                                for ( iJ = iLenSave; ; iJ-- )
-                                                {
-                                                    xS = doc.getText(iJ, 1);
-                                                    if ( xS.equals(0x0d) || xS.equals(0x0a) )
-                                                        ;
-                                                    else
-                                                        break;
-                                                }
-                                                
-                                                iLen = iJ;
-                                            }
-                                            
-                                            if ( iType == NORMAL )
-                                                doc.insertString(iLen, outLineS, normalStyle);
-                                            else if ( iType == WARNING )
-                                                doc.insertString(iLen, outLineS, warningStyle);
-                                            else if ( iType == ERROR )
-                                                doc.insertString(iLen, outLineS, errorStyle);
-                                            
-                                            if ( bSaveLen )
-                                                iLenSave = doc.getLength();
-                                                
-                                            if ( iLen > 0 )
-                                            {
-                                                // Keep all output in view..
-                                                textPane.setCaretPosition(doc.getLength() - 1);
-                                            }
-                                            
-                                            if ( bLineBreakOut )
-                                                break;
-                                            
-                                        }	// End while..
-                                        
-                                        //System.out.println("Dropped out");
-                                    }
-                                    else
-                                    {
-                                        //System.out.println("Normal Output, iBytesRead: "+iBytesRead);
-                                        //System.out.println("lineSb.length(): "+lineSb.length());
-                                        // Normal output..
-                                        if ( iBytesRead > 0 ) 
-                                        {
-                                            outS = lineSb.substring(0, lineSb.length());
-                                            
-                                            iLen = doc.getLength();
-                                            
-                                            // This can have issues.
-                                            // It's most noticable when you do a Gradle 'Release'.
-                                            // It gets the output strings, but doesn't do anything with them
-                                            // until the end, when it dumps everything.
-                                            // With the new SwingWorker it seems to be better.
-        
-                                            doc.insertString(iLen, outS, normalStyle);
-                                            
-                                            if ( iLen > 0 )
-                                            {
-                                                textPane.setCaretPosition(doc.getLength() - 1);
-                                                textPane.repaint();
-                                            }
-                                        }
-                                    }
-                                }
-                                catch (IllegalArgumentException iae)
-                                {
-                                    iae.printStackTrace();
-                                }
-                                catch (BadLocationException ble)
-                                {
-                                    ble.printStackTrace();
-                                }
-                            }
-                            else    // if ( iBytesRead > 0 )
-                            {
-                                // No output..
-                                
-                                //System.out.println("(No output)iLoopCount: "+iLoopCount);
-                                
-                                
-                                
-                                if ( iOS == LINUX_MAC )
-                                //if ( true )
-                                {
-                                    // If still getting data
-                                    // gets Exception:
-                                    // 'Exception: java.lang.IllegalThreadStateException: process hasn't exited'
-                                    // When I/O is finished, does exitValue()..
-                                    try
-                                    {
-                                        iExitVal = proc.exitValue();
-                                        //System.out.println("iExitVal: "+iExitVal);
-
-                                        // In cases like Install, it can quit before
-                                        // the result gets output, so this give it more
-                                        // time to output the results..                                        
-                                        iExitCount++;
-                                        if ( iExitCount > 10 )
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    catch (IllegalThreadStateException itse)
-                                    {
-                                        // Still getting data..
-                                        //System.out.println(itse.toString());
-                                    }
-                                }
-                            }
                             
-                            iBytesRead = 0;
-                            
-                        }	// End while, while ( ! isInterrupted() )
+                    // Note:
+                    //
+                    // Sometimes it can catch the end prompt early,
+                    // so we need an end test..
+                    if ( iBytesRead > 0 )
+                    {
+                        //iGotZeroCount = 0;  // Reset..
                         
-/*                        
-                        if ( sc.s_ShowProgressBar )
+                        if ( bLogcatOn == false )
                         {
-                            if ( tProgressJFrame != null )
+                            if ( (commandPhrase != null) && (commandPhrase.length() > 0) )
                             {
-                                tProgressJFrame.dispose();
-                                tProgressJFrame = null;
+                                //System.out.println("commandPhrase: '"+commandPhrase+"'");
+                                if ( lineSb.indexOf(commandPhrase) != -1 )
+                                {
+                                    //System.out.println("--Found Phrase--");
+                                    bFoundPhrase = true;
+                                }
+                            }
+                            else
+                            {
+                                // Prevent early end..
+                                if ( (lCurrentTime + 2000) < (long)System.currentTimeMillis() )
+                                    ;   // Too early..
+                                else
+                                    bFoundPhrase = true;
+                            }
+                            
+                            //System.out.println("lineSb.length(): "+lineSb.length());
+                            
+                            //if ( ((lineSb.length() - 1) >= 0) && (lineSb.charAt(lineSb.length() - 1) == '>') )
+                            //{
+                                lineS = lineSb.substring(0, lineSb.length());
+
+                                if ( lineS.length() > 5 )
+                                {
+                                        sTest = lineS.substring(lineS.length() - 5);
+                                    
+                                    //System.out.println("bFoundPhrase: "+bFoundPhrase);
+                                    //System.out.println("sTest: '"+sTest+"'");
+                                    if ( bFoundPhrase && (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                    //if ( (sTest.endsWith(">") || sTest.endsWith("$")) )
+                                    {
+                                        //System.out.println("\nHit end");
+                                        bEndBreakOut = true;
+                                    }
+                                }
+                            //}
+                            
+/*
+                            if ( sGradlewCommand == null )
+                                System.out.println("sGradlewCommand null");
+                            else
+                                System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
+/**/                                
+                            //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");
+                            
+                            //System.out.println("sGradlewCommand: '"+sGradlewCommand+"'");
+                            if ( (sGradlewCommand != null) && (lineSb.indexOf(sGradlewCommand) != -1) )
+                            {
+                                // Finish Progress Bar early..
+                                //System.out.println("--FOUND--");
+                                bFinished = true;
+                            }
+
+                            //System.out.println("(Check)lineSb: '"+lineSb.toString()+"'");	
+                            //System.out.println("bFinished: "+bFinished);
+                            if ( bGradleSelected && (! bFinished) )
+                            {
+                                if ( (lineSb.indexOf("preBuild") != -1) ||
+                                    (lineSb.indexOf(":clean") != -1) )
+                                {
+                                    // Finish Progress Bar early..
+                                    bFinished = true;
+                                }
                             }
                         }
-/**/ 
+
+                        outLineS = "";	// Final line to be inserted..
+                        bContinued = false;
+                        iType = NORMAL;
+                        iLineLen = lineSb.length();
+                        
+                        try
+                        {
+                            doc = textPane.getStyledDocument();
+
+                            if ( bLogcatOn )
+                            {
+                                // Logcat output..
+                                bLineBreakOut = false;
+                                iIndex = 0;
+                                
+                                while ( true )
+                                {
+                                    if ( bCompletePartialLine )
+                                    {
+                                        // Reset..
+                                        bCompletePartialLine = false;
+                                        
+                                        // Capture rest of line..
+                                        iStart = iIndex;
+                                        bHitTrailing = false;
+                                        
+                                        for ( ;; iIndex++ )
+                                        {
+                                            if ( iIndex >= iLineLen )
+                                                break;
+                                            
+                                            if ( bHitTrailing )
+                                            {
+                                                if ( Character.isWhitespace(lineSb.charAt(iIndex)) )
+                                                    ;
+                                                else
+                                                    break;
+                                            }
+                
+                                            if ( (lineSb.charAt(iIndex) == 0x0d) ||
+                                                    (lineSb.charAt(iIndex) == 0x0a) )
+                                                bHitTrailing = true;
+                                        }
+
+                                        // Set up for output..
+                                        if ( bHitTrailing )
+                                            bSaveLen = false;	// Reset..
+                                            
+                                        iType = iCurrentType;
+                                        if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
+                                        {
+                                            outLineS = lineSb.substring(iStart, iIndex);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Process line from Start..
+                                        iLenSave = 0;	// Reset..
+                                        
+                                        // Set Type..
+                                        if ( ((iIndex + 1) < iLineLen) &&
+                                            (lineSb.charAt(iIndex + 1) == '/') )
+                                        {
+                                            // Start Characters, X/..
+                                            if ( lineSb.charAt(iIndex) == 'E' )
+                                                iType = ERROR;												
+                                            else if ( lineSb.charAt(iIndex) == 'W' )
+                                                iType = WARNING;
+                                            else
+                                                iType = NORMAL;
+                                        }
+                                        else
+                                        {
+                                            // Not a "Start"..
+                                            iType = NORMAL;
+                                        }
+                                        
+                                        iStart = iIndex;
+                                        bOver = false;
+                                        bHitTrailing = false;
+                                        
+                                        for ( ;; iIndex++ )
+                                        {
+                                            if ( iIndex >= iLineLen )
+                                            {
+                                                bOver = true;
+                                                break;
+                                            }
+                                            
+                                            if ( bHitTrailing )
+                                            {
+                                                if ( Character.isWhitespace(lineSb.charAt(iIndex)) )
+                                                    ;
+                                                else
+                                                    break;	// Start of next line..
+                                            }
+
+                                            if ( (lineSb.charAt(iIndex) == 0x0d) ||
+                                                    (lineSb.charAt(iIndex) == 0x0a) )
+                                                bHitTrailing = true;
+                                        }
+                                        
+                                        if ( bOver )
+                                        {
+                                            // Set up to draw what we have..
+                                            if ( (iStart >= 0) && (iStart < lineSb.length()) )
+                                            {
+                                                outLineS = lineSb.substring(iStart);
+                                            }
+                                            
+                                            iCurrentType = iType;	// Save for next draw..
+                                            
+                                            if ( ! bHitTrailing )
+                                            {
+                                                bCompletePartialLine = true;
+                                                bSaveLen = true;
+                                            }
+                                            
+                                            // Signal to break..
+                                            bLineBreakOut = true;
+                                        }
+                                        else
+                                        {
+                                            if ( (iStart >= 0) && (iIndex >= 0) && (iIndex < lineSb.length()) )
+                                            {
+                                                outLineS = lineSb.substring(iStart, iIndex);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // We should now have the full line
+                                    // including any trailing 0x0d 0x0a
+                                    iLen = doc.getLength();
+
+                                    // Try to back up over any trailing 0x0d 0x0a
+                                    // to append the partial string..									
+                                    if ( (iLenSave > 0) && (iLen > 0) )
+                                    {
+                                        int iJ;
+                                        String xS = "";
+                                        for ( iJ = iLenSave; ; iJ-- )
+                                        {
+                                            xS = doc.getText(iJ, 1);
+                                            if ( xS.equals(0x0d) || xS.equals(0x0a) )
+                                                ;
+                                            else
+                                                break;
+                                        }
+                                        
+                                        iLen = iJ;
+                                    }
+                                    
+                                    if ( iType == NORMAL )
+                                        doc.insertString(iLen, outLineS, normalStyle);
+                                    else if ( iType == WARNING )
+                                        doc.insertString(iLen, outLineS, warningStyle);
+                                    else if ( iType == ERROR )
+                                        doc.insertString(iLen, outLineS, errorStyle);
+                                    
+/*                                    
+                                    //System.out.println("outLineS.length(): "+outLineS.length());
+                                    if ( outLineS.length() < 100 )
+                                        iLengthCount++;
+                                    else
+                                        iLengthCount = 0;
+                                        
+                                    System.out.println("iLengthCount: "+iLengthCount);
+/**/                                    
+                                    if ( bSaveLen )
+                                        iLenSave = doc.getLength();
+                                        
+                                    if ( iLen > 0 )
+                                    {
+                                        // Keep all output in view..
+                                        textPane.setCaretPosition(doc.getLength() - 1);
+                                    }
+                                    
+                                    if ( bLineBreakOut )
+                                        break;
+                                    
+                                }	// End while..
+                                
+                                //System.out.println("Dropped out");
+                            }
+                            else
+                            {
+                                //System.out.println("Normal Output, iBytesRead: "+iBytesRead);
+                                //System.out.println("lineSb.length(): "+lineSb.length());
+                                // Normal output..
+                                if ( iBytesRead > 0 ) 
+                                {
+                                    outS = lineSb.substring(0, lineSb.length());
+                                    
+                                    iLen = doc.getLength();
+                                    
+                                    // This can have issues.
+                                    // It's most noticable when you do a Gradle 'Release'.
+                                    // It gets the output strings, but doesn't do anything with them
+                                    // until the end, when it dumps everything.
+                                    // With the new SwingWorker it seems to be better.
+
+                                    doc.insertString(iLen, outS, normalStyle);
+                                    
+                                    if ( iLen > 0 )
+                                    {
+                                        textPane.setCaretPosition(doc.getLength() - 1);
+                                        textPane.repaint();
+                                    }
+                                }
+                            }
+                        }
+                        catch (IllegalArgumentException iae)
+                        {
+                            iae.printStackTrace();
+                        }
+                        catch (BadLocationException ble)
+                        {
+                            ble.printStackTrace();
+                        }
+                    }
+                    else    // if ( iBytesRead > 0 )
+                    {
+                        // No output..
+                        
+                        //System.out.println("(No output)iLoopCount: "+iLoopCount);
+                        
+                        
+                        
+                        if ( iOS == LINUX_MAC )
+                        //if ( true )
+                        {
+                            // If still getting data
+                            // gets Exception:
+                            // 'Exception: java.lang.IllegalThreadStateException: process hasn't exited'
+                            // When I/O is finished, does exitValue()..
+                            try
+                            {
+                                iExitVal = proc.exitValue();
+                                //System.out.println("iExitVal: "+iExitVal);
+
+                                // In cases like Install, it can quit before
+                                // the result gets output, so this give it more
+                                // time to output the results..                                        
+                                iExitCount++;
+                                if ( iExitCount > 10 )
+                                {
+                                    break;
+                                }
+                            }
+                            catch (IllegalThreadStateException itse)
+                            {
+                                // Still getting data..
+                                //System.out.println(itse.toString());
+                            }
+                        }
+                    }
+                    
+                    iBytesRead = 0;
+                    
+                }	// End while, while ( ! isInterrupted() )
+                        
 
 				bIOBgThreadBreak = false;    // Reset..
 				
@@ -4771,11 +4784,12 @@ public class ADev
 			}
 			catch (Exception e)
 			{
-				System.out.println("Exception: "+e.toString());
-				e.printStackTrace();
+				//System.out.println("Exception: "+e.toString());
+				//e.printStackTrace();
 			}
 			finally
 			{
+			    //System.out.println("In finally");
 				try
 				{
 					if ( error_bis != null )
@@ -4795,6 +4809,7 @@ public class ADev
 				}
 			}
 
+			//System.out.println("Past finally");
 			//System.out.println("Calling destroy()");
 			proc.destroy();
 
@@ -20521,6 +20536,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 					
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+					
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -20541,6 +20568,7 @@ While_Break:
 
 					// Restore..
 					actionCommandS = CLEAN;
+/**/					
 				}
 
 				//commandPhrase = "PATH";
@@ -21059,7 +21087,7 @@ While_Break:
 			else if ( DEBUG.equals(actionCommandS) ||
 				BUILD.equals(actionCommandS) )
 			{
-				System.out.println("DEBUG/BUILD");
+				//System.out.println("DEBUG/BUILD");
 				// Debug..
 				boolean bRegularBuild;
 				iBuildType = DEBUG_BUILD;
@@ -21071,6 +21099,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -21091,6 +21131,7 @@ While_Break:
 					
 					// Restore..
 					actionCommandS = saveS;
+/**/					
 				}
 				
 				commandPhrase = "PATH";
@@ -21726,7 +21767,19 @@ While_Break:
 				{
 					// Reset..
 					logcatToggleButton.doClick();
-
+					
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -21744,7 +21797,7 @@ While_Break:
 						if ( ! bLogcatOn )
 							break;
 					}
-					
+/**/					
 					// Restore..
 					//actionCommandS = RELEASE;
 				}
@@ -21757,6 +21810,7 @@ While_Break:
 				bIsReleaseBuild = true;
 				bIsDebugBuild = false;
 
+				//System.out.println("bDidClean: "+bDidClean);
                 if ( bDidClean == false )
                 {
                     // Do things Clean would have done..
@@ -22409,12 +22463,13 @@ While_Break:
 /**/				
 				// Reset..
 				bDidClean = false;
-/**/				
+				
+                //System.out.println("Exiting RELEASE");				
 			}
 			else if ( RUN.equals(actionCommandS) )
 			{
-			    System.out.println("***************************");
-				System.out.println("RUN");
+			    //System.out.println("***************************");
+				//System.out.println("RUN");
 				iDebugMode = DEBUG_RUN;
 				bBlockDebug = true;
 				
@@ -22457,6 +22512,7 @@ While_Break:
 				}
 /**/
 
+/*
 				if ( DevicesAr == null )
 					System.out.println("DevicesAr null");
 				else
@@ -22475,7 +22531,7 @@ While_Break:
                     }
                 }
  
-                System.out.println("sDeviceName: '"+sDeviceName+"'");
+                //System.out.println("sDeviceName: '"+sDeviceName+"'");
                 
 				init();
 				RefreshProperties();
@@ -22859,13 +22915,6 @@ While_Break:
 				{
 				    // Logcat being turned on..
 				    //System.out.println("Logcat turned on");
-/*				    
-				    if ( bLogcatRunning )
-				    {
-				        
-				        
-				    }
-/**/
 
 				    
 /*				    
@@ -23334,9 +23383,21 @@ While_Break:
 				}        // end if bSelected
 				else
 				{
+				    
 				    // Logcat being turned off..
 					// Already selected..
 					//System.out.println("Logcat turned off");
+
+					if ( ioBgThread != null )
+					{
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
 					
 					//sc.s_KillIOBgThread = true;
 
@@ -23353,7 +23414,7 @@ While_Break:
 					bLogcatOn = false;
 					bKillLogcat = true;	// Signal to kill for logcat..
 				}					
-			}
+			}    // End if LOGCAT
 			else if ( KILL_SERVER.equals(actionCommandS) )
 			{
 			    //System.out.println("KILL_SERVER");
@@ -23365,6 +23426,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -23385,6 +23458,7 @@ While_Break:
 					
 					// Restore..
 					actionCommandS = KILL_SERVER;
+/**/					
 				}
 				
 				commandSb = new StringBuffer();
@@ -23479,6 +23553,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -23499,6 +23585,7 @@ While_Break:
 					
 					// Restore..
 					actionCommandS = DEVICES;
+/**/					
 				}
 				
 				commandSb = new StringBuffer();
@@ -23542,6 +23629,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -23564,6 +23663,7 @@ While_Break:
 					
 					// Restore..
 					actionCommandS = UNINSTALL;
+/**/					
 				}
 /*
 				if ( packageNameS == null )				
@@ -23855,6 +23955,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -23875,6 +23987,7 @@ While_Break:
 					
 					// Restore..
 					actionCommandS = INSTALL;
+/**/					
 				}
 
 /*				
@@ -27259,6 +27372,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -27276,6 +27401,7 @@ While_Break:
 						if ( ! bLogcatOn )
 							break;
 					}
+/**/					
 				}
 
 				// Construct file path for ls command..
@@ -27541,7 +27667,7 @@ While_Break:
 			else if ( SEARCH_NEXT.equals(actionCommandS) ||
 				SEARCH_RESET_NEXT.equals(actionCommandS) )
 			{
-				//System.out.println("\nSEARCH");
+				//System.out.println("\nReset Next and Next");
 				// Get text from StyledDocument..
 				int iLength = 0;
 				int iStart = 0;
@@ -27600,7 +27726,6 @@ While_Break:
 /**/                
 
 				if ( searchComboBox != null )
-				//if ( searchShortcutSpinner != null )
 				{
 				    String sT2 = "";
 				    String sT3 = "";
@@ -27637,8 +27762,15 @@ While_Break:
 
 				    //if ( (sT2 != null) && (sT2.length() > 0) )
 				        //searchShortcutSpinner.setValue((String)sT2);
+/*
+				    if ( g_sSearchValue == null )
+				        System.out.println("g_sSearchValue null");
+				    else
+				        System.out.println("g_sSearchValue: '"+g_sSearchValue+"'");
+/**/				    
 
-				    if ( (g_sSearchValue != null) && (g_sSearchValue.length() > 0) )
+                    // Add search string to List if not present..
+				    if ( (g_sSearchValue != null) && (g_sSearchValue.length() > 0) )    // 'g_sSearchValue' is gotten from Listener..
 				    {
 				        if ( (sT2 != null) && (sT2.length() > 0) )
 				        {
@@ -27647,13 +27779,13 @@ While_Break:
                             else
                             {
                                 // Add..
-                                //cb.insertItemAt(g_sSearchValue, 0);
                                 searchComboBox.insertItemAt(sT2, 0);
                             }
-                            
-                            sSearchText = sT2;
 				        }
 				    }
+				    
+				    if ( (sT2 != null) && (sT2.length() > 0) )
+				        sSearchText = sT2;
 				    
 				    //sSearchText = "";
 /*				    
@@ -27667,8 +27799,15 @@ While_Break:
 				}
 				
 				//sSearchText = sSearchText.trim();
-				//System.out.println("\nsSearchText: '"+sSearchText+"'");
 				
+				// 'sSearchText' is the text we are searching for..
+/*				
+				if ( sSearchText == null )
+				    System.out.println("sSearchText null");
+				else
+				    System.out.println("sSearchText: '"+sSearchText+"'");
+/**/
+
 				iSearchLength = sSearchText.length();
 
 				if ( bIsNext )
@@ -28633,6 +28772,18 @@ While_Break:
 					// Reset..
 					logcatToggleButton.doClick();
 
+                    if ( ioBgThread != null )
+                    {
+                        try
+                        {
+                            ioBgThread.interrupt();
+                        }
+                        catch (SecurityException se)
+                        {
+                        }
+                    }
+                    
+/*					
 					// Set to kill IOBgThread..
 					bBreakOut = true;
 					
@@ -28650,6 +28801,7 @@ While_Break:
 						if ( ! bLogcatOn )
 							break;
 					}
+/**/					
 				}
 				
 				commandPhrase = "PATH";

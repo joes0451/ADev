@@ -3,7 +3,7 @@
 
 # Features:
 
-* Create and build: Android Ant, Gradle, Kotlin and Flutter projects.
+* Create and build: Gradle, Kotlin, Flutter and Android Ant projects.
 * Gradle, Kotlin and Flutter projects can use the latest Android SDK.
 * Integrated Java Debug Wire Protocol debugger.
 * Flutter debugger.
